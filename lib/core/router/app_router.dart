@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/auth/domain/auth_user.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
@@ -11,7 +12,7 @@ import '../localization/app_localizations.dart';
 /// Route names used for navigation.
 abstract class AppRoutes {
   static const onboarding = '/onboarding';
-  static const shell = '/';
+  static const shell = '/home';
   static const home = '/home';
   static const search = '/search';
   static const bookings = '/bookings';
@@ -26,10 +27,28 @@ final rootNavigatorKey = GlobalKey<NavigatorState>();
 final shellNavigatorKey = GlobalKey<NavigatorState>();
 
 /// Creates the application router. [initialLocation] is overridable in tests.
-GoRouter createAppRouter({String initialLocation = AppRoutes.shell}) {
+///
+/// When [currentUser] is provided, protected routes redirect to the login
+/// screen for unauthenticated users, and signed-in users are bounced away from
+/// the onboarding/login screens. A `null` [currentUser] disables gating.
+GoRouter createAppRouter({
+  String initialLocation = AppRoutes.shell,
+  AuthUser? currentUser,
+  bool authReady = true,
+}) {
   return GoRouter(
     navigatorKey: rootNavigatorKey,
     initialLocation: initialLocation,
+    redirect: (context, state) {
+      if (!authReady) return null;
+      final location = state.matchedLocation;
+      final isPublic =
+          location == AppRoutes.onboarding || location == AppRoutes.login;
+      if (currentUser == null) {
+        return isPublic ? null : AppRoutes.login;
+      }
+      return isPublic ? AppRoutes.shell : null;
+    },
     routes: [
       GoRoute(
         path: AppRoutes.onboarding,

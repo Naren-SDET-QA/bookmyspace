@@ -107,6 +107,14 @@ class AppLocalizations {
   String get continueWithGoogle => _t('continueWithGoogle');
   String get continueWithApple => _t('continueWithApple');
   String get myProfile => _t('myProfile');
+  String get signInWithEmailOtp => _t('signInWithEmailOtp');
+  String get signInWithPhoneOtp => _t('signInWithPhoneOtp');
+  String get otpPlaceholder => _t('otpPlaceholder');
+  String get verifyOtp => _t('verifyOtp');
+  String get sendOtp => _t('sendOtp');
+  String get resendOtp => _t('resendOtp');
+  String get otpSent => _t('otpSent');
+  String get authFailed => _t('authFailed');
 
   // Owner
   String get ownerDashboard => _t('ownerDashboard');
@@ -216,6 +224,14 @@ class AppLocalizations {
       'continueWithGoogle': 'Continue with Google',
       'continueWithApple': 'Continue with Apple',
       'myProfile': 'My profile',
+      'signInWithEmailOtp': 'Log in with email OTP',
+      'signInWithPhoneOtp': 'Log in with phone OTP',
+      'otpPlaceholder': '6-digit code',
+      'verifyOtp': 'Verify & log in',
+      'sendOtp': 'Send code',
+      'resendOtp': 'Resend code',
+      'otpSent': 'We sent you a verification code.',
+      'authFailed': 'Authentication failed. Please try again.',
       'ownerDashboard': 'Owner dashboard',
       'ownerVenues': 'My venues',
       'ownerRequests': 'Booking requests',
@@ -316,6 +332,14 @@ class AppLocalizations {
       'continueWithGoogle': 'Google తో కొనసాగండి',
       'continueWithApple': 'Apple తో కొనసాగండి',
       'myProfile': 'నా ప్రొఫైల్',
+      'signInWithEmailOtp': 'ఇమెయిల్ OTP తో లాగిన్ అవ్వండి',
+      'signInWithPhoneOtp': 'ఫోన్ OTP తో లాగిన్ అవ్వండి',
+      'otpPlaceholder': '6 అంకెల కోడ్',
+      'verifyOtp': 'ధృవీకరించి లాగిన్ అవ్వండి',
+      'sendOtp': 'కోడ్ పంపండి',
+      'resendOtp': 'కోడ్ మళ్లీ పంపండి',
+      'otpSent': 'మేము మీకు ధృవీకరణ కోడ్ పంపాము.',
+      'authFailed': 'ప్రమాణీకరణ విఫలమైంది. దయచేసి మళ్లీ ప్రయత్నించండి.',
       'ownerDashboard': 'యజమాని డాష్‌బోర్డ్',
       'ownerVenues': 'నా వేదికలు',
       'ownerRequests': 'బుకింగ్ అభ్యర్థనలు',

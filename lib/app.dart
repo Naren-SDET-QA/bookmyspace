@@ -6,6 +6,7 @@ import 'core/config/settings_controller.dart';
 import 'core/localization/app_localizations.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'features/auth/presentation/auth_providers.dart';
 
 /// Root widget that wires together providers, theming, localization and routing.
 class BookMySpaceApp extends ConsumerWidget {
@@ -16,8 +17,14 @@ class BookMySpaceApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final authAsync = ref.watch(authStateProvider);
+    final currentUser = authAsync.value;
+    final authReady = !authAsync.isLoading;
+
     final router = createAppRouter(
       initialLocation: initialLocation ?? AppRoutes.shell,
+      currentUser: currentUser,
+      authReady: authReady,
     );
 
     return MaterialApp.router(

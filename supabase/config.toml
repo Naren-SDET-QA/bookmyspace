@@ -1,0 +1,65 @@
+# Supabase project configuration for BookMySpace.
+# Generated with `supabase init`. Local development only.
+project_id = "bookmyspace"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+
+[auth]
+enabled = true
+site_url = "http://127.0.0.1:3000"
+additional_redirect_urls = ["http://127.0.0.1:8080"]
+jwt_expiry = 3600
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
+
+[auth.email.template.invite]
+subject = "Invite to BookMySpace"
+content_path = "./supabase/templates/invite.html"
+
+[auth.email.template.confirmation]
+subject = "Confirm your BookMySpace signup"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.external.google]
+enabled = true
+client_id = ""
+secret = ""
+redirect_uri = ""
+
+[auth.external.apple]
+enabled = true
+client_id = ""
+secret = ""
+
+[edge_runtime]
+enabled = true
+policy = "oneshot"
+verify_jwt = true
+
+[analytics]
+enabled = true
+port = 54327
+
+[realtime]
+enabled = true

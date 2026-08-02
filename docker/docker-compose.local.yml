@@ -1,0 +1,38 @@
+# Local development stack for BookMySpace.
+#
+# Runs a Postgres (with PostGIS) + a lightweight auth proxy so the Flutter
+# app can be developed without a hosted Supabase project.
+#
+# NOTE: The Supabase CLI (`supabase start`) is the recommended path when it is
+# available. This compose file provides the database layer only; Edge
+# Functions and realtime require the full Supabase stack.
+#
+# Usage:
+#   docker compose -f docker/docker-compose.local.yml up -d
+#   # then apply migrations:
+#   docker compose -f docker/docker-compose.local.yml exec db \
+#     psql -U postgres -d bookmyspace -f /docker-entrypoint-initdb.d/init.sql
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: bookmyspace
+    ports:
+      - "54322:5432"
+    volumes:
+      - bms_db_data:/var/lib/postgresql/data
+      # Bootstrap: stub schema + migrations applied in order on first boot.
+      - ../supabase/test_harness_auth_stub.sql:/docker-entrypoint-initdb.d/000-stub.sql
+      - ../supabase/migrations:/migrations
+      - ./init-migrations.sh:/docker-entrypoint-initdb.d/001-migrate.sh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d bookmyspace"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  bms_db_data:
