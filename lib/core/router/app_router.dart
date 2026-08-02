@@ -5,6 +5,8 @@ import '../../features/auth/domain/auth_user.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
+import '../../features/saved/presentation/screens/saved_screen.dart';
+import '../../features/search/presentation/screens/search_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/venues/presentation/screens/venue_details_screen.dart';
 import '../localization/app_localizations.dart';
@@ -87,7 +89,13 @@ GoRouter createAppRouter({
             routes: [
               GoRoute(
                 path: AppRoutes.search,
-                builder: (context, state) => const SearchPlaceholderScreen(),
+                builder: (context, state) {
+                  final extra = state.extra;
+                  final category = extra is Map<String, dynamic>
+                      ? extra['category'] as String?
+                      : null;
+                  return SearchScreen(initialCategory: category);
+                },
               ),
             ],
           ),
@@ -103,7 +111,7 @@ GoRouter createAppRouter({
             routes: [
               GoRoute(
                 path: AppRoutes.saved,
-                builder: (context, state) => const SavedPlaceholderScreen(),
+                builder: (context, state) => const SavedScreen(),
               ),
             ],
           ),
@@ -172,27 +180,11 @@ class _AppShell extends StatelessWidget {
 }
 
 // Temporary placeholders replaced with real screens in later milestones.
-class SearchPlaceholderScreen extends StatelessWidget {
-  const SearchPlaceholderScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: Text('Search (M3)')));
-  }
-}
-
 class BookingsPlaceholderScreen extends StatelessWidget {
   const BookingsPlaceholderScreen({super.key});
   @override
   Widget build(BuildContext context) {
     return const Scaffold(body: Center(child: Text('Bookings (M4-M5)')));
-  }
-}
-
-class SavedPlaceholderScreen extends StatelessWidget {
-  const SavedPlaceholderScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: Text('Saved (M3)')));
   }
 }
 

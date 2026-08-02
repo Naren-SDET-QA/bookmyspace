@@ -78,6 +78,34 @@ class AppLocalizations {
   String get homeGreeting => _t('homeGreeting');
   String get findYourSpace => _t('findYourSpace');
   String get whatAreYouLookingFor => _t('whatAreYouLookingFor');
+  String get saveVenue => _t('saveVenue');
+  String get savedVenues => _t('savedVenues');
+  String get noSavedVenues => _t('noSavedVenues');
+  String get noSavedVenuesMessage => _t('noSavedVenuesMessage');
+  String get filters => _t('filters');
+  String get clearFilters => _t('clearFilters');
+  String get sortBy => _t('sortBy');
+  String get relevance => _t('relevance');
+  String get priceLowToHigh => _t('priceLowToHigh');
+  String get priceHighToLow => _t('priceHighToLow');
+  String get topRated => _t('topRated');
+  String get minPrice => _t('minPrice');
+  String get maxPrice => _t('maxPrice');
+  String get allCategories => _t('allCategories');
+  String get apply => _t('apply');
+  String get resultsCount => _t('resultsCount');
+  String get aboutThisVenue => _t('aboutThisVenue');
+  String get details => _t('details');
+  String get address => _t('address');
+  String get openNow => _t('openNow');
+  String get closedNow => _t('closedNow');
+  String get foodOptions => _t('foodOptions');
+  String get rules => _t('rules');
+  String get parking => _t('parking');
+  String get taxRate => _t('taxRate');
+  String get basePrice => _t('basePrice');
+  String get viewOnMap => _t('viewOnMap');
+  String get gallery => _t('gallery');
   String get explore => _t('explore');
   String get events => _t('events');
   String get courses => _t('courses');
@@ -199,6 +227,34 @@ class AppLocalizations {
       'homeGreeting': 'Hello',
       'findYourSpace': 'Find your perfect space',
       'whatAreYouLookingFor': 'What are you looking for?',
+      'saveVenue': 'Save venue',
+      'savedVenues': 'Saved venues',
+      'noSavedVenues': 'No saved venues yet',
+      'noSavedVenuesMessage': 'Tap the heart on any venue to keep it here.',
+      'filters': 'Filters',
+      'clearFilters': 'Clear all',
+      'sortBy': 'Sort by',
+      'relevance': 'Relevance',
+      'priceLowToHigh': 'Price: low to high',
+      'priceHighToLow': 'Price: high to low',
+      'topRated': 'Top rated',
+      'minPrice': 'Min price',
+      'maxPrice': 'Max price',
+      'allCategories': 'All categories',
+      'apply': 'Apply',
+      'resultsCount': '{count} venues found',
+      'aboutThisVenue': 'About this venue',
+      'details': 'Details',
+      'address': 'Address',
+      'openNow': 'Open now',
+      'closedNow': 'Closed',
+      'foodOptions': 'Food options',
+      'rules': 'House rules',
+      'parking': 'Parking',
+      'taxRate': 'GST',
+      'basePrice': 'Base price',
+      'viewOnMap': 'View on map',
+      'gallery': 'Gallery',
       'explore': 'Explore',
       'events': 'Events',
       'courses': 'Courses',
@@ -307,6 +363,35 @@ class AppLocalizations {
       'homeGreeting': 'నమస్తే',
       'findYourSpace': 'మీ స్థలాన్ని కనుగొనండి',
       'whatAreYouLookingFor': 'మీరు ఏమి వెతుకుతున్నారు?',
+      'saveVenue': 'వేదికను సేవ్ చేయండి',
+      'savedVenues': 'సేవ్ చేసిన వేదికలు',
+      'noSavedVenues': 'ఇంకా సేవ్ చేసిన వేదికలు లేవు',
+      'noSavedVenuesMessage':
+          'ఏదైనా వేదికపై హార్ట్‌పై నొక్కితే ఇక్కడ కనిపిస్తుంది.',
+      'filters': 'ఫిల్టర్లు',
+      'clearFilters': 'అన్నీ క్లియర్ చేయండి',
+      'sortBy': 'క్రమబద్ధీకరించండి',
+      'relevance': 'ఔచిత్యం',
+      'priceLowToHigh': 'ధర: తక్కువ నుండి ఎక్కువ',
+      'priceHighToLow': 'ధర: ఎక్కువ నుండి తక్కువ',
+      'topRated': 'అత్యధిక రేటింగ్',
+      'minPrice': 'కనిష్ట ధర',
+      'maxPrice': 'గరిష్ట ధర',
+      'allCategories': 'అన్ని వర్గాలు',
+      'apply': 'వర్తించు',
+      'resultsCount': '{count} వేదికలు దొరికాయి',
+      'aboutThisVenue': 'ఈ వేదిక గురించి',
+      'details': 'వివరాలు',
+      'address': 'చిరునామా',
+      'openNow': 'ఇప్పుడు తెరిచి ఉంది',
+      'closedNow': 'మూసివేయబడింది',
+      'foodOptions': 'ఆహార ఎంపికలు',
+      'rules': 'నిబంధనలు',
+      'parking': 'పార్కింగ్',
+      'taxRate': 'GST',
+      'basePrice': 'ప్రాథమిక ధర',
+      'viewOnMap': 'మ్యాప్‌లో చూడండి',
+      'gallery': 'గ్యాలరీ',
       'explore': 'అన్వేషించండి',
       'events': 'ఈవెంట్స్',
       'courses': 'కోర్సులు',

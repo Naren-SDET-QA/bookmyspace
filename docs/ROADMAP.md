@@ -7,8 +7,8 @@ with formatting, analysis, tests and a meaningful git commit.
 | - | --------- | ------ |
 | 1 | Foundation: themes, navigation, localization, environments, errors, widgets | ✅ Done |
 | 2 | Supabase setup, migrations, auth, profiles, roles, RLS | ✅ Done |
-| 3 | Home, search, maps, venue listings/details, images, favorites | ⏳ Next |
-| 4 | Availability calendar, slots, booking holds, atomic logic, concurrency tests | ⏳ |
+| 3 | Home, search, maps, venue listings/details, images, favorites | ✅ Done |
+| 4 | Availability calendar, slots, booking holds, atomic logic, concurrency tests | ⏳ Next |
 | 5 | Razorpay orders, verification, webhooks, reconciliation, refunds | ⏳ |
 | 6 | Events, institutes, courses, enrollment, tickets | ⏳ |
 | 7 | Owner registration, venue management, requests, calendar, revenue, payouts | ⏳ |
@@ -45,6 +45,35 @@ with formatting, analysis, tests and a meaningful git commit.
 - Functional login screen with OTP + social sign-in.
 - Local dev stack: `supabase/config.toml` and `docker/docker-compose.local.yml`.
 - `flutter analyze` clean; 24 unit/widget tests pass.
+
+## Milestone 3 — completed deliverable
+
+- Venue domain model (`Venue`, `VenueCategory`, `VenueImage`, facilities,
+  operating hours, `VenueSearchQuery` + sort enums) with hand-written JSON
+  mapping and `copyWith` hydration.
+- `VenueRepository` + `SupabaseVenueRepository` (public reads via RLS,
+  user-scoped favourites) using PostgREST `select`/`textSearch`/`filter` and
+  the `nearby_venues` RPC.
+- Migration `0009_nearby_venues_rpc.sql`: distance-sorted `nearby_venues(lat,
+  lng, radius, limit)` RPC returning venue rows + category + gallery JSONB,
+  security-invoker (RLS preserved). Verified against Postgres 16.
+- Migration `0010_demo_content.sql`: gallery images (Unsplash), operating
+  hours and a third demo venue (`The Work Nest`); test harness stub now seeds
+  an `owner@demo.com` user so demo data is created locally.
+- Riverpod venue providers: categories, popular, nearby, search query/results,
+  favourites (ids, hydrated, toggle), venue details family.
+- Home screen: category chips (from DB), popular + nearby venue grids with
+  loading skeletons and retryable errors.
+- Search screen: debounced full-text query, category chips, filter bottom sheet
+  (sort, category, price range).
+- Venue details: image gallery pager, rating/verified badges, about, pricing +
+  capacity, amenities chips, operating hours, details rows, and an embedded
+  OpenStreetMap (flutter_map) marker.
+- Saved screen: hydrated favourite venues with empty state.
+- Reusable widgets: `VenueCard`, `RatingBadge`, `VerifiedBadge`,
+  `FavoriteButton`, INR currency + distance formatters.
+- New dependencies: `geolocator`, `flutter_map`, `latlong2`.
+- `flutter analyze` clean; 38 unit/widget tests pass; web release builds.
 
 ## Design documents
 
