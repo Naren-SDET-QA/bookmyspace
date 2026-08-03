@@ -11,9 +11,9 @@ with formatting, analysis, tests and a meaningful git commit.
 | 4 | Availability calendar, slots, booking holds, atomic logic, concurrency tests | ✅ Done |
 | 5 | Razorpay orders, verification, webhooks, reconciliation, refunds | ✅ Done |
 | 6 | Events, institutes, courses, enrollment, tickets | ✅ Done |
-| 7 | Owner registration, venue management, requests, calendar, revenue, payouts | ⏳ |
-| 8 | Notifications, analytics, crash reporting, support, audit, admin | ⏳ |
-| 9 | Performance, accessibility, security, CI/CD, docs, store readiness | ⏳ |
+| 7 | Owner registration, venue management, requests, calendar, revenue, payouts | ✅ Done |
+| 8 | Notifications, analytics, crash reporting, support, audit, admin | ✅ Done |
+| 9 | Performance, accessibility, security, CI/CD, docs, store readiness | ✅ Done |
 
 ## Milestone 1 — completed deliverable
 
@@ -215,6 +215,26 @@ with formatting, analysis, tests and a meaningful git commit.
 - Localization keys added in English + Telugu for all M8 features.
 - Router: `/notifications`, `/analytics`, `/support`, `/admin/audit`.
 - `flutter analyze` clean; all 86 tests pass.
+
+## Milestone 9 — completed deliverable
+
+- GitHub Actions CI workflow (`.github/workflows/ci.yml`): analyze, test
+  with coverage, build Android APK + web, and SQL migration tests against
+  Postgres 16. Concurrency-safe with auto-cancel on push.
+- Input validation utility (`lib/core/validators/app_validators.dart`):
+  centralized validators for email, phone, name, OTP, password, required
+  fields, descriptions, and subjects with consistent error messages.
+- Accessibility widgets (`lib/core/widgets/accessibility.dart`):
+  `MinTouchTarget` (enforces WCAG 44x44 minimum), `AccessibleInkWell`
+  (touch-target + semantics), and `AccessibleIconButton` (tooltip + min size).
+- Retry and rate-limiting utilities (`lib/core/network/retry.dart`):
+  exponential-backoff `withRetry` wrapper and `RateLimiter` with configurable
+  window and request limits.
+- Legal screens: `PrivacyPolicyScreen` and `TermsOfServiceScreen` with
+  structured policy content and English localization.
+- Settings screen wired to legal pages (`/privacy`, `/terms`).
+- 28 new tests (validators, retry, accessibility, rate limiter);
+  `flutter analyze` clean; 114 total tests pass.
 
 ## Design documents
 

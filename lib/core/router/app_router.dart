@@ -17,6 +17,8 @@ import '../../features/notifications/presentation/screens/notifications_screen.d
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/owner/presentation/screens/owner_dashboard_screen.dart';
 import '../../features/owner/presentation/screens/owner_registration_screen.dart';
+import '../../features/legal/presentation/screens/privacy_policy_screen.dart';
+import '../../features/legal/presentation/screens/terms_of_service_screen.dart';
 import '../../features/payments/presentation/screens/payment_screen.dart';
 import '../../features/saved/presentation/screens/saved_screen.dart';
 import '../../features/search/presentation/screens/search_screen.dart';
@@ -50,6 +52,8 @@ abstract class AppRoutes {
   static const adminAudit = '/admin/audit';
   static const ownerRegistration = '/owner/register';
   static const ownerDashboard = '/owner';
+  static const privacyPolicy = '/privacy';
+  static const termsOfService = '/terms';
 }
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -167,6 +171,16 @@ GoRouter createAppRouter({
         path: AppRoutes.ownerDashboard,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const OwnerDashboardScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.privacyPolicy,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const PrivacyPolicyScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.termsOfService,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const TermsOfServiceScreen(),
       ),
       GoRoute(
         path: AppRoutes.paymentFlow,
