@@ -8,8 +8,8 @@ with formatting, analysis, tests and a meaningful git commit.
 | 1 | Foundation: themes, navigation, localization, environments, errors, widgets | ✅ Done |
 | 2 | Supabase setup, migrations, auth, profiles, roles, RLS | ✅ Done |
 | 3 | Home, search, maps, venue listings/details, images, favorites | ✅ Done |
-| 4 | Availability calendar, slots, booking holds, atomic logic, concurrency tests | ⏳ Next |
-| 5 | Razorpay orders, verification, webhooks, reconciliation, refunds | ⏳ |
+| 4 | Availability calendar, slots, booking holds, atomic logic, concurrency tests | ✅ Done |
+| 5 | Razorpay orders, verification, webhooks, reconciliation, refunds | ⏳ Next |
 | 6 | Events, institutes, courses, enrollment, tickets | ⏳ |
 | 7 | Owner registration, venue management, requests, calendar, revenue, payouts | ⏳ |
 | 8 | Notifications, analytics, crash reporting, support, audit, admin | ⏳ |
@@ -74,6 +74,37 @@ with formatting, analysis, tests and a meaningful git commit.
   `FavoriteButton`, INR currency + distance formatters.
 - New dependencies: `geolocator`, `flutter_map`, `latlong2`.
 - `flutter analyze` clean; 38 unit/widget tests pass; web release builds.
+
+## Milestone 4 — completed deliverable
+
+- Migration `0011_available_time_slots_rpc.sql`: security-definer
+  `available_time_slots(venue_id, date)` RPC returning every active slot with
+  `is_available` and a `reason` (`available` / `booked` / `held` / `blocked` /
+  `closed` / `inactive`). Security definer lets it see other users' holds and
+  bookings (which RLS hides) while exposing only aggregate availability.
+  Verified on Postgres 16 (all reason paths) and against the full 0001–0011
+  migration suite.
+- Booking domain models: `TimeSlot`, `SlotAvailability`, `Booking`,
+  `BookingStatus`, `BookingHold` (hand-written JSON mapping).
+- `BookingRepository` + `SupabaseBookingRepository`: availability via RPC,
+  atomic hold acquisition through the `create-booking-hold` Edge Function
+  (server validates amount + advisory-locks the slot), pending-booking insert
+  (RLS-safe), my-bookings list, and user cancellation (guarded to `pending`).
+  Maps `slot_unavailable` / exclusion-violation to a typed
+  `BookingConflictException`.
+- Booking flow screen: 14-day date strip, slot list with availability reasons,
+  disabled/taken slots, a confirmation dialog with base + GST + total, and a
+  confirm action that acquires the hold then creates the pending booking.
+- My Bookings screen (replaces the placeholder tab): booking cards with status
+  badges, date/time chips, booking reference, amount, and cancel for pending
+  bookings; pull-to-refresh, retryable error and empty states.
+- Router wiring: `/venues/:id/book` booking flow (venue passed via `extra`,
+  falls back to details on deep-link), `/bookings` tab now shows the real
+  screen; venue details "Book now" button navigates instead of showing a
+  SnackBar.
+- Localization keys added in English + Telugu.
+- `flutter analyze` clean; 49 unit/widget tests pass; web release builds;
+  concurrency suite still 4/4 on a fresh database.
 
 ## Design documents
 

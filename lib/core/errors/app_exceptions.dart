@@ -52,6 +52,16 @@ class NotFoundException extends AppException {
   const NotFoundException(super.message, {super.code, super.statusCode});
 }
 
+/// The requested slot is already held or booked by someone else.
+class BookingConflictException extends AppException {
+  const BookingConflictException(super.message, {super.code, super.statusCode});
+}
+
+/// A booking hold expired before it could be confirmed.
+class HoldExpiredException extends AppException {
+  const HoldExpiredException(super.message, {super.code});
+}
+
 /// Thrown when a configuration value is missing or is still a placeholder.
 class ConfigurationException extends AppException {
   const ConfigurationException(super.message, {super.code});

@@ -3,11 +3,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/domain/auth_user.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
+import '../../features/booking/presentation/screens/booking_screen.dart';
+import '../../features/booking/presentation/screens/my_bookings_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/saved/presentation/screens/saved_screen.dart';
 import '../../features/search/presentation/screens/search_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
+import '../../features/venues/domain/venue.dart';
 import '../../features/venues/presentation/screens/venue_details_screen.dart';
 import '../localization/app_localizations.dart';
 
@@ -23,6 +26,7 @@ abstract class AppRoutes {
   static const settings = '/settings';
   static const login = '/login';
   static const venueDetails = '/venues/:id';
+  static const bookingFlow = '/venues/:id/book';
 }
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -72,6 +76,22 @@ GoRouter createAppRouter({
         builder: (context, state) =>
             VenueDetailsScreen(venueId: state.pathParameters['id'] ?? ''),
       ),
+      GoRoute(
+        path: AppRoutes.bookingFlow,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) {
+          final extra = state.extra;
+          final venue = extra is Venue ? extra : null;
+          if (venue == null) {
+            // Bookmark/refresh navigation without a venue object — fall back
+            // to the details screen which can re-fetch the venue.
+            return VenueDetailsScreen(
+              venueId: state.pathParameters['id'] ?? '',
+            );
+          }
+          return BookingScreen(venue: venue);
+        },
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return _AppShell(navigationShell: navigationShell);
@@ -103,7 +123,7 @@ GoRouter createAppRouter({
             routes: [
               GoRoute(
                 path: AppRoutes.bookings,
-                builder: (context, state) => const BookingsPlaceholderScreen(),
+                builder: (context, state) => const MyBookingsScreen(),
               ),
             ],
           ),
@@ -179,15 +199,7 @@ class _AppShell extends StatelessWidget {
   }
 }
 
-// Temporary placeholders replaced with real screens in later milestones.
-class BookingsPlaceholderScreen extends StatelessWidget {
-  const BookingsPlaceholderScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: Text('Bookings (M4-M5)')));
-  }
-}
-
+// Temporary placeholder replaced with a real screen in a later milestone.
 class ProfilePlaceholderScreen extends StatelessWidget {
   const ProfilePlaceholderScreen({super.key});
   @override

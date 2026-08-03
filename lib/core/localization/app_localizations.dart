@@ -123,6 +123,14 @@ class AppLocalizations {
   String get paymentFailed => _t('paymentFailed');
   String get paymentPending => _t('paymentPending');
   String get myBookings => _t('myBookings');
+  String get noSlotsForDate => _t('noSlotsForDate');
+  String get total => _t('total');
+  String get bookingConfirmed => _t('bookingConfirmed');
+  String get noBookings => _t('noBookings');
+  String get noBookingsMessage => _t('noBookingsMessage');
+  String get cancelBooking => _t('cancelBooking');
+  String get cancelBookingConfirm => _t('cancelBookingConfirm');
+  String get keep => _t('keep');
 
   // Profile / Auth
   String get login => _t('login');
@@ -270,6 +278,14 @@ class AppLocalizations {
       'paymentFailed': 'Payment failed',
       'paymentPending': 'Payment pending',
       'myBookings': 'My bookings',
+      'noSlotsForDate': 'No slots available on this date',
+      'total': 'Total',
+      'bookingConfirmed': 'Booking confirmed —',
+      'noBookings': 'No bookings yet',
+      'noBookingsMessage': 'When you book a venue, it will show up here.',
+      'cancelBooking': 'Cancel booking',
+      'cancelBookingConfirm': 'Are you sure you want to cancel this booking?',
+      'keep': 'Keep booking',
       'login': 'Log in',
       'signUp': 'Sign up',
       'logout': 'Log out',
@@ -407,6 +423,15 @@ class AppLocalizations {
       'paymentFailed': 'చెల్లింపు విఫలమైంది',
       'paymentPending': 'చెల్లింపు పెండింగ్‌లో ఉంది',
       'myBookings': 'నా బుకింగ్స్',
+      'noSlotsForDate': 'ఈ తేదీన స్లాట్‌లు అందుబాటులో లేవు',
+      'total': 'మొత్తం',
+      'bookingConfirmed': 'బుకింగ్ నిర్ధారించబడింది —',
+      'noBookings': 'ఇంకా బుకింగ్స్ లేవు',
+      'noBookingsMessage':
+          'మీరు వేదికను బుక్ చేసినప్పుడు అది ఇక్కడ కనిపిస్తుంది.',
+      'cancelBooking': 'బుకింగ్ రద్దు చేయండి',
+      'cancelBookingConfirm': 'మీరు ఈ బుకింగ్‌ను రద్దు చేయాలనుకుంటున్నారా?',
+      'keep': 'బుకింగ్ ఉంచండి',
       'login': 'లాగిన్',
       'signUp': 'సైన్ అప్',
       'logout': 'లాగ్ అవుట్',

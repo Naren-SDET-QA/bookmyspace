@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../../core/localization/app_localizations.dart';
@@ -450,13 +451,8 @@ class _BookingBar extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
         child: FilledButton.icon(
-          onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Booking flow arrives in Milestone 4.'),
-              ),
-            );
-          },
+          onPressed: () =>
+              context.push('/venues/${venue.id}/book', extra: venue),
           icon: const Icon(Icons.event_available_rounded),
           label: Text('${l10n.bookNow} · ${formatInr(venue.price)}'),
         ),
