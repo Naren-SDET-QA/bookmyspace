@@ -14,7 +14,8 @@ with formatting, analysis, tests and a meaningful git commit.
 | 7 | Owner registration, venue management, requests, calendar, revenue, payouts | ✅ Done |
 | 8 | Notifications, analytics, crash reporting, support, audit, admin | ✅ Done |
 | 9 | Performance, accessibility, security, CI/CD, docs, store readiness | ✅ Done |
-| 10 | Owner venue management, reviews/ratings, venue CRUD | ⏳ |
+| 10 | Owner venue management, reviews/ratings, venue CRUD | ✅ Done |
+| 11 | Firebase Crashlytics, Performance, app icons, splash screen | ⏳ |
 
 ## Milestone 1 — completed deliverable
 
@@ -256,6 +257,22 @@ with formatting, analysis, tests and a meaningful git commit.
 - Localization keys added in English + Telugu for owner venues, create
   venue, and reviews.
 - `flutter analyze` clean; 114 tests pass.
+
+## Milestone 11 — completed deliverable
+
+- Firebase integration (`firebase_core`, `firebase_crashlytics`,
+  `firebase_performance`, `firebase_analytics`): initialization service,
+  Crashlytics error reporting with custom context, Performance monitoring
+  with custom traces and HTTP metrics, ErrorLogger unified wrapper.
+- Crashlytics: auto-record Flutter errors, PlatformDispatcher errors,
+  custom exception context, user ID association, custom keys and logs.
+- Performance: screen view traces, HTTP request traces, custom metrics,
+  user attributes for segmentation.
+- App icons: `flutter_launcher_icons` config for Android/iOS/Web,
+  adaptive icon support, placeholder SVG assets and generation guide.
+- Splash screen: `flutter_native_splash` config, brand color background,
+  centered icon, fullscreen support across platforms.
+- `flutter analyze` clean; all 114 tests pass.
 
 ## Design documents
 

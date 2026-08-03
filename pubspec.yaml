@@ -50,6 +50,10 @@ dependencies:
   flutter_map: ^8.3.1
   latlong2: ^0.10.1
   razorpay_flutter: ^1.4.5
+  firebase_core: ^3.15.0
+  firebase_crashlytics: ^4.3.0
+  firebase_performance: ^0.10.0
+  firebase_analytics: ^11.6.0
 
 dev_dependencies:
   flutter_test:
@@ -57,13 +61,9 @@ dev_dependencies:
   build_runner: ^2.4.15
   freezed: ^3.0.4
   json_serializable: ^6.9.4
-
-  # The "flutter_lints" package below contains a set of recommended lints to
-  # encourage good coding practices. The lint set provided by the package is
-  # activated in the `analysis_options.yaml` file located at the root of your
-  # package. See that file for information about deactivating specific lint
-  # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.4.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -106,3 +106,23 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# flutter_launcher_icons configuration
+flutter_launcher_icons:
+  android: true
+  ios: true
+  web:
+    generate: true
+  image_path: "assets/icons/app_icon.png"
+  adaptive_icon_background: "assets/icons/adaptive_background.png"
+  adaptive_icon_foreground: "assets/icons/adaptive_foreground.png"
+  remove_alpha_ios: true
+
+# flutter_native_splash configuration
+flutter_native_splash:
+  color: "#3F51B5"
+  image: "assets/icons/splash_icon.png"
+  android: true
+  ios: true
+  web: true
+  fullscreen: true
