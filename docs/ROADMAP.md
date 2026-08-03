@@ -10,7 +10,7 @@ with formatting, analysis, tests and a meaningful git commit.
 | 3 | Home, search, maps, venue listings/details, images, favorites | ✅ Done |
 | 4 | Availability calendar, slots, booking holds, atomic logic, concurrency tests | ✅ Done |
 | 5 | Razorpay orders, verification, webhooks, reconciliation, refunds | ✅ Done |
-| 6 | Events, institutes, courses, enrollment, tickets | ⏳ |
+| 6 | Events, institutes, courses, enrollment, tickets | ✅ Done |
 | 7 | Owner registration, venue management, requests, calendar, revenue, payouts | ⏳ |
 | 8 | Notifications, analytics, crash reporting, support, audit, admin | ⏳ |
 | 9 | Performance, accessibility, security, CI/CD, docs, store readiness | ⏳ |
@@ -141,6 +141,46 @@ with formatting, analysis, tests and a meaningful git commit.
   fresh database; concurrency suite still 4/4; full 0001–0011 migration
   suite applies cleanly.
 - `flutter analyze` clean; 62 unit/widget tests pass; web release builds.
+
+## Milestone 6 — completed deliverable
+
+- Migration `0012_events_enrollment.sql`: `event_registrations` table (unique
+  `(event_id, user_id)`, `registered`/`cancelled`/`checked_in`) + RLS, and
+  atomic, capacity-safe functions using the same advisory-lock pattern as
+  booking holds: `register_for_event` (publishes nothing but validates
+  published + future events and counts live registrations), 
+  `cancel_event_registration`, `enroll_in_course` (idempotent, recounts
+  `course_batches.enrolled_count`), and `drop_course_enrollment`. Seeds demo
+  events (Hyderabad Music Night, AI Product Strategy Workshop), an institute
+  (Nexus Learning), two courses and three batches.
+- Migration `0013_events_courses_read.sql`: security-definer read models so
+  client queries can see live capacity and their own state — `event_summaries`,
+  `event_detail` (with `registered_count` + `user_registered`) and
+  `my_enrolled_batches`.
+- New SQL suite `supabase/tests/events_courses.sql` — 6/6 PASS on a fresh
+  database: event registration, event capacity enforcement, cancel frees a
+  seat, course batch capacity + `enrolled_count` tracking, drop frees a seat,
+  and read-model counts/state. Concurrency 4/4 and payments/refunds 3/3 still
+  pass; full 0001–0013 migration suite applies cleanly.
+- Events domain (`Event`, `EventCategory`, `EventRegistration`) + courses
+  domain (`Institute`, `Course`, `CourseBatch`, `CourseMode`) with hand-written
+  JSON mapping; `EventRepository` + `CourseRepository` contracts.
+- `SupabaseEventRepository` (read models + RPC registration/cancel) and
+  `SupabaseCourseRepository` (course/batch reads with merged-in
+  `my_enrolled_batches` for accurate `userEnrolled`); typed errors for
+  sold-out/unavailable cases.
+- Events screens: list (upcoming, view-all), detail with live seats, date/time
+  and venue, plus a register/cancel bottom bar (registration via RPC,
+  confirmation dialog for cancel).
+- Courses screens: list (published, view-all), detail with mode/duration/
+  instructor/fee and per-batch enroll/drop buttons with seat counts and
+  full-batch disabled states.
+- Home screen: dynamic "Upcoming events" and "Courses" horizontal sections
+  (shown only when data exists) with view-all navigation.
+- Router: `/events`, `/events/:id`, `/courses`, `/courses/:id`.
+- Localization keys added in English + Telugu.
+- Tests: domain + widget tests for events and courses (22 new tests);
+  `flutter analyze` clean; 85 unit/widget tests pass; web release builds.
 
 ## Design documents
 

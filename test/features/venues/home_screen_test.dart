@@ -2,6 +2,8 @@ import 'package:bookmyspace/core/localization/app_localizations.dart';
 import 'package:bookmyspace/core/router/app_router.dart';
 import 'package:bookmyspace/features/auth/domain/auth_user.dart';
 import 'package:bookmyspace/features/auth/presentation/auth_providers.dart';
+import 'package:bookmyspace/features/courses/presentation/course_providers.dart';
+import 'package:bookmyspace/features/events/presentation/event_providers.dart';
 import 'package:bookmyspace/features/venues/presentation/venue_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -9,6 +11,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../auth/mock_auth_repository.dart';
+import '../courses/mock_course_repository.dart';
+import '../events/mock_event_repository.dart';
 import 'mock_venue_repository.dart';
 
 Widget _app(MockVenueRepository venueRepo, {MockAuthRepository? authRepo}) {
@@ -21,6 +25,8 @@ Widget _app(MockVenueRepository venueRepo, {MockAuthRepository? authRepo}) {
     overrides: [
       venueRepositoryProvider.overrideWithValue(venueRepo),
       authRepositoryProvider.overrideWithValue(auth),
+      eventRepositoryProvider.overrideWithValue(MockEventRepository()),
+      courseRepositoryProvider.overrideWithValue(MockCourseRepository()),
     ],
     child: MaterialApp.router(
       routerConfig: createAppRouter(

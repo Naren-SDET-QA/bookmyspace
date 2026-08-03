@@ -5,6 +5,8 @@ import 'package:bookmyspace/features/auth/presentation/auth_providers.dart';
 import 'package:bookmyspace/features/booking/domain/booking.dart';
 import 'package:bookmyspace/features/booking/presentation/booking_providers.dart';
 import 'package:bookmyspace/features/booking/presentation/screens/my_bookings_screen.dart';
+import 'package:bookmyspace/features/courses/presentation/course_providers.dart';
+import 'package:bookmyspace/features/events/presentation/event_providers.dart';
 import 'package:bookmyspace/features/payments/presentation/payment_providers.dart';
 import 'package:bookmyspace/features/venues/presentation/venue_providers.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +15,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../auth/mock_auth_repository.dart';
+import '../courses/mock_course_repository.dart';
+import '../events/mock_event_repository.dart';
 import '../payments/mock_payment_repository.dart';
 import '../venues/mock_venue_repository.dart';
 import 'mock_booking_repository.dart';
@@ -31,6 +35,8 @@ Widget _app(
           initialUser: const AuthUser(id: 'u1', email: 'a@b.com'),
         ),
       ),
+      eventRepositoryProvider.overrideWithValue(MockEventRepository()),
+      courseRepositoryProvider.overrideWithValue(MockCourseRepository()),
     ],
     child: MaterialApp.router(
       routerConfig: createAppRouter(

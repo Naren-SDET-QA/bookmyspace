@@ -8,6 +8,10 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/skeleton.dart';
+import '../../../courses/presentation/course_providers.dart';
+import '../../../courses/presentation/widgets/course_card.dart';
+import '../../../events/presentation/event_providers.dart';
+import '../../../events/presentation/widgets/event_card.dart';
 import '../../../venues/domain/venue.dart';
 import '../../../venues/presentation/venue_providers.dart';
 import '../../../venues/presentation/widgets/venue_card.dart';
@@ -23,6 +27,8 @@ class HomeScreen extends ConsumerWidget {
     final popular = ref.watch(popularVenuesProvider);
     final nearby = ref.watch(nearbyVenuesProvider);
     final categories = ref.watch(venueCategoriesProvider);
+    final events = ref.watch(upcomingEventsProvider);
+    final courses = ref.watch(publishedCoursesProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -44,6 +50,8 @@ class HomeScreen extends ConsumerWidget {
           ref.invalidate(popularVenuesProvider);
           ref.invalidate(nearbyVenuesProvider);
           ref.invalidate(venueCategoriesProvider);
+          ref.invalidate(upcomingEventsProvider);
+          ref.invalidate(publishedCoursesProvider);
         },
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -61,6 +69,32 @@ class HomeScreen extends ConsumerWidget {
               error: (_, _) => const SizedBox(height: 92),
             ),
             const SizedBox(height: 24),
+            _DynamicSection(
+              async: events,
+              title: l10n.upcomingEvents,
+              onViewAll: () => context.push(AppRoutes.eventsList),
+              loading: const _LoadingCardRow(),
+              itemBuilder: (items) => _HorizontalList(
+                items: items
+                    .map(
+                      (e) => SizedBox(width: 280, child: EventCard(event: e)),
+                    )
+                    .toList(),
+              ),
+            ),
+            _DynamicSection(
+              async: courses,
+              title: l10n.courses,
+              onViewAll: () => context.push(AppRoutes.coursesList),
+              loading: const _LoadingCardRow(),
+              itemBuilder: (items) => _HorizontalList(
+                items: items
+                    .map(
+                      (c) => SizedBox(width: 280, child: CourseCard(course: c)),
+                    )
+                    .toList(),
+              ),
+            ),
             _SectionHeader(title: l10n.popularVenues, onViewAll: null),
             const SizedBox(height: 8),
             popular.when(
@@ -183,6 +217,91 @@ class _VenueGrid extends StatelessWidget {
       ),
       itemCount: venues.length,
       itemBuilder: (context, i) => VenueCard(venue: venues[i]),
+    );
+  }
+}
+
+/// A horizontal, scrollable row of fixed-width cards.
+class _HorizontalList extends StatelessWidget {
+  const _HorizontalList({required this.items});
+
+  final List<Widget> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 260,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: items.length,
+        separatorBuilder: (context, i) => const SizedBox(width: 12),
+        itemBuilder: (context, i) => items[i],
+      ),
+    );
+  }
+}
+
+/// Renders a titled horizontal section only when the data is non-empty.
+class _DynamicSection<T> extends StatelessWidget {
+  const _DynamicSection({
+    required this.async,
+    required this.title,
+    required this.onViewAll,
+    required this.itemBuilder,
+    required this.loading,
+  });
+
+  final AsyncValue<List<T>> async;
+  final String title;
+  final VoidCallback? onViewAll;
+  final Widget Function(List<T> items) itemBuilder;
+  final Widget loading;
+
+  @override
+  Widget build(BuildContext context) {
+    if (async.isLoading && !async.hasValue) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            loading,
+          ],
+        ),
+      );
+    }
+    final items = async.valueOrNull;
+    if (items == null || items.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SectionHeader(title: title, onViewAll: onViewAll),
+          const SizedBox(height: 8),
+          itemBuilder(items),
+        ],
+      ),
+    );
+  }
+}
+
+class _LoadingCardRow extends StatelessWidget {
+  const _LoadingCardRow();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      height: 260,
+      child: Row(
+        children: [
+          Expanded(child: SkeletonBox(height: 260, radius: 16)),
+          SizedBox(width: 12),
+          Expanded(child: SkeletonBox(height: 260, radius: 16)),
+        ],
+      ),
     );
   }
 }

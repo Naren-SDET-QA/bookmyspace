@@ -6,6 +6,10 @@ import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/booking/domain/booking.dart';
 import '../../features/booking/presentation/screens/booking_screen.dart';
 import '../../features/booking/presentation/screens/my_bookings_screen.dart';
+import '../../features/courses/presentation/screens/course_detail_screen.dart';
+import '../../features/courses/presentation/screens/courses_list_screen.dart';
+import '../../features/events/presentation/screens/event_detail_screen.dart';
+import '../../features/events/presentation/screens/events_list_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/payments/presentation/screens/payment_screen.dart';
@@ -30,6 +34,10 @@ abstract class AppRoutes {
   static const venueDetails = '/venues/:id';
   static const bookingFlow = '/venues/:id/book';
   static const paymentFlow = '/bookings/:id/pay';
+  static const eventsList = '/events';
+  static const eventDetails = '/events/:id';
+  static const coursesList = '/courses';
+  static const courseDetails = '/courses/:id';
 }
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -94,6 +102,28 @@ GoRouter createAppRouter({
           }
           return BookingScreen(venue: venue);
         },
+      ),
+      GoRoute(
+        path: AppRoutes.eventsList,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const EventsListScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.eventDetails,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) =>
+            EventDetailScreen(eventId: state.pathParameters['id'] ?? ''),
+      ),
+      GoRoute(
+        path: AppRoutes.coursesList,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const CoursesListScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.courseDetails,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) =>
+            CourseDetailScreen(courseId: state.pathParameters['id'] ?? ''),
       ),
       GoRoute(
         path: AppRoutes.paymentFlow,

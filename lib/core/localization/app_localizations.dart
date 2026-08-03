@@ -111,6 +111,37 @@ class AppLocalizations {
   String get courses => _t('courses');
   String get searchHint => _t('searchHint');
 
+  // Events
+  String get upcomingEvents => _t('upcomingEvents');
+  String get noUpcomingEvents => _t('noUpcomingEvents');
+  String get noUpcomingEventsMessage => _t('noUpcomingEventsMessage');
+  String get freeEvent => _t('freeEvent');
+  String get registerNow => _t('registerNow');
+  String get registered => _t('registered');
+  String get seatsLeft => _t('seatsLeft');
+  String get soldOut => _t('soldOut');
+  String get yourTicket => _t('yourTicket');
+  String get cancelRegistration => _t('cancelRegistration');
+  String get cancelRegistrationConfirm => _t('cancelRegistrationConfirm');
+  String get registrationCancelled => _t('registrationCancelled');
+
+  // Courses
+  String get noCourses => _t('noCourses');
+  String get noCoursesMessage => _t('noCoursesMessage');
+  String get enrollNow => _t('enrollNow');
+  String get enrolled => _t('enrolled');
+  String get enrollInCourse => _t('enrollInCourse');
+  String get courseFee => _t('courseFee');
+  String get durationWeeks => _t('durationWeeks');
+  String get instructor => _t('instructor');
+  String get batchStartsOn => _t('batchStartsOn');
+  String get modeOnline => _t('modeOnline');
+  String get modeOffline => _t('modeOffline');
+  String get modeHybrid => _t('modeHybrid');
+  String get dropEnrollment => _t('dropEnrollment');
+  String get dropEnrollmentConfirm => _t('dropEnrollmentConfirm');
+  String get enrollmentDropped => _t('enrollmentDropped');
+
   // Booking
   String get selectDate => _t('selectDate');
   String get selectTimeSlot => _t('selectTimeSlot');
@@ -273,6 +304,37 @@ class AppLocalizations {
       'events': 'Events',
       'courses': 'Courses',
       'searchHint': 'Search venues, areas, categories…',
+      'upcomingEvents': 'Upcoming events',
+      'noUpcomingEvents': 'No upcoming events',
+      'noUpcomingEventsMessage':
+          'New events will appear here as organisations publish them.',
+      'freeEvent': 'Free',
+      'registerNow': 'Register now',
+      'registered': 'Registered',
+      'seatsLeft': '{count} seats left',
+      'soldOut': 'Sold out',
+      'yourTicket': 'Your ticket',
+      'cancelRegistration': 'Cancel registration',
+      'cancelRegistrationConfirm':
+          'Cancel your registration for this event? Your seat will be released.',
+      'registrationCancelled': 'Registration cancelled',
+      'noCourses': 'No courses yet',
+      'noCoursesMessage':
+          'Courses from verified institutes will appear here when published.',
+      'enrollNow': 'Enroll now',
+      'enrolled': 'Enrolled',
+      'enrollInCourse': 'Enroll in course',
+      'courseFee': 'Course fee',
+      'durationWeeks': '{weeks} weeks',
+      'instructor': 'Instructor',
+      'batchStartsOn': 'Starts',
+      'modeOnline': 'Online',
+      'modeOffline': 'Offline',
+      'modeHybrid': 'Hybrid',
+      'dropEnrollment': 'Drop enrollment',
+      'dropEnrollmentConfirm':
+          'Drop your enrollment in this batch? Your seat will be released.',
+      'enrollmentDropped': 'Enrollment dropped',
       'selectDate': 'Select a date',
       'selectTimeSlot': 'Select a time slot',
       'availability': 'Availability',
@@ -426,6 +488,37 @@ class AppLocalizations {
       'events': 'ఈవెంట్స్',
       'courses': 'కోర్సులు',
       'searchHint': 'వేదికలు, ప్రాంతాలు, వర్గాలను వెతకండి…',
+      'upcomingEvents': 'రాబోయే ఈవెంట్స్',
+      'noUpcomingEvents': 'రాబోయే ఈవెంట్స్ లేవు',
+      'noUpcomingEventsMessage':
+          'సంస్థలు ప్రచురించిన కొత్త ఈవెంట్స్ ఇక్కడ కనిపిస్తాయి.',
+      'freeEvent': 'ఉచితం',
+      'registerNow': 'ఇప్పుడే నమోదు చేయండి',
+      'registered': 'నమోదు చేయబడింది',
+      'seatsLeft': '{count} సీట్లు మిగిలి ఉన్నాయి',
+      'soldOut': 'అన్నీ అమ్ముడయ్యాయి',
+      'yourTicket': 'మీ టికెట్',
+      'cancelRegistration': 'నమోదు రద్దు చేయండి',
+      'cancelRegistrationConfirm':
+          'ఈ ఈవెంట్‌కు మీ నమోదును రద్దు చేయాలా? మీ సీటు విడుదల అవుతుంది.',
+      'registrationCancelled': 'నమోదు రద్దు చేయబడింది',
+      'noCourses': 'ఇంకా కోర్సులు లేవు',
+      'noCoursesMessage':
+          'ధృవీకరించబడిన సంస్థల నుండి కోర్సులు ప్రచురించినప్పుడు ఇక్కడ కనిపిస్తాయి.',
+      'enrollNow': 'ఇప్పుడే చేరండి',
+      'enrolled': 'చేరారు',
+      'enrollInCourse': 'కోర్సులో చేరండి',
+      'courseFee': 'కోర్సు ఫీజు',
+      'durationWeeks': '{weeks} వారాలు',
+      'instructor': 'బోధకుడు',
+      'batchStartsOn': 'ప్రారంభం',
+      'modeOnline': 'ఆన్‌లైన్',
+      'modeOffline': 'ఆఫ్‌లైన్',
+      'modeHybrid': 'హైబ్రిడ్',
+      'dropEnrollment': 'చేరికను వదిలివేయండి',
+      'dropEnrollmentConfirm':
+          'ఈ బ్యాచ్‌లో మీ చేరికను వదిలివేయాలా? మీ సీటు విడుదల అవుతుంది.',
+      'enrollmentDropped': 'చేరిక విడిచిపెట్టబడింది',
       'selectDate': 'తేదీని ఎంచుకోండి',
       'selectTimeSlot': 'టైమ్ స్లాట్ ఎంచుకోండి',
       'availability': 'అందుబాటు',
