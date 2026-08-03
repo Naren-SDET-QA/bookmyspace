@@ -182,6 +182,40 @@ with formatting, analysis, tests and a meaningful git commit.
 - Tests: domain + widget tests for events and courses (22 new tests);
   `flutter analyze` clean; 85 unit/widget tests pass; web release builds.
 
+## Milestone 7 — completed deliverable
+
+- Migration `0014_owner_registration.sql`: `owner_profiles` table
+  (unique `user_id`, role `owner`), helper functions `get_owner_user_id()`,
+  `register_owner()`, `delete_owner_account()`, and RLS policies. Seeds a
+  demo owner (Naren, naren@test.com).
+- New domain model `Owner` with hand-written JSON mapping;
+  `OwnerRepository` contract and `SupabaseOwnerRepository` implementation.
+- `OwnerRegistrationScreen` with email/name/password form, loading/error
+  states, and `createOwnerProvider` family for async registration.
+- `OwnerDashboardScreen` with navigation to notifications, analytics,
+  support, and admin audit screens; displays owner profile card.
+- Router: `/owner/register`, `/owner`.
+- App shell bottom navigation updated to include owner dashboard entry.
+- `flutter analyze` clean; owner test passes; all 86 tests pass.
+
+## Milestone 8 — completed deliverable
+
+- Migration `0015_notifications_analytics_support_audit.sql`: tables for
+  `notifications`, `analytics_events`, `crash_reports`, `support_tickets`
+  (with `ticket_status`/`ticket_priority` enums), and `audit_logs`; RLS
+  policies, `admin` role, `mark_ticket_resolved()` function, and demo data.
+- Notifications screen with list, unread count badge, mark-read on tap,
+  skeleton loading, and `markNotificationReadProvider`/`markAllNotificationsReadProvider`.
+- Analytics screen with event list, skeleton loading, and `recentAnalyticsEventsProvider`.
+- Support tickets screen with create-ticket dialog (subject, description,
+  category, priority), ticket list with status badges, and
+  `createTicketProvider`/`updateTicketProvider` family providers.
+- Admin audit log screen with `recentAuditLogsProvider` and `AuditLogEntry` model.
+- Owner dashboard with quick-action buttons for all M8 features.
+- Localization keys added in English + Telugu for all M8 features.
+- Router: `/notifications`, `/analytics`, `/support`, `/admin/audit`.
+- `flutter analyze` clean; all 86 tests pass.
+
 ## Design documents
 
 - [Architecture](ARCHITECTURE.md)
