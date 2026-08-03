@@ -191,6 +191,8 @@ class AppLocalizations {
 
   // Owner
   String get ownerDashboard => _t('ownerDashboard');
+  String get myVenues => _t('myVenues');
+  String get createVenue => _t('createVenue');
   String get ownerVenues => _t('ownerVenues');
   String get ownerRequests => _t('ownerRequests');
   String get ownerCalendar => _t('ownerCalendar');
@@ -399,7 +401,9 @@ class AppLocalizations {
       'otpSent': 'We sent you a verification code.',
       'authFailed': 'Authentication failed. Please try again.',
       'ownerDashboard': 'Owner dashboard',
-      'ownerVenues': 'My venues',
+      'myVenues': 'My Venues',
+      'createVenue': 'Create Venue',
+      'ownerVenues': 'Owner Venues',
       'ownerRequests': 'Booking requests',
       'ownerCalendar': 'Calendar',
       'earnings': 'Earnings',
@@ -604,7 +608,9 @@ class AppLocalizations {
       'otpSent': 'మేము మీకు ధృవీకరణ కోడ్ పంపాము.',
       'authFailed': 'ప్రమాణీకరణ విఫలమైంది. దయచేసి మళ్లీ ప్రయత్నించండి.',
       'ownerDashboard': 'యజమాని డాష్‌బోర్డ్',
-      'ownerVenues': 'నా వేదికలు',
+      'myVenues': 'నా వేదికలు',
+      'createVenue': 'వేదికను సృష్టించండి',
+      'ownerVenues': 'యజమాని వేదికలు',
       'ownerRequests': 'బుకింగ్ అభ్యర్థనలు',
       'ownerCalendar': 'క్యాలెండర్',
       'earnings': 'ఆదాయాలు',

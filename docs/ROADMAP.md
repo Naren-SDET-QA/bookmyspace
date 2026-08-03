@@ -14,6 +14,7 @@ with formatting, analysis, tests and a meaningful git commit.
 | 7 | Owner registration, venue management, requests, calendar, revenue, payouts | ✅ Done |
 | 8 | Notifications, analytics, crash reporting, support, audit, admin | ✅ Done |
 | 9 | Performance, accessibility, security, CI/CD, docs, store readiness | ✅ Done |
+| 10 | Owner venue management, reviews/ratings, venue CRUD | ⏳ |
 
 ## Milestone 1 — completed deliverable
 
@@ -235,6 +236,26 @@ with formatting, analysis, tests and a meaningful git commit.
 - Settings screen wired to legal pages (`/privacy`, `/terms`).
 - 28 new tests (validators, retry, accessibility, rate limiter);
   `flutter analyze` clean; 114 total tests pass.
+
+## Milestone 10 — completed deliverable
+
+- Migration `0016_reviews_venue_management.sql`: `reviews` table with
+  rating, title, body, verification flag; unique per user/venue; RLS for
+  author-only write. Trigger to auto-update venue `avg_rating` and
+  `rating_count`. Helper RPCs: `get_owner_venues`, `create_owner_venue`,
+  `update_owner_venue`, `delete_owner_venue`. Seeds 3 demo reviews.
+- Owner venue management: `OwnerVenuesScreen` (list with status badges,
+  ratings, prices), `CreateVenueScreen` (form with category dropdown, city/
+  state, capacity, pricing). RPC-backed Supabase implementation with
+  ownership checks.
+- Reviews system: `VenueReviewsSection` widget showing review list with
+  star ratings, verified badges, and date. Dialog to submit new review
+  with 5-star rating picker. `ReviewRepository` + `SupabaseReviewRepository`.
+- New routes: `/owner/venues`, `/owner/venues/create`. Owner dashboard
+  quick action for venue management.
+- Localization keys added in English + Telugu for owner venues, create
+  venue, and reviews.
+- `flutter analyze` clean; 114 tests pass.
 
 ## Design documents
 
