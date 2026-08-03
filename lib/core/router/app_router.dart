@@ -3,10 +3,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/domain/auth_user.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
+import '../../features/booking/domain/booking.dart';
 import '../../features/booking/presentation/screens/booking_screen.dart';
 import '../../features/booking/presentation/screens/my_bookings_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
+import '../../features/payments/presentation/screens/payment_screen.dart';
 import '../../features/saved/presentation/screens/saved_screen.dart';
 import '../../features/search/presentation/screens/search_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
@@ -27,6 +29,7 @@ abstract class AppRoutes {
   static const login = '/login';
   static const venueDetails = '/venues/:id';
   static const bookingFlow = '/venues/:id/book';
+  static const paymentFlow = '/bookings/:id/pay';
 }
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -90,6 +93,19 @@ GoRouter createAppRouter({
             );
           }
           return BookingScreen(venue: venue);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.paymentFlow,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) {
+          final extra = state.extra;
+          final booking = extra is Booking ? extra : null;
+          if (booking == null) {
+            // Deep link without a booking object — show the bookings tab.
+            return const MyBookingsScreen();
+          }
+          return PaymentScreen(booking: booking);
         },
       ),
       StatefulShellRoute.indexedStack(

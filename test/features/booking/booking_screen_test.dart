@@ -5,6 +5,7 @@ import 'package:bookmyspace/features/auth/presentation/auth_providers.dart';
 import 'package:bookmyspace/features/booking/domain/booking.dart';
 import 'package:bookmyspace/features/booking/presentation/booking_providers.dart';
 import 'package:bookmyspace/features/booking/presentation/screens/my_bookings_screen.dart';
+import 'package:bookmyspace/features/payments/presentation/payment_providers.dart';
 import 'package:bookmyspace/features/venues/presentation/venue_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -12,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../auth/mock_auth_repository.dart';
+import '../payments/mock_payment_repository.dart';
 import '../venues/mock_venue_repository.dart';
 import 'mock_booking_repository.dart';
 
@@ -170,5 +172,56 @@ void main() {
     final remaining = await bookingRepo.myBookings();
     expect(remaining.length, 1);
     expect(remaining.first.id, 'b2');
+  });
+
+  testWidgets('confirmed bookings show a refund action that requests one', (
+    tester,
+  ) async {
+    final bookingRepo = MockBookingRepository(
+      bookings: [
+        MockBookingRepository.sampleBooking(status: BookingStatus.confirmed),
+      ],
+    );
+    final paymentRepo = MockPaymentRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          bookingRepositoryProvider.overrideWithValue(bookingRepo),
+          paymentRepositoryProvider.overrideWithValue(paymentRepo),
+          authRepositoryProvider.overrideWithValue(
+            MockAuthRepository(
+              initialUser: const AuthUser(id: 'u1', email: 'a@b.com'),
+            ),
+          ),
+        ],
+        child: const MaterialApp(
+          home: MyBookingsScreen(),
+          localizationsDelegates: [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // A confirmed booking offers a refund, not a cancel.
+    expect(find.text('Request refund'), findsOneWidget);
+    expect(find.text('Cancel booking'), findsNothing);
+
+    await tester.tap(find.text('Request refund'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('full refund'), findsOneWidget);
+    await tester.tap(find.text('Request refund').last);
+    await tester.pumpAndSettle();
+
+    expect(paymentRepo.lastRefundBookingId, 'b1');
+    expect(paymentRepo.lastRefundAmount, 41300);
+    expect(find.textContaining('Refund requested'), findsOneWidget);
   });
 }

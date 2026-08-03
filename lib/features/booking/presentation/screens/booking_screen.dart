@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/localization/app_localizations.dart';
@@ -15,7 +18,7 @@ import '../booking_providers.dart';
 ///
 /// The slot lock is acquired atomically on the server (via the
 /// `create-booking-hold` Edge Function) when the user confirms, then a
-/// `pending` booking row is created. Payment arrives in Milestone 5.
+/// `pending` booking row is created and the payment flow is entered.
 class BookingScreen extends ConsumerStatefulWidget {
   const BookingScreen({super.key, required this.venue});
 
@@ -155,12 +158,8 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
       );
       ref.invalidate(myBookingsProvider);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${l10n.bookingConfirmed} ${booking.bookingRef}'),
-        ),
-      );
-      Navigator.of(context).pop(true);
+      // Enter the payment flow with the freshly created pending booking.
+      unawaited(context.push('/bookings/${booking.id}/pay', extra: booking));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(

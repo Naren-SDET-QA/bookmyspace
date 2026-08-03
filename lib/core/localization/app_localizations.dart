@@ -122,6 +122,12 @@ class AppLocalizations {
   String get paymentSuccess => _t('paymentSuccess');
   String get paymentFailed => _t('paymentFailed');
   String get paymentPending => _t('paymentPending');
+  String get paymentCancelled => _t('paymentCancelled');
+  String get verifyingPayment => _t('verifyingPayment');
+  String get paymentPendingMessage => _t('paymentPendingMessage');
+  String get requestRefund => _t('requestRefund');
+  String get requestRefundConfirm => _t('requestRefundConfirm');
+  String get refundRequested => _t('refundRequested');
   String get myBookings => _t('myBookings');
   String get noSlotsForDate => _t('noSlotsForDate');
   String get total => _t('total');
@@ -277,6 +283,14 @@ class AppLocalizations {
       'paymentSuccess': 'Payment successful',
       'paymentFailed': 'Payment failed',
       'paymentPending': 'Payment pending',
+      'paymentCancelled': 'Payment was cancelled. You can try again.',
+      'verifyingPayment': 'Verifying your payment…',
+      'paymentPendingMessage':
+          'Payment received. We are confirming your booking.',
+      'requestRefund': 'Request refund',
+      'requestRefundConfirm':
+          'Request a full refund for this booking? This cannot be undone.',
+      'refundRequested': 'Refund requested — it will be processed shortly.',
       'myBookings': 'My bookings',
       'noSlotsForDate': 'No slots available on this date',
       'total': 'Total',
@@ -422,6 +436,16 @@ class AppLocalizations {
       'paymentSuccess': 'చెల్లింపు విజయవంతమైంది',
       'paymentFailed': 'చెల్లింపు విఫలమైంది',
       'paymentPending': 'చెల్లింపు పెండింగ్‌లో ఉంది',
+      'paymentCancelled':
+          'చెల్లింపు రద్దు చేయబడింది. మీరు మళ్లీ ప్రయత్నించవచ్చు.',
+      'verifyingPayment': 'మీ చెల్లింపు ధృవీకరిస్తోంది…',
+      'paymentPendingMessage':
+          'చెల్లింపు అందింది. మీ బుకింగ్‌ను నిర్ధారిస్తున్నాము.',
+      'requestRefund': 'వాపసు అభ్యర్థించండి',
+      'requestRefundConfirm':
+          'ఈ బుకింగ్‌కు పూర్తి వాపసు అభ్యర్థించాలా? దీన్ని రద్దు చేయలేము.',
+      'refundRequested':
+          'వాపసు అభ్యర్థించబడింది — త్వరలో ప్రాసెస్ చేయబడుతుంది.',
       'myBookings': 'నా బుకింగ్స్',
       'noSlotsForDate': 'ఈ తేదీన స్లాట్‌లు అందుబాటులో లేవు',
       'total': 'మొత్తం',

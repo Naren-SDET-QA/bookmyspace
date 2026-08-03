@@ -9,7 +9,7 @@ with formatting, analysis, tests and a meaningful git commit.
 | 2 | Supabase setup, migrations, auth, profiles, roles, RLS | ✅ Done |
 | 3 | Home, search, maps, venue listings/details, images, favorites | ✅ Done |
 | 4 | Availability calendar, slots, booking holds, atomic logic, concurrency tests | ✅ Done |
-| 5 | Razorpay orders, verification, webhooks, reconciliation, refunds | ⏳ Next |
+| 5 | Razorpay orders, verification, webhooks, reconciliation, refunds | ✅ Done |
 | 6 | Events, institutes, courses, enrollment, tickets | ⏳ |
 | 7 | Owner registration, venue management, requests, calendar, revenue, payouts | ⏳ |
 | 8 | Notifications, analytics, crash reporting, support, audit, admin | ⏳ |
@@ -105,6 +105,42 @@ with formatting, analysis, tests and a meaningful git commit.
 - Localization keys added in English + Telugu.
 - `flutter analyze` clean; 49 unit/widget tests pass; web release builds;
   concurrency suite still 4/4 on a fresh database.
+
+## Milestone 5 — completed deliverable
+
+- `create-payment-order` and `razorpay-webhook` Edge Functions (order
+  creation with server-side amount validation; HMAC-verified, idempotent
+  webhook that confirms bookings on `payment.captured` and records failures)
+  were already scaffolded in M2 — wired into the app in this milestone.
+- New `create-refund` Edge Function: validates the booking belongs to the
+  user and is `confirmed`, finds the captured payment, calls the Razorpay
+  refunds API, writes a `refunds` row, and moves booking + payment to
+  `refunded`. Guards against invalid amounts and duplicate refunds.
+- Payment domain: `Payment`, `PaymentOrder`, `Refund`, `PaymentStatus`
+  (hand-written JSON mapping), `PaymentRepository` interface, and a
+  `CheckoutService` abstraction.
+- `SupabasePaymentRepository`: order creation + refunds via Edge Functions,
+  booking-status verification (webhook-driven confirmation), and the user's
+  payments list. Maps `booking_not_found` / `not_refundable` /
+  `already_refunded` etc. to typed exceptions.
+- Checkout service abstraction with a real Razorpay implementation
+  (`razorpay_flutter`, refuses placeholder keys with a
+  `ConfigurationException`) and a fake for tests/web.
+- Payment flow screen: booking summary, creates the order, opens checkout,
+  then polls the booking status until the webhook confirms it (paid /
+  pending / failed / cancelled states).
+- Booking flow now navigates to payment after creating the pending booking.
+- My Bookings: confirmed bookings offer a "Request refund" action with a
+  confirmation dialog; refunds invalidate the list and show a snackbar.
+- Router: `/bookings/:id/pay` payment flow (booking passed via `extra`,
+  falls back to the bookings tab on deep link).
+- New dependency: `razorpay_flutter`.
+- Localization keys added in English + Telugu.
+- New SQL test suite `supabase/tests/payments_refunds.sql` (confirmed-booking
+  refund, pending-booking rejection, duplicate-refund guard) — 3/3 PASS on a
+  fresh database; concurrency suite still 4/4; full 0001–0011 migration
+  suite applies cleanly.
+- `flutter analyze` clean; 62 unit/widget tests pass; web release builds.
 
 ## Design documents
 

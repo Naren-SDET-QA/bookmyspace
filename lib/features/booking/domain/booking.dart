@@ -150,6 +150,9 @@ class Booking {
 
   bool get canCancel => status == BookingStatus.pending;
 
+  /// Confirmed (captured) bookings can be refunded.
+  bool get canRefund => status == BookingStatus.confirmed;
+
   String get displayStart =>
       startTime.length >= 5 ? startTime.substring(0, 5) : startTime;
   String get displayEnd =>

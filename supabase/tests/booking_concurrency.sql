@@ -14,11 +14,14 @@
 create or replace function test_setup_fixture()
 returns void language plpgsql as $$
 begin
-  delete from public.booking_holds;
+  delete from public.refunds;
+  delete from public.payments;
   delete from public.bookings;
+  delete from public.booking_holds;
   delete from public.time_slots;
   delete from public.venues;
   delete from public.organizations;
+  delete from auth.users;
 
   insert into auth.users (id, email) values
     (gen_random_uuid(), 'owner@test.com'),

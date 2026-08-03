@@ -6,6 +6,7 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/error_view.dart';
+import '../../../payments/presentation/payment_providers.dart';
 import '../../../venues/presentation/widgets/venue_badges.dart';
 import '../../domain/booking.dart';
 import '../booking_providers.dart';
@@ -56,6 +57,44 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
     }
   }
 
+  Future<void> _requestRefund(Booking booking) async {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.requestRefund),
+        content: Text(l10n.requestRefundConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.keep),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.requestRefund),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await ref
+          .read(paymentRepositoryProvider)
+          .requestRefund(bookingId: booking.id, amount: booking.totalAmount);
+      ref.invalidate(myBookingsProvider);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.refundRequested)));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -87,6 +126,9 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                   onCancel: list[i].canCancel
                       ? () => _cancelBooking(list[i])
                       : null,
+                  onRefund: list[i].canRefund
+                      ? () => _requestRefund(list[i])
+                      : null,
                 ),
               ),
             ),
@@ -98,10 +140,11 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
 }
 
 class _BookingCard extends StatelessWidget {
-  const _BookingCard({required this.booking, this.onCancel});
+  const _BookingCard({required this.booking, this.onCancel, this.onRefund});
 
   final Booking booking;
   final VoidCallback? onCancel;
+  final VoidCallback? onRefund;
 
   @override
   Widget build(BuildContext context) {
@@ -188,6 +231,17 @@ class _BookingCard extends StatelessWidget {
                   onPressed: onCancel,
                   icon: const Icon(Icons.cancel_outlined, size: 18),
                   label: Text(l10n.cancelBooking),
+                ),
+              ),
+            ],
+            if (onRefund != null) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: onRefund,
+                  icon: const Icon(Icons.currency_rupee_rounded, size: 18),
+                  label: Text(l10n.requestRefund),
                 ),
               ),
             ],
