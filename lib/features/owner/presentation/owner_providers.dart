@@ -16,15 +16,20 @@ final currentOwnerProvider = FutureProvider<Owner?>((ref) {
 });
 
 /// Sign in with email/password for owners.
-final ownerSignInProvider = FutureProvider<Owner>((ref, email, password) {
-  return ref.watch(ownerRepositoryProvider).signInWithEmailPassword(email, password);
+final ownerSignInProvider = FutureProvider.autoDispose.family<
+    Owner, ({String email, String password})>((ref, params) async {
+  return ref.watch(ownerRepositoryProvider).signInWithEmailPassword(
+        params.email,
+        params.password,
+      );
 });
 
 /// Create a new owner profile.
-final createOwnerProvider = FutureProvider<Owner>((ref, email, name, password) {
+final createOwnerProvider = FutureProvider.autoDispose.family<
+    Owner, ({String email, String name, String password})>((ref, params) async {
   return ref.watch(ownerRepositoryProvider).createOwner(
-    email: email,
-    name: name,
-    password: password,
-  );
+        email: params.email,
+        name: params.name,
+        password: params.password,
+      );
 });

@@ -1,7 +1,3 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
-
-import '../../../core/errors/app_exceptions.dart' as app_errors;
-
 /// Owner domain model (separate profile from user auth).
 class Owner {
   const Owner({

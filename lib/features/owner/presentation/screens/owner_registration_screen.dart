@@ -2,10 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/localization/app_localizations.dart';
-import '../../../../core/router/app_router.dart';
-import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/error_view.dart';
-import '../../../../core/widgets/skeleton.dart';
 import '../owner_providers.dart';
 
 /// Owner registration form with email/password.
@@ -33,7 +29,11 @@ class _OwnerRegistrationScreenState extends ConsumerState<OwnerRegistrationScree
   Future<void> _register() async {
     final l10n = AppLocalizations.of(context);
     final createOwner = ref.read(
-      createOwnerProvider(_emailController.text, _nameController.text, _passwordController.text).future,
+      createOwnerProvider((
+        email: _emailController.text,
+        name: _nameController.text,
+        password: _passwordController.text,
+      )).future,
     );
 
     try {
@@ -57,7 +57,11 @@ class _OwnerRegistrationScreenState extends ConsumerState<OwnerRegistrationScree
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final createOwner = ref.watch(
-      createOwnerProvider(_emailController.text, _nameController.text, _passwordController.text),
+      createOwnerProvider((
+        email: _emailController.text,
+        name: _nameController.text,
+        password: _passwordController.text,
+      )),
     );
 
     return Scaffold(

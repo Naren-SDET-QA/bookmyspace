@@ -202,10 +202,28 @@ class AppLocalizations {
   String get language => _t('language');
   String get themeMode => _t('themeMode');
   String get notifications => _t('notifications');
-  String get privacyPolicy => _t('privacyPolicy');
-  String get termsAndConditions => _t('termsAndConditions');
+  String get analytics => _t('analytics');
   String get support => _t('support');
-  String get deleteAccount => _t('deleteAccount');
+  String get auditLog => _t('auditLog');
+   String get priority => _t('priority');
+   String get noNotifications => _t('noNotifications');
+  String get unread => _t('unread');
+  String get noAnalyticsData => _t('noAnalyticsData');
+  String get noSupportTickets => _t('noSupportTickets');
+  String get newTicket => _t('newTicket');
+  String get resolved => _t('resolved');
+  String get open => _t('open');
+  String get inProgress => _t('inProgress');
+  String get closed => _t('closed');
+  String get adminReply => _t('adminReply');
+  String get noAdminReply => _t('noAdminReply');
+  String get ticketCreated => _t('ticketCreated');
+  String get ticketUpdated => _t('ticketUpdated');
+  String get admin => _t('admin');
+   String get noAuditLogs => _t('noAuditLogs');
+   String get privacyPolicy => _t('privacyPolicy');
+   String get termsAndConditions => _t('termsAndConditions');
+   String get deleteAccount => _t('deleteAccount');
   String get about => _t('about');
 
   // Errors
@@ -390,10 +408,28 @@ class AppLocalizations {
       'language': 'Language',
       'themeMode': 'Theme',
       'notifications': 'Notifications',
-      'privacyPolicy': 'Privacy policy',
-      'termsAndConditions': 'Terms & conditions',
+      'analytics': 'Analytics',
       'support': 'Support',
-      'deleteAccount': 'Delete account',
+      'auditLog': 'Audit Log',
+       'priority': 'Priority',
+       'noNotifications': 'No notifications',
+      'unread': 'Unread',
+      'noAnalyticsData': 'No analytics data',
+      'noSupportTickets': 'No support tickets',
+      'newTicket': 'New Ticket',
+      'resolved': 'Resolved',
+      'open': 'Open',
+      'inProgress': 'In Progress',
+      'closed': 'Closed',
+      'adminReply': 'Admin Reply',
+      'noAdminReply': 'No admin reply yet',
+      'ticketCreated': 'Ticket created',
+      'ticketUpdated': 'Ticket updated',
+      'admin': 'Admin',
+      'noAuditLogs': 'No audit logs',
+      'privacyPolicy': 'Privacy policy',
+       'termsAndConditions': 'Terms & conditions',
+       'deleteAccount': 'Delete account',
       'about': 'About',
       'errorNoInternet': 'No internet connection',
       'errorInvalidEmail': 'Enter a valid email address',
@@ -577,10 +613,28 @@ class AppLocalizations {
       'language': 'భాష',
       'themeMode': 'థీమ్',
       'notifications': 'నోటిఫికేషన్లు',
-      'privacyPolicy': 'గోప్యతా విధానం',
-      'termsAndConditions': 'నిబంధనలు & షరతులు',
+      'analytics': 'విశ్లేషణ',
       'support': 'సహాయం',
-      'deleteAccount': 'ఖాతాను తొలగించండి',
+      'auditLog': 'ఆడిట్ లాగ్',
+       'priority': 'ప్రాధాన్యత',
+       'noNotifications': 'నోటిఫికేషన్లు లేవు',
+      'unread': 'చదలపడలేదు',
+      'noAnalyticsData': 'విశ్లేషణ డేటా లేదు',
+      'noSupportTickets': 'సహాయ టికెట్లు లేవు',
+      'newTicket': 'కొత్త టికెట్',
+      'resolved': 'పరిష్కరించబడింది',
+      'open': 'తెరగింది',
+      'inProgress': 'ప్రక్రియలో',
+      'closed': 'మూసివేయబడింది',
+      'adminReply': 'నిర్వాహక స్పందన',
+      'noAdminReply': 'ఇంకా నిర్వాహక స్పందన లేదు',
+      'ticketCreated': 'టికెట్ సృష్టించబడింది',
+      'ticketUpdated': 'టికెట్ నవీకరించబడింది',
+      'admin': 'నిర్వాహకుడు',
+      'noAuditLogs': 'ఆడిట్ లాగ్లు లేవు',
+      'privacyPolicy': 'గోప్యతా విధానం',
+       'termsAndConditions': 'నిబంధనలు & షరతులు',
+       'deleteAccount': 'ఖాతాను తొలగించండి',
       'about': 'గురించి',
       'errorNoInternet': 'ఇంటర్నెట్ కనెక్షన్ లేదు',
       'errorInvalidEmail': 'చెల్లుబాటు అయ్యే ఇమెయిల్ నమోదు చేయండి',

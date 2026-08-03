@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/admin/presentation/screens/admin_audit_screen.dart';
+import '../../features/analytics/presentation/screens/analytics_screen.dart';
 import '../../features/auth/domain/auth_user.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/booking/domain/booking.dart';
@@ -11,11 +13,15 @@ import '../../features/courses/presentation/screens/courses_list_screen.dart';
 import '../../features/events/presentation/screens/event_detail_screen.dart';
 import '../../features/events/presentation/screens/events_list_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
+import '../../features/notifications/presentation/screens/notifications_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
+import '../../features/owner/presentation/screens/owner_dashboard_screen.dart';
+import '../../features/owner/presentation/screens/owner_registration_screen.dart';
 import '../../features/payments/presentation/screens/payment_screen.dart';
 import '../../features/saved/presentation/screens/saved_screen.dart';
 import '../../features/search/presentation/screens/search_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
+import '../../features/support/presentation/screens/support_screen.dart';
 import '../../features/venues/domain/venue.dart';
 import '../../features/venues/presentation/screens/venue_details_screen.dart';
 import '../localization/app_localizations.dart';
@@ -38,6 +44,12 @@ abstract class AppRoutes {
   static const eventDetails = '/events/:id';
   static const coursesList = '/courses';
   static const courseDetails = '/courses/:id';
+  static const notifications = '/notifications';
+  static const analytics = '/analytics';
+  static const support = '/support';
+  static const adminAudit = '/admin/audit';
+  static const ownerRegistration = '/owner/register';
+  static const ownerDashboard = '/owner';
 }
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -122,8 +134,39 @@ GoRouter createAppRouter({
       GoRoute(
         path: AppRoutes.courseDetails,
         parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) =>
-            CourseDetailScreen(courseId: state.pathParameters['id'] ?? ''),
+        builder: (context, state) => CourseDetailScreen(
+          courseId: state.pathParameters['id'] ?? '',
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.notifications,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const NotificationsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.analytics,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const AnalyticsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.support,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const SupportTicketsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminAudit,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const AdminAuditScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.ownerRegistration,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const OwnerRegistrationScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.ownerDashboard,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const OwnerDashboardScreen(),
       ),
       GoRoute(
         path: AppRoutes.paymentFlow,
@@ -220,6 +263,11 @@ class _AppShell extends StatelessWidget {
             label: l10n.navHome,
           ),
           NavigationDestination(
+            icon: const Icon(Icons.notifications_outlined),
+            selectedIcon: const Icon(Icons.notifications_rounded),
+            label: l10n.notifications,
+          ),
+          NavigationDestination(
             icon: const Icon(Icons.search_outlined),
             selectedIcon: const Icon(Icons.search_rounded),
             label: l10n.navSearch,
@@ -230,9 +278,9 @@ class _AppShell extends StatelessWidget {
             label: l10n.navBookings,
           ),
           NavigationDestination(
-            icon: const Icon(Icons.bookmark_outline_rounded),
-            selectedIcon: const Icon(Icons.bookmark_rounded),
-            label: l10n.navSaved,
+            icon: const Icon(Icons.school_outlined),
+            selectedIcon: const Icon(Icons.school_rounded),
+            label: l10n.courses,
           ),
           NavigationDestination(
             icon: const Icon(Icons.person_outline_rounded),
