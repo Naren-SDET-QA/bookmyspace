@@ -6,11 +6,7 @@ import 'package:flutter/material.dart';
 /// If the child is smaller than 44x44, transparent padding is added to
 /// meet the minimum without visually changing the widget.
 class MinTouchTarget extends StatelessWidget {
-  const MinTouchTarget({
-    super.key,
-    required this.child,
-    this.minSize = 44,
-  });
+  const MinTouchTarget({super.key, required this.child, this.minSize = 44});
 
   final Widget child;
   final double minSize;
@@ -18,10 +14,7 @@ class MinTouchTarget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ConstrainedBox(
-      constraints: BoxConstraints(
-        minWidth: minSize,
-        minHeight: minSize,
-      ),
+      constraints: BoxConstraints(minWidth: minSize, minHeight: minSize),
       child: child,
     );
   }
@@ -48,11 +41,7 @@ class AccessibleInkWell extends StatelessWidget {
       label: semanticsLabel,
       button: onTap != null,
       child: MinTouchTarget(
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: borderRadius,
-          child: child,
-        ),
+        child: InkWell(onTap: onTap, borderRadius: borderRadius, child: child),
       ),
     );
   }
@@ -81,10 +70,7 @@ class AccessibleIconButton extends StatelessWidget {
         label: semanticsLabel,
         button: onPressed != null,
         child: MinTouchTarget(
-          child: IconButton(
-            icon: Icon(icon),
-            onPressed: onPressed,
-          ),
+          child: IconButton(icon: Icon(icon), onPressed: onPressed),
         ),
       ),
     );

@@ -1,10 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/config/app_config.dart';
+import '../../../../core/errors/app_exceptions.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../domain/auth_user.dart';
 import '../auth_providers.dart';
 
 /// Authentication entry screen.
@@ -29,16 +34,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _otpSent = false;
   bool _busy = false;
   bool _otpBusy = false;
+  Timer? _resendTimer;
+  int _resendSeconds = 0;
   String? _error;
 
   @override
   void dispose() {
+    _resendTimer?.cancel();
     _contactController.dispose();
     _otpController.dispose();
     super.dispose();
   }
 
   Future<void> _sendOtp() async {
+    if (_busy || _resendSeconds > 0) return;
     if (!_formKey.currentState!.validate()) return;
     setState(() {
       _busy = true;
@@ -52,12 +61,41 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       } else {
         await repo.signInWithPhoneOtp(contact);
       }
+      if (!mounted) return;
+      _otpController.clear();
+      _otpInputKey.currentState?.reset();
       setState(() => _otpSent = true);
+      _startResendCooldown();
     } catch (e) {
-      setState(() => _error = e.toString());
+      if (mounted) {
+        setState(() {
+          _error = e is AppException ? e.message : e.toString();
+          if (e is AppException && e.code == 'over_email_send_rate_limit') {
+            _error =
+                'Too many code requests. Please wait a minute and try again.';
+          }
+        });
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  void _startResendCooldown() {
+    _resendTimer?.cancel();
+    setState(() => _resendSeconds = 60);
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_resendSeconds <= 1) {
+        timer.cancel();
+        setState(() => _resendSeconds = 0);
+      } else {
+        setState(() => _resendSeconds--);
+      }
+    });
   }
 
   Future<void> _verifyOtp() async {
@@ -77,7 +115,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         context.go(AppRoutes.shell);
       }
     } catch (e) {
-      setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _otpBusy = false);
     }
@@ -92,7 +130,39 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       await action.call();
       if (mounted) context.go(AppRoutes.shell);
     } catch (e) {
-      setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _developmentTestLogin(AppAccessRole expectedRole) async {
+    if (!AppConfig.developmentTestLoginEnabled || _busy) return;
+    final roleName = expectedRole.name;
+    final credentials = AppConfig.developmentTestCredentials[roleName];
+    if (credentials == null) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final repo = ref.read(authRepositoryProvider);
+      await repo.signInWithPassword(credentials.email, credentials.password);
+      final actualRole = await repo.resolveAccessRole();
+      if (actualRole != expectedRole) {
+        await repo.signOut();
+        throw AppError(
+          'Role mismatch: this account is ${actualRole.name}, not $roleName.',
+        );
+      }
+      if (!mounted) return;
+      context.go(switch (actualRole) {
+        AppAccessRole.customer => AppRoutes.shell,
+        AppAccessRole.owner => AppRoutes.ownerDashboard,
+        AppAccessRole.admin => AppRoutes.adminDashboard,
+      });
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -104,6 +174,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ? _OtpChannel.phone
           : _OtpChannel.email;
       _otpSent = false;
+      _resendTimer?.cancel();
+      _resendSeconds = 0;
       _otpController.clear();
       _contactController.clear();
     });
@@ -132,6 +204,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isEmail = _channel == _OtpChannel.email;
+    final socialAuthEnabled = AppConfig.environment != AppEnvironment.local;
 
     return Scaffold(
       body: SafeArea(
@@ -164,9 +237,43 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
+                  if (AppConfig.developmentTestLoginEnabled) ...[
+                    const SizedBox(height: 20),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.errorContainer,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'TEST MODE',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: theme.colorScheme.onErrorContainer,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    for (final role in AppAccessRole.values)
+                      if (AppConfig.developmentTestCredentials.containsKey(
+                        role.name,
+                      )) ...[
+                        OutlinedButton.icon(
+                          onPressed: _busy
+                              ? null
+                              : () => _developmentTestLogin(role),
+                          icon: const Icon(Icons.science_outlined),
+                          label: Text(
+                            '${role.name[0].toUpperCase()}${role.name.substring(1)} Test Login',
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                  ],
                   const SizedBox(height: 40),
                   FilledButton.icon(
-                    onPressed: _busy
+                    onPressed: _busy || !socialAuthEnabled
                         ? null
                         : () => _socialSignIn(
                             ref.read(authRepositoryProvider).signInWithGoogle,
@@ -176,7 +283,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: 16),
                   OutlinedButton.icon(
-                    onPressed: _busy
+                    onPressed: _busy || !socialAuthEnabled
                         ? null
                         : () => _socialSignIn(
                             ref.read(authRepositoryProvider).signInWithApple,
@@ -185,6 +292,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     label: Text(l10n.continueWithApple),
                   ),
                   const SizedBox(height: 24),
+                  if (!socialAuthEnabled) ...[
+                    Text(
+                      'Google and Apple sign-in are unavailable in local mode. Use email OTP below.',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   Row(
                     children: [
                       const Expanded(child: Divider()),
@@ -229,14 +346,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: 16),
                   FilledButton.tonalIcon(
-                    onPressed: _busy ? null : _sendOtp,
+                    onPressed: _busy || _resendSeconds > 0 ? null : _sendOtp,
                     icon: _busy
                         ? const SizedBox.square(
                             dimension: 18,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.sms_outlined),
-                    label: Text(_otpSent ? l10n.resendOtp : l10n.sendOtp),
+                    label: Text(
+                      _resendSeconds > 0
+                          ? 'Resend code in ${_resendSeconds}s'
+                          : _otpSent
+                          ? l10n.resendOtp
+                          : l10n.sendOtp,
+                    ),
                   ),
                   if (_otpSent) ...[
                     const SizedBox(height: 8),

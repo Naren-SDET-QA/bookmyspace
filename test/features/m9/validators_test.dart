@@ -102,5 +102,71 @@ void main() {
         expect(AppValidators.required('abc', minLength: 3), isNull);
       });
     });
+
+    group('priceRange', () {
+      test('returns null for valid ranges', () {
+        expect(AppValidators.priceRange(min: 100, max: 500), isNull);
+        expect(AppValidators.priceRange(min: null, max: 500), isNull);
+        expect(AppValidators.priceRange(), isNull);
+      });
+
+      test('rejects negative values', () {
+        expect(AppValidators.priceRange(min: -1), isNotNull);
+        expect(AppValidators.priceRange(max: -5), isNotNull);
+      });
+
+      test('rejects min greater than max', () {
+        expect(AppValidators.priceRange(min: 1000, max: 100), isNotNull);
+      });
+    });
+
+    group('subject', () {
+      test('returns null for valid subject', () {
+        expect(AppValidators.subject('Help with booking'), isNull);
+      });
+
+      test('returns error for too short subject', () {
+        expect(AppValidators.subject('Hi'), isNotNull);
+      });
+    });
+
+    group('description', () {
+      test('returns null for valid description', () {
+        expect(
+          AppValidators.description('This is a long enough description.'),
+          isNull,
+        );
+      });
+
+      test('returns error for short description', () {
+        expect(AppValidators.description('short'), isNotNull);
+      });
+    });
+
+    group('positiveInt', () {
+      test('returns null for valid capacity', () {
+        expect(AppValidators.positiveInt('50', fieldName: 'capacity'), isNull);
+      });
+
+      test('rejects zero and negative', () {
+        expect(AppValidators.positiveInt('0'), isNotNull);
+        expect(AppValidators.positiveInt('-1'), isNotNull);
+      });
+
+      test('rejects non-numeric', () {
+        expect(AppValidators.positiveInt('abc'), isNotNull);
+      });
+    });
+
+    group('nonNegativePrice', () {
+      test('returns null for valid price', () {
+        expect(AppValidators.nonNegativePrice('0'), isNull);
+        expect(AppValidators.nonNegativePrice('1500.50'), isNull);
+      });
+
+      test('rejects negative price', () {
+        expect(AppValidators.nonNegativePrice('-10'), isNotNull);
+      });
+    });
   });
 }

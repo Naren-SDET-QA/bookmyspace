@@ -57,7 +57,7 @@ class ListSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
       itemCount: itemCount,
       itemBuilder: (context, index) => const _CardSkeleton(),
     );

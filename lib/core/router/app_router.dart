@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/accommodations/domain/accommodation.dart';
+import '../../features/accommodations/presentation/screens/accommodation_detail_screen.dart';
+import '../../features/accommodations/presentation/screens/accommodation_list_screen.dart';
+import '../../features/accommodations/presentation/screens/stay_management_screens.dart';
 import '../../features/admin/presentation/screens/admin_audit_screen.dart';
+import '../../features/admin/presentation/screens/admin_dashboard_screen.dart';
 import '../../features/analytics/presentation/screens/analytics_screen.dart';
 import '../../features/auth/domain/auth_user.dart';
+import '../../features/auth/presentation/screens/auth_callback_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/booking/domain/booking.dart';
+import '../../features/booking/presentation/screens/booking_result_screen.dart';
 import '../../features/booking/presentation/screens/booking_screen.dart';
 import '../../features/booking/presentation/screens/my_bookings_screen.dart';
 import '../../features/courses/presentation/screens/course_detail_screen.dart';
@@ -13,18 +20,30 @@ import '../../features/courses/presentation/screens/courses_list_screen.dart';
 import '../../features/events/presentation/screens/event_detail_screen.dart';
 import '../../features/events/presentation/screens/events_list_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
+import '../../features/invoices/presentation/screens/invoice_screens.dart';
+import '../../features/legal/presentation/screens/privacy_policy_screen.dart';
+import '../../features/legal/presentation/screens/terms_of_service_screen.dart';
+import '../../features/meeting_rooms/presentation/screens/meeting_room_booking_screen.dart';
+import '../../features/meeting_rooms/presentation/screens/meeting_room_detail_screen.dart';
+import '../../features/meeting_rooms/presentation/screens/meeting_room_owner_screen.dart';
+import '../../features/meeting_rooms/presentation/screens/meeting_rooms_screen.dart';
 import '../../features/notifications/presentation/screens/notifications_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/owner/presentation/screens/owner_dashboard_screen.dart';
+import '../../features/owner/presentation/screens/owner_operations_screen.dart';
+import '../../features/owner/presentation/screens/owner_profile_screen.dart';
 import '../../features/owner/presentation/screens/owner_registration_screen.dart';
-import '../../features/owner_venues/presentation/screens/owner_venues_screen.dart';
 import '../../features/owner_venues/presentation/screens/create_venue_screen.dart';
-import '../../features/legal/presentation/screens/privacy_policy_screen.dart';
-import '../../features/legal/presentation/screens/terms_of_service_screen.dart';
+import '../../features/owner_venues/presentation/screens/owner_venues_screen.dart';
+import '../../features/payments/presentation/screens/commerce_payment_screen.dart';
 import '../../features/payments/presentation/screens/payment_screen.dart';
+import '../../features/payments/presentation/screens/receipt_screen.dart';
+import '../../features/profile/presentation/screens/profile_screen.dart';
+import '../../features/registration/presentation/screens/registration_screens.dart';
 import '../../features/saved/presentation/screens/saved_screen.dart';
 import '../../features/search/presentation/screens/search_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
+import '../../features/sports/presentation/screens/sports_screens.dart';
 import '../../features/support/presentation/screens/support_screen.dart';
 import '../../features/venues/domain/venue.dart';
 import '../../features/venues/presentation/screens/venue_details_screen.dart';
@@ -41,21 +60,50 @@ abstract class AppRoutes {
   static const profile = '/profile';
   static const settings = '/settings';
   static const login = '/login';
+  static const authCallback = '/auth/callback';
   static const venueDetails = '/venues/:id';
   static const bookingFlow = '/venues/:id/book';
   static const paymentFlow = '/bookings/:id/pay';
+  static const commercePayment = '/commerce/:id/pay';
+  static const bookingResult = '/bookings/:id/status';
+  static const bookingReceipt = '/bookings/:id/receipt';
   static const eventsList = '/events';
   static const eventDetails = '/events/:id';
   static const coursesList = '/courses';
   static const courseDetails = '/courses/:id';
+  static const pgList = '/pg';
+  static const pgDetails = '/pg/:id';
+  static const staysList = '/stays';
+  static const stayDetails = '/stays/:id';
+  static const myStays = '/stays/bookings/mine';
+  static const ownerStays = '/owner/stays';
+  static const meetingRooms = '/meeting-rooms';
+  static const meetingRoomDetails = '/meeting-rooms/:id';
+  static const meetingRoomBooking = '/meeting-rooms/:id/book';
+  static const ownerMeetingRooms = '/owner/meeting-rooms';
+  static const sportsVenues = '/sports';
+  static const sportsVenueDetails = '/sports/:id';
+  static const sportsBooking = '/sports/:id/book';
+  static const ownerSports = '/owner/sports';
+  static const registrationForms = '/owner/registration-forms';
+  static const registrationFill = '/registration/forms/:id/fill';
+  static const invoiceConfig = '/owner/invoice-settings';
+  static const invoiceView = '/invoices/:id';
   static const notifications = '/notifications';
   static const analytics = '/analytics';
   static const support = '/support';
   static const adminAudit = '/admin/audit';
+  static const adminDashboard = '/admin';
   static const ownerRegistration = '/owner/register';
   static const ownerDashboard = '/owner';
   static const ownerVenues = '/owner/venues';
   static const ownerVenueCreate = '/owner/venues/create';
+  static const ownerVenueEdit = '/owner/venues/:id/edit';
+  static const ownerProfile = '/owner/profile';
+  static const ownerAvailability = '/owner/availability';
+  static const ownerBookings = '/owner/bookings';
+  static const ownerOfflineBooking = '/owner/offline-booking';
+  static const ownerPayments = '/owner/payments';
   static const privacyPolicy = '/privacy';
   static const termsOfService = '/terms';
 }
@@ -72,6 +120,8 @@ GoRouter createAppRouter({
   String initialLocation = AppRoutes.shell,
   AuthUser? currentUser,
   bool authReady = true,
+  AppAccessRole accessRole = AppAccessRole.customer,
+  bool roleReady = true,
 }) {
   return GoRouter(
     navigatorKey: rootNavigatorKey,
@@ -79,12 +129,38 @@ GoRouter createAppRouter({
     redirect: (context, state) {
       if (!authReady) return null;
       final location = state.matchedLocation;
-      final isPublic =
+      final isAuthEntry =
           location == AppRoutes.onboarding || location == AppRoutes.login;
+      final isAuthCallback = location == AppRoutes.authCallback;
+      final isPublic = isAuthEntry || isAuthCallback;
       if (currentUser == null) {
         return isPublic ? null : AppRoutes.login;
       }
-      return isPublic ? AppRoutes.shell : null;
+      if (!roleReady) return null;
+      if (isAuthCallback) return null;
+      final isOwnerRoute =
+          location != AppRoutes.ownerRegistration &&
+          (location == AppRoutes.ownerDashboard ||
+              location.startsWith('/owner/'));
+      final isAdminRoute =
+          location == AppRoutes.adminDashboard ||
+          location.startsWith('/admin/');
+      if (isAdminRoute && accessRole != AppAccessRole.admin) {
+        return AppRoutes.home;
+      }
+      if (isOwnerRoute && accessRole != AppAccessRole.owner) {
+        return accessRole == AppAccessRole.admin
+            ? AppRoutes.adminDashboard
+            : AppRoutes.profile;
+      }
+      if (isAuthEntry) {
+        return switch (accessRole) {
+          AppAccessRole.admin => AppRoutes.adminDashboard,
+          AppAccessRole.owner => AppRoutes.ownerDashboard,
+          AppAccessRole.customer => AppRoutes.shell,
+        };
+      }
+      return null;
     },
     routes: [
       GoRoute(
@@ -95,6 +171,13 @@ GoRouter createAppRouter({
         path: AppRoutes.login,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.authCallback,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => AuthCallbackScreen(
+          callbackUri: state.uri.queryParameters.isEmpty ? null : state.uri,
+        ),
       ),
       GoRoute(
         path: AppRoutes.settings,
@@ -124,6 +207,19 @@ GoRouter createAppRouter({
         },
       ),
       GoRoute(
+        path: AppRoutes.bookingResult,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => state.extra is Booking
+            ? BookingResultScreen(booking: state.extra! as Booking)
+            : const MyBookingsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.bookingReceipt,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) =>
+            ReceiptScreen(bookingId: state.pathParameters['id'] ?? ''),
+      ),
+      GoRoute(
         path: AppRoutes.eventsList,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const EventsListScreen(),
@@ -140,11 +236,80 @@ GoRouter createAppRouter({
         builder: (context, state) => const CoursesListScreen(),
       ),
       GoRoute(
+        path: AppRoutes.pgList,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) =>
+            const AccommodationListScreen(module: AccommodationModule.pg),
+      ),
+      GoRoute(
+        path: AppRoutes.pgDetails,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => AccommodationDetailScreen(
+          propertyId: state.pathParameters['id'] ?? '',
+          module: AccommodationModule.pg,
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.staysList,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) =>
+            const AccommodationListScreen(module: AccommodationModule.stay),
+      ),
+      GoRoute(
+        path: AppRoutes.stayDetails,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => AccommodationDetailScreen(
+          propertyId: state.pathParameters['id'] ?? '',
+          module: AccommodationModule.stay,
+        ),
+      ),
+      GoRoute(
         path: AppRoutes.courseDetails,
         parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) => CourseDetailScreen(
-          courseId: state.pathParameters['id'] ?? '',
+        builder: (context, state) =>
+            CourseDetailScreen(courseId: state.pathParameters['id'] ?? ''),
+      ),
+      GoRoute(
+        path: AppRoutes.registrationFill,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => RegistrationFillScreen(
+          formId: state.pathParameters['id'] ?? '',
+          bookingId: state.uri.queryParameters['bookingId'],
         ),
+      ),
+      GoRoute(
+        path: AppRoutes.sportsVenues,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const SportsVenuesScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.sportsVenueDetails,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) =>
+            SportsVenueDetailScreen(venueId: state.pathParameters['id'] ?? ''),
+      ),
+      GoRoute(
+        path: AppRoutes.sportsBooking,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) =>
+            SportsBookingScreen(venueId: state.pathParameters['id'] ?? ''),
+      ),
+      GoRoute(
+        path: AppRoutes.meetingRooms,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const MeetingRoomsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.meetingRoomDetails,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) =>
+            MeetingRoomDetailScreen(roomId: state.pathParameters['id'] ?? ''),
+      ),
+      GoRoute(
+        path: AppRoutes.meetingRoomBooking,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) =>
+            MeetingRoomBookingScreen(roomId: state.pathParameters['id'] ?? ''),
       ),
       GoRoute(
         path: AppRoutes.notifications,
@@ -162,9 +327,66 @@ GoRouter createAppRouter({
         builder: (context, state) => const SupportTicketsScreen(),
       ),
       GoRoute(
+        path: AppRoutes.adminDashboard,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const AdminDashboardScreen(),
+      ),
+      for (final module in AdminModule.values)
+        GoRoute(
+          path: '/admin/${module.name}',
+          parentNavigatorKey: rootNavigatorKey,
+          builder: (context, state) => AdminModuleScreen(module: module),
+        ),
+      GoRoute(
         path: AppRoutes.adminAudit,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const AdminAuditScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.commercePayment,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => CommercePaymentScreen(
+          referenceId: state.pathParameters['id']!,
+          amount:
+              double.tryParse(state.uri.queryParameters['amount'] ?? '') ?? 0,
+          currency: state.uri.queryParameters['currency'] ?? 'INR',
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.myStays,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const MyStayBookingsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.ownerStays,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const StayOwnerScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.registrationForms,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const RegistrationFormsAdminScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.invoiceConfig,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const InvoiceConfigScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.invoiceView,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) =>
+            InvoiceScreen(invoiceId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: AppRoutes.ownerSports,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const SportsOwnerScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.ownerMeetingRooms,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const MeetingRoomOwnerScreen(),
       ),
       GoRoute(
         path: AppRoutes.ownerRegistration,
@@ -185,6 +407,43 @@ GoRouter createAppRouter({
         path: AppRoutes.ownerVenueCreate,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const CreateVenueScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.ownerVenueEdit,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => CreateVenueScreen(
+          venue: state.extra is Venue ? state.extra as Venue : null,
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.ownerProfile,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const OwnerProfileScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.ownerAvailability,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) =>
+            const OwnerOperationsScreen(operation: OwnerOperation.availability),
+      ),
+      GoRoute(
+        path: AppRoutes.ownerBookings,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) =>
+            const OwnerOperationsScreen(operation: OwnerOperation.bookings),
+      ),
+      GoRoute(
+        path: AppRoutes.ownerOfflineBooking,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const OwnerOperationsScreen(
+          operation: OwnerOperation.offlineBooking,
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.ownerPayments,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) =>
+            const OwnerOperationsScreen(operation: OwnerOperation.payments),
       ),
       GoRoute(
         path: AppRoutes.privacyPolicy,
@@ -228,9 +487,11 @@ GoRouter createAppRouter({
                 path: AppRoutes.search,
                 builder: (context, state) {
                   final extra = state.extra;
-                  final category = extra is Map<String, dynamic>
-                      ? extra['category'] as String?
-                      : null;
+                  final category =
+                      state.uri.queryParameters['category'] ??
+                      (extra is Map<String, dynamic>
+                          ? extra['category'] as String?
+                          : null);
                   return SearchScreen(initialCategory: category);
                 },
               ),
@@ -256,7 +517,7 @@ GoRouter createAppRouter({
             routes: [
               GoRoute(
                 path: AppRoutes.profile,
-                builder: (context, state) => const ProfilePlaceholderScreen(),
+                builder: (context, state) => const ProfileScreen(),
               ),
             ],
           ),
@@ -291,24 +552,19 @@ class _AppShell extends StatelessWidget {
             label: l10n.navHome,
           ),
           NavigationDestination(
-            icon: const Icon(Icons.notifications_outlined),
-            selectedIcon: const Icon(Icons.notifications_rounded),
-            label: l10n.notifications,
-          ),
-          NavigationDestination(
             icon: const Icon(Icons.search_outlined),
             selectedIcon: const Icon(Icons.search_rounded),
-            label: l10n.navSearch,
+            label: 'Explore',
           ),
           NavigationDestination(
             icon: const Icon(Icons.receipt_long_outlined),
             selectedIcon: const Icon(Icons.receipt_long_rounded),
             label: l10n.navBookings,
           ),
-          NavigationDestination(
-            icon: const Icon(Icons.school_outlined),
-            selectedIcon: const Icon(Icons.school_rounded),
-            label: l10n.courses,
+          const NavigationDestination(
+            icon: Icon(Icons.favorite_border_rounded),
+            selectedIcon: Icon(Icons.favorite_rounded),
+            label: 'Saved',
           ),
           NavigationDestination(
             icon: const Icon(Icons.person_outline_rounded),
@@ -318,14 +574,5 @@ class _AppShell extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-// Temporary placeholder replaced with a real screen in a later milestone.
-class ProfilePlaceholderScreen extends StatelessWidget {
-  const ProfilePlaceholderScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: Text('Profile (M7)')));
   }
 }

@@ -1,6 +1,14 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:bookmyspace/core/localization/app_localizations.dart';
 import 'package:bookmyspace/core/widgets/accessibility.dart';
+import 'package:bookmyspace/features/venues/domain/venue.dart';
+import 'package:bookmyspace/features/venues/presentation/venue_providers.dart';
+import 'package:bookmyspace/features/venues/presentation/widgets/venue_card.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import '../venues/mock_venue_repository.dart';
 
 void main() {
   group('MinTouchTarget', () {
@@ -76,6 +84,37 @@ void main() {
       );
       expect(find.byType(Tooltip), findsOneWidget);
       expect(find.byType(IconButton), findsOneWidget);
+    });
+  });
+
+  group('VenueCard semantics', () {
+    testWidgets('compact card exposes venue name in semantics', (tester) async {
+      final venue = MockVenueRepository.defaultVenues.first;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            isFavoriteProvider(venue.id).overrideWith((ref) => Future.value(false)),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: VenueCard(venue: venue, compact: true),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.bySemanticsLabel('${venue.name}, ${venue.city}'),
+        findsOneWidget,
+      );
     });
   });
 }

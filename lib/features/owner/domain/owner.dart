@@ -5,18 +5,48 @@ class Owner {
     required this.userId,
     required this.email,
     required this.name,
+    this.phone = '',
+    this.whatsapp = '',
+    this.businessName = '',
+    this.address = '',
+    this.city = '',
+    this.state = '',
+    this.photoUrl = '',
+    this.latitude,
+    this.longitude,
+    this.orgId = '',
   });
 
   final String id;
   final String userId;
   final String email;
   final String name;
+  final String phone;
+  final String whatsapp;
+  final String businessName;
+  final String address;
+  final String city;
+  final String state;
+  final String photoUrl;
+  final double? latitude;
+  final double? longitude;
+  final String orgId;
 
   factory Owner.fromJson(Map<String, dynamic> json) => Owner(
     id: json['id'] as String? ?? '',
     userId: json['user_id'] as String? ?? '',
     email: json['email'] as String? ?? '',
     name: json['name'] as String? ?? '',
+    phone: json['phone'] as String? ?? '',
+    whatsapp: json['whatsapp'] as String? ?? '',
+    businessName: json['business_name'] as String? ?? '',
+    address: json['address'] as String? ?? '',
+    city: json['city'] as String? ?? '',
+    state: json['state'] as String? ?? '',
+    photoUrl: json['photo_url'] as String? ?? '',
+    latitude: (json['latitude'] as num?)?.toDouble(),
+    longitude: (json['longitude'] as num?)?.toDouble(),
+    orgId: json['org_id'] as String? ?? '',
   );
 }
 
@@ -40,4 +70,6 @@ abstract interface class OwnerRepository {
 
   /// Delete the owner profile and associated auth user.
   Future<void> deleteOwner();
+
+  Future<Owner> saveProfile(Owner owner);
 }

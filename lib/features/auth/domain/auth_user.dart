@@ -56,3 +56,5 @@ class AuthUser {
   @override
   int get hashCode => Object.hash(id, email);
 }
+
+enum AppAccessRole { customer, owner, admin }

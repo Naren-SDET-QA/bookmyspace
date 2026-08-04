@@ -35,7 +35,8 @@ class SavedScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(16),
               itemCount: venues.length,
               separatorBuilder: (_, _) => const SizedBox(height: 12),
-              itemBuilder: (context, i) => VenueCard(venue: venues[i]),
+              itemBuilder: (context, i) =>
+                  VenueCard(venue: venues[i], compact: true),
             ),
           );
         },

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/validators/app_validators.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/skeleton.dart';
@@ -30,12 +31,24 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   void initState() {
     super.initState();
     _controller = TextEditingController();
-    if (widget.initialCategory != null) {
+    _applyInitialCategory(widget.initialCategory);
+  }
+
+  @override
+  void didUpdateWidget(covariant SearchScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialCategory == widget.initialCategory) return;
+    _applyInitialCategory(widget.initialCategory);
+  }
+
+  void _applyInitialCategory(String? category) {
+    Future<void>(() {
+      if (!mounted) return;
       final current = ref.read(searchQueryProvider);
       ref.read(searchQueryProvider.notifier).state = current.copyWith(
-        categorySlug: () => widget.initialCategory,
+        categorySlug: () => category,
       );
-    }
+    });
   }
 
   @override
@@ -81,9 +94,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final query = ref.watch(searchQueryProvider);
     final results = ref.watch(searchResultsProvider);
     final categories = ref.watch(venueCategoriesProvider);
+    final isWide = MediaQuery.sizeOf(context).width >= 700;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.search)),
+      appBar: AppBar(title: const Text('Explore')),
       body: Column(
         children: [
           Padding(
@@ -163,12 +177,27 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         'Try a different keyword, category or price range.',
                   );
                 }
-                return ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: venues.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 12),
-                  itemBuilder: (context, i) => VenueCard(venue: venues[i]),
-                );
+                return isWide
+                    ? GridView.builder(
+                        padding: const EdgeInsets.all(16),
+                        gridDelegate:
+                            const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 420,
+                          mainAxisExtent: 132,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                        ),
+                        itemCount: venues.length,
+                        itemBuilder: (context, i) =>
+                            VenueCard(venue: venues[i], compact: true),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: venues.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 12),
+                        itemBuilder: (context, i) =>
+                            VenueCard(venue: venues[i], compact: true),
+                      );
               },
               loading: () => const ListSkeleton(),
               error: (e, _) => ErrorView(
@@ -204,6 +233,7 @@ class _FilterSheetState extends State<_FilterSheet> {
   late final TextEditingController _minController;
   late final TextEditingController _maxController;
   String? _categorySlug;
+  String? _priceError;
 
   @override
   void initState() {
@@ -226,11 +256,18 @@ class _FilterSheetState extends State<_FilterSheet> {
   }
 
   void _apply() {
+    final min = double.tryParse(_minController.text);
+    final max = double.tryParse(_maxController.text);
+    final priceError = AppValidators.priceRange(min: min, max: max);
+    if (priceError != null) {
+      setState(() => _priceError = priceError);
+      return;
+    }
     final updated = widget.initial.copyWith(
       sortBy: _sortBy,
       categorySlug: () => _categorySlug,
-      minPrice: () => double.tryParse(_minController.text),
-      maxPrice: () => double.tryParse(_maxController.text),
+      minPrice: () => min,
+      maxPrice: () => max,
     );
     widget.onApply(updated);
     Navigator.of(context).pop();
@@ -326,9 +363,11 @@ class _FilterSheetState extends State<_FilterSheet> {
                   child: TextField(
                     controller: _minController,
                     keyboardType: TextInputType.number,
+                    onChanged: (_) => setState(() => _priceError = null),
                     decoration: InputDecoration(
                       labelText: l10n.minPrice,
                       prefixText: '₹ ',
+                      errorText: _priceError,
                     ),
                   ),
                 ),
@@ -337,6 +376,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                   child: TextField(
                     controller: _maxController,
                     keyboardType: TextInputType.number,
+                    onChanged: (_) => setState(() => _priceError = null),
                     decoration: InputDecoration(
                       labelText: l10n.maxPrice,
                       prefixText: '₹ ',

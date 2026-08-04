@@ -18,29 +18,66 @@ final myVenuesProvider = FutureProvider<List<Venue>>((ref) {
 
 /// Create a venue and invalidate the list.
 final createVenueProvider = FutureProvider.autoDispose
-    .family<Venue, ({
-      String name,
-      String categoryId,
-      String description,
-      String city,
-      String state,
-      double latitude,
-      double longitude,
-      int capacity,
-      double pricingBaseAmount,
-    })>((ref, params) async {
-  final repo = ref.watch(ownerVenueRepositoryProvider);
-  final venue = await repo.createVenue(
-    name: params.name,
-    categoryId: params.categoryId,
-    description: params.description,
-    city: params.city,
-    state: params.state,
-    latitude: params.latitude,
-    longitude: params.longitude,
-    capacity: params.capacity,
-    pricingBaseAmount: params.pricingBaseAmount,
-  );
-  ref.invalidate(myVenuesProvider);
-  return venue;
-});
+    .family<
+      Venue,
+      ({
+        String name,
+        String categoryId,
+        String description,
+        String city,
+        String state,
+        double latitude,
+        double longitude,
+        int capacity,
+        double pricingBaseAmount,
+      })
+    >((ref, params) async {
+      final repo = ref.watch(ownerVenueRepositoryProvider);
+      final venue = await repo.createVenue(
+        name: params.name,
+        categoryId: params.categoryId,
+        description: params.description,
+        city: params.city,
+        state: params.state,
+        latitude: params.latitude,
+        longitude: params.longitude,
+        capacity: params.capacity,
+        pricingBaseAmount: params.pricingBaseAmount,
+      );
+      ref.invalidate(myVenuesProvider);
+      return venue;
+    });
+
+final updateVenueProvider = FutureProvider.autoDispose
+    .family<
+      Venue,
+      ({
+        String venueId,
+        String name,
+        String categoryId,
+        String description,
+        String city,
+        String state,
+        double latitude,
+        double longitude,
+        int capacity,
+        double pricingBaseAmount,
+      })
+    >((ref, p) async {
+      final venue = await ref
+          .watch(ownerVenueRepositoryProvider)
+          .updateVenue(
+            venueId: p.venueId,
+            name: p.name,
+            categoryId: p.categoryId,
+            description: p.description,
+            city: p.city,
+            state: p.state,
+            latitude: p.latitude,
+            longitude: p.longitude,
+            capacity: p.capacity,
+            pricingBaseAmount: p.pricingBaseAmount,
+          );
+      ref.invalidate(myVenuesProvider);
+      return venue;
+    });
