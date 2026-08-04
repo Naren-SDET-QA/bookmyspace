@@ -6,6 +6,7 @@ import '../../../../core/config/settings_controller.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_bottom_sheet.dart';
 
 /// Settings screen: theme, language and account management entry points.
 class SettingsScreen extends ConsumerWidget {
@@ -137,137 +138,132 @@ class SettingsScreen extends ConsumerWidget {
     WidgetRef ref,
     AppThemeColor selected,
   ) {
-    showModalBottomSheet<void>(
+    showAppBottomSheet<void>(
       context: context,
-      builder: (sheetContext) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Choose your colour',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: AppThemeColor.values.map((choice) {
-                  final active = choice == selected;
-                  return Semantics(
-                    selected: active,
-                    label: '${choice.label} theme colour',
-                    button: true,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(16),
-                      onTap: () {
-                        ref
-                            .read(themeColorProvider.notifier)
-                            .setThemeColor(choice);
-                        Navigator.pop(sheetContext);
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 180),
-                        width: 68,
-                        height: 68,
-                        decoration: BoxDecoration(
-                          color: choice.color,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: active ? Colors.white : Colors.transparent,
-                            width: 3,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: choice.color.withValues(alpha: .28),
-                              blurRadius: active ? 18 : 10,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
+      maxHeightFactor: 0.7,
+      builder: (sheetContext) => AppBottomSheetScrollBody(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Choose your colour',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: AppThemeColor.values.map((choice) {
+                final active = choice == selected;
+                return Semantics(
+                  selected: active,
+                  label: '${choice.label} theme colour',
+                  button: true,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () {
+                      ref
+                          .read(themeColorProvider.notifier)
+                          .setThemeColor(choice);
+                      Navigator.pop(sheetContext);
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      width: 68,
+                      height: 68,
+                      decoration: BoxDecoration(
+                        color: choice.color,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: active ? Colors.white : Colors.transparent,
+                          width: 3,
                         ),
-                        child: active
-                            ? const Icon(
-                                Icons.check_rounded,
-                                color: Colors.white,
-                              )
-                            : null,
+                        boxShadow: [
+                          BoxShadow(
+                            color: choice.color.withValues(alpha: .28),
+                            blurRadius: active ? 18 : 10,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
                       ),
+                      child: active
+                          ? const Icon(
+                              Icons.check_rounded,
+                              color: Colors.white,
+                            )
+                          : null,
                     ),
-                  );
-                }).toList(),
-              ),
-            ],
-          ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
         ),
       ),
     );
   }
 
   void _showThemePicker(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet<void>(
+    showAppBottomSheet<void>(
       context: context,
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: const Text('SYSTEM'),
-              onTap: () {
-                ref
-                    .read(themeModeProvider.notifier)
-                    .setThemeMode(ThemeMode.system);
-                Navigator.pop(sheetContext);
-              },
-            ),
-            ListTile(
-              title: const Text('LIGHT'),
-              onTap: () {
-                ref
-                    .read(themeModeProvider.notifier)
-                    .setThemeMode(ThemeMode.light);
-                Navigator.pop(sheetContext);
-              },
-            ),
-            ListTile(
-              title: const Text('DARK'),
-              onTap: () {
-                ref
-                    .read(themeModeProvider.notifier)
-                    .setThemeMode(ThemeMode.dark);
-                Navigator.pop(sheetContext);
-              },
-            ),
-          ],
-        ),
+      maxHeightFactor: 0.55,
+      builder: (sheetContext) => ListView(
+        shrinkWrap: true,
+        children: [
+          ListTile(
+            title: const Text('SYSTEM'),
+            onTap: () {
+              ref
+                  .read(themeModeProvider.notifier)
+                  .setThemeMode(ThemeMode.system);
+              Navigator.pop(sheetContext);
+            },
+          ),
+          ListTile(
+            title: const Text('LIGHT'),
+            onTap: () {
+              ref
+                  .read(themeModeProvider.notifier)
+                  .setThemeMode(ThemeMode.light);
+              Navigator.pop(sheetContext);
+            },
+          ),
+          ListTile(
+            title: const Text('DARK'),
+            onTap: () {
+              ref.read(themeModeProvider.notifier).setThemeMode(ThemeMode.dark);
+              Navigator.pop(sheetContext);
+            },
+          ),
+        ],
       ),
     );
   }
 
   void _showLanguagePicker(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet<void>(
+    showAppBottomSheet<void>(
       context: context,
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: const Text('English'),
-              onTap: () {
-                ref.read(localeProvider.notifier).setLocale(const Locale('en'));
-                Navigator.pop(sheetContext);
-              },
-            ),
-            ListTile(
-              title: const Text('తెలుగు'),
-              onTap: () {
-                ref.read(localeProvider.notifier).setLocale(const Locale('te'));
-                Navigator.pop(sheetContext);
-              },
-            ),
-          ],
-        ),
+      maxHeightFactor: 0.45,
+      builder: (sheetContext) => ListView(
+        shrinkWrap: true,
+        children: [
+          ListTile(
+            title: const Text('English'),
+            onTap: () {
+              ref.read(localeProvider.notifier).setLocale(const Locale('en'));
+              Navigator.pop(sheetContext);
+            },
+          ),
+          ListTile(
+            title: const Text('తెలుగు'),
+            onTap: () {
+              ref.read(localeProvider.notifier).setLocale(const Locale('te'));
+              Navigator.pop(sheetContext);
+            },
+          ),
+        ],
       ),
     );
   }

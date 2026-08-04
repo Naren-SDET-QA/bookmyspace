@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/localization/app_localizations.dart';
@@ -20,6 +21,9 @@ class MyBookingsScreen extends ConsumerStatefulWidget {
 }
 
 class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
+  bool _showCalendar = false;
+  DateTime _selectedDate = DateTime.now();
+
   Future<void> _refresh() async {
     ref.invalidate(myBookingsProvider);
     await ref.read(myBookingsProvider.future);
@@ -115,36 +119,117 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
           }
           return RefreshIndicator(
             onRefresh: _refresh,
-            child: ListView.builder(
+            child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16),
-              itemCount: list.length,
-              itemBuilder: (context, i) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _BookingCard(
-                  booking: list[i],
-                  onCancel: list[i].canCancel
-                      ? () => _cancelBooking(list[i])
-                      : null,
-                  onRefund: list[i].canRefund
-                      ? () => _requestRefund(list[i])
-                      : null,
-                ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppTheme.pagePadding,
+                vertical: 12,
               ),
+              children: [
+                SegmentedButton<bool>(
+                  segments: const [
+                    ButtonSegment(
+                      value: false,
+                      icon: Icon(Icons.view_list_rounded),
+                      label: Text('List'),
+                    ),
+                    ButtonSegment(
+                      value: true,
+                      icon: Icon(Icons.calendar_month_rounded),
+                      label: Text('Calendar'),
+                    ),
+                  ],
+                  selected: {_showCalendar},
+                  showSelectedIcon: false,
+                  onSelectionChanged: (value) =>
+                      setState(() => _showCalendar = value.first),
+                ),
+                const SizedBox(height: 16),
+                if (_showCalendar) ...[
+                  Card(
+                    margin: EdgeInsets.zero,
+                    child: CalendarDatePicker(
+                      initialDate: _selectedDate,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2035),
+                      onDateChanged: (date) =>
+                          setState(() => _selectedDate = date),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    DateFormat.yMMMMd().format(_selectedDate),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                for (final booking in _visibleBookings(list))
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _BookingCard(
+                      booking: booking,
+                      onCancel: booking.canCancel
+                          ? () => _cancelBooking(booking)
+                          : null,
+                      onRefund: booking.canRefund
+                          ? () => _requestRefund(booking)
+                          : null,
+                      onPay: booking.status == BookingStatus.paymentPending
+                          ? () => context.push(
+                              '/bookings/${booking.id}/pay',
+                              extra: booking,
+                            )
+                          : null,
+                      onReceipt: booking.status == BookingStatus.confirmed
+                          ? () =>
+                                context.push('/bookings/${booking.id}/receipt')
+                          : null,
+                    ),
+                  ),
+                if (_showCalendar && _visibleBookings(list).isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 28),
+                    child: EmptyState(
+                      icon: Icons.event_available_rounded,
+                      title: 'Nothing booked on this day',
+                      message: 'Choose another highlighted booking date.',
+                    ),
+                  ),
+              ],
             ),
           );
         },
       ),
     );
   }
+
+  List<Booking> _visibleBookings(List<Booking> bookings) {
+    if (!_showCalendar) return bookings;
+    return bookings.where((booking) {
+      final date = booking.bookDate;
+      return date.year == _selectedDate.year &&
+          date.month == _selectedDate.month &&
+          date.day == _selectedDate.day;
+    }).toList();
+  }
 }
 
 class _BookingCard extends StatelessWidget {
-  const _BookingCard({required this.booking, this.onCancel, this.onRefund});
+  const _BookingCard({
+    required this.booking,
+    this.onCancel,
+    this.onRefund,
+    this.onPay,
+    this.onReceipt,
+  });
 
   final Booking booking;
   final VoidCallback? onCancel;
   final VoidCallback? onRefund;
+  final VoidCallback? onPay;
+  final VoidCallback? onReceipt;
 
   @override
   Widget build(BuildContext context) {
@@ -154,7 +239,7 @@ class _BookingCard extends StatelessWidget {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -168,7 +253,7 @@ class _BookingCard extends StatelessWidget {
                       Text(
                         name,
                         style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w800,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -203,7 +288,7 @@ class _BookingCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            const Divider(height: 1),
+            const Divider(height: 1, color: AppTheme.line),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -245,6 +330,28 @@ class _BookingCard extends StatelessWidget {
                 ),
               ),
             ],
+            if (onPay != null) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: onPay,
+                  icon: const Icon(Icons.lock_rounded, size: 18),
+                  label: const Text('Pay securely'),
+                ),
+              ),
+            ],
+            if (onReceipt != null) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: onReceipt,
+                  icon: const Icon(Icons.receipt_long_rounded, size: 18),
+                  label: const Text('View receipt'),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -260,11 +367,18 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color) = switch (status) {
+      BookingStatus.requested => ('Approval requested', Colors.orange),
       BookingStatus.held => ('Held', Colors.orange),
+      BookingStatus.approved => ('Approved', Colors.blue),
+      BookingStatus.paymentPending => ('Payment pending', Colors.orange),
+      BookingStatus.paid => ('Paid', Colors.teal),
       BookingStatus.pending => ('Pending', Colors.orange),
       BookingStatus.confirmed => ('Confirmed', Colors.green),
       BookingStatus.completed => ('Completed', Colors.blue),
+      BookingStatus.rejected => ('Rejected', Colors.red),
       BookingStatus.cancelled => ('Cancelled', Colors.grey),
+      BookingStatus.expired => ('Expired', Colors.grey),
+      BookingStatus.blocked => ('Blocked', Colors.red),
       BookingStatus.refunded => ('Refunded', Colors.teal),
       BookingStatus.noShow => ('No show', Colors.red),
     };
@@ -272,14 +386,15 @@ class _StatusBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(7),
       ),
       child: Text(
         label,
         style: TextStyle(
           color: color,
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+          letterSpacing: .4,
         ),
       ),
     );

@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:latlong2/latlong.dart';
 
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/maps/domain/geo_point.dart';
+import '../../../../core/maps/presentation/map_view.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_network_image.dart';
 import '../../../../core/widgets/error_view.dart';
+import '../../../venue_import/presentation/claim_venue_sheet.dart';
 import '../../domain/venue.dart';
 import '../venue_providers.dart';
 import '../widgets/venue_badges.dart';
@@ -170,6 +171,24 @@ class _VenueDetailsBody extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
+                if (venue.isClaimable && !venue.ownerVerified) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => showClaimVenueSheet(
+                        context,
+                        ref,
+                        venueId: venue.id,
+                        venueName: venue.name,
+                        isClaimable: venue.isClaimable,
+                        ownerVerified: venue.ownerVerified,
+                      ),
+                      icon: const Text('🏠', style: TextStyle(fontSize: 16)),
+                      label: const Text('Claim This Venue'),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 if (venue.description.isNotEmpty) ...[
                   Text(l10n.aboutThisVenue, style: theme.textTheme.titleMedium),
                   const SizedBox(height: 6),
@@ -396,44 +415,11 @@ class _VenueMap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final point = LatLng(latitude, longitude);
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: SizedBox(
-        height: 180,
-        child: FlutterMap(
-          options: MapOptions(
-            initialCenter: point,
-            initialZoom: 14,
-            interactionOptions: const InteractionOptions(
-              flags:
-                  InteractiveFlag.drag |
-                  InteractiveFlag.pinchZoom |
-                  InteractiveFlag.doubleTapZoom,
-            ),
-          ),
-          children: [
-            TileLayer(
-              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-              userAgentPackageName: 'com.bookmyspace.app',
-            ),
-            MarkerLayer(
-              markers: [
-                Marker(
-                  point: point,
-                  width: 40,
-                  height: 40,
-                  child: const Icon(
-                    Icons.location_pin,
-                    color: AppTheme.brand,
-                    size: 40,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+    final point = GeoPoint(latitude, longitude);
+    return MapView(
+      initialCenter: point,
+      height: 180,
+      markers: [MapMarkerData(point: point, label: name)],
     );
   }
 }

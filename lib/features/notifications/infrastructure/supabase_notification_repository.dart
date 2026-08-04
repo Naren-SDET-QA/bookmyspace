@@ -31,7 +31,10 @@ class SupabaseNotificationRepository implements NotificationRepository {
     try {
       await _client
           .from('notifications')
-          .update({'read': true, 'read_at': 'now()'})
+          .update({
+            'read': true,
+            'read_at': DateTime.now().toUtc().toIso8601String(),
+          })
           .eq('id', notificationId)
           .eq('user_id', _userId!);
     } catch (e) {
@@ -44,7 +47,10 @@ class SupabaseNotificationRepository implements NotificationRepository {
     try {
       await _client
           .from('notifications')
-          .update({'read': true, 'read_at': 'now()'})
+          .update({
+            'read': true,
+            'read_at': DateTime.now().toUtc().toIso8601String(),
+          })
           .eq('user_id', _userId!);
     } catch (e) {
       throw app_errors.mapError(e);
@@ -60,6 +66,43 @@ class SupabaseNotificationRepository implements NotificationRepository {
           .eq('user_id', _userId!)
           .eq('read', false);
       return rows.length;
+    } catch (e) {
+      throw app_errors.mapError(e);
+    }
+  }
+
+  @override
+  Future<NotificationPreferences> preferences() async {
+    try {
+      final userId = _userId;
+      if (userId == null) {
+        throw const app_errors.AuthException('Please sign in.');
+      }
+      final row = await _client
+          .from('notification_preferences')
+          .select()
+          .eq('user_id', userId)
+          .maybeSingle();
+      return row == null
+          ? const NotificationPreferences()
+          : NotificationPreferences.fromJson(row);
+    } catch (e) {
+      throw app_errors.mapError(e);
+    }
+  }
+
+  @override
+  Future<void> updatePreferences(NotificationPreferences preferences) async {
+    try {
+      final userId = _userId;
+      if (userId == null) {
+        throw const app_errors.AuthException('Please sign in.');
+      }
+      await _client.from('notification_preferences').upsert({
+        'user_id': userId,
+        ...preferences.toJson(),
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      });
     } catch (e) {
       throw app_errors.mapError(e);
     }

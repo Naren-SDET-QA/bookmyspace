@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/errors/app_exceptions.dart' as app_errors;
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/empty_state.dart';
@@ -141,6 +142,17 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
 
     setState(() => _confirming = true);
     try {
+      final latest = await repo.availableTimeSlots(
+        venueId: widget.venue.id,
+        date: date,
+      );
+      final liveSlot = latest.where((item) => item.slotId == slot.slotId);
+      if (liveSlot.isEmpty || !liveSlot.first.isAvailable) {
+        throw const app_errors.BookingConflictException(
+          'This slot was just taken. Please choose another.',
+          code: 'slot_unavailable',
+        );
+      }
       final hold = await repo.acquireHold(
         venueId: widget.venue.id,
         slotId: slot.slotId,
@@ -158,16 +170,42 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
       );
       ref.invalidate(myBookingsProvider);
       if (!mounted) return;
-      // Enter the payment flow with the freshly created pending booking.
-      unawaited(context.push('/bookings/${booking.id}/pay', extra: booking));
+      if (booking.status == BookingStatus.confirmed ||
+          booking.status == BookingStatus.requested) {
+        context.go('/bookings/${booking.id}/status', extra: booking);
+      } else {
+        unawaited(context.push('/bookings/${booking.id}/pay', extra: booking));
+      }
     } catch (e) {
       if (!mounted) return;
+      if (e is app_errors.BookingConflictException ||
+          e is app_errors.HoldExpiredException) {
+        setState(() => _selectedSlot = null);
+        ref.invalidate(
+          slotAvailabilityProvider(
+            SlotAvailabilityQuery(venueId: widget.venue.id, date: date),
+          ),
+        );
+      }
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      ).showSnackBar(SnackBar(content: Text(_bookingError(e))));
     } finally {
       if (mounted) setState(() => _confirming = false);
     }
+  }
+
+  String _bookingError(Object error) {
+    if (error is app_errors.HoldExpiredException) {
+      return 'Checkout time expired. Select the slot again to continue.';
+    }
+    if (error is app_errors.BookingConflictException) return error.message;
+    if (error is app_errors.NetworkException ||
+        error is app_errors.TimeoutException) {
+      return 'Connection interrupted. Your booking was not duplicated. Please retry.';
+    }
+    if (error is app_errors.AppException) return error.message;
+    return 'We could not complete the booking. Please try again.';
   }
 }
 
@@ -180,7 +218,12 @@ class _VenueHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.pagePadding,
+        12,
+        AppTheme.pagePadding,
+        12,
+      ),
       child: Row(
         children: [
           Expanded(
@@ -241,7 +284,10 @@ class _DateStrip extends StatelessWidget {
     return SizedBox(
       height: 76,
       child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppTheme.pagePadding,
+          vertical: 8,
+        ),
         scrollDirection: Axis.horizontal,
         itemCount: dates.length,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
@@ -282,13 +328,13 @@ class _DateChip extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppTheme.compactRadius),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         width: 60,
         decoration: BoxDecoration(
           color: isSelected ? AppTheme.brand : theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppTheme.compactRadius),
           border: Border.all(
             color: isSelected
                 ? AppTheme.brand
@@ -369,7 +415,10 @@ class _SlotList extends ConsumerWidget {
           );
         }
         return ListView.builder(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppTheme.pagePadding,
+            vertical: 14,
+          ),
           itemCount: slots.length,
           itemBuilder: (context, i) {
             final slot = slots[i];
@@ -406,20 +455,26 @@ class _SlotTile extends StatelessWidget {
     final enabled = slot.isAvailable;
 
     return Material(
-      color: isSelected
-          ? AppTheme.brand.withValues(alpha: 0.08)
-          : theme.colorScheme.surface,
+      color: isSelected ? const Color(0xFFFAF8FF) : AppTheme.card,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: isSelected ? AppTheme.brand : theme.colorScheme.outlineVariant,
+          color: isSelected ? AppTheme.brand : AppTheme.line,
+          width: 1.5,
         ),
       ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Semantics(
+        label: enabled
+            ? '${slot.label}, ${slot.displayStart} to ${slot.displayEnd}, ${formatInr(slot.priceAmount)}'
+            : '${slot.label}, ${_reasonLabel(slot.reason)}',
+        button: enabled,
+        enabled: enabled,
+        selected: isSelected,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
           child: Row(
             children: [
               Expanded(
@@ -429,7 +484,7 @@ class _SlotTile extends StatelessWidget {
                     Text(
                       slot.label,
                       style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -462,6 +517,14 @@ class _SlotTile extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 2),
+                    Text(
+                      'Available',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: AppTheme.success,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -481,6 +544,7 @@ class _SlotTile extends StatelessWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }
@@ -521,7 +585,12 @@ class _ConfirmBar extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        padding: const EdgeInsets.fromLTRB(
+          AppTheme.pagePadding,
+          13,
+          AppTheme.pagePadding,
+          16,
+        ),
         child: Row(
           children: [
             Column(

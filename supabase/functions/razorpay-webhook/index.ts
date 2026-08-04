@@ -6,26 +6,17 @@
 //
 // Razorpay signs the raw body with HMAC-SHA256 using the webhook secret.
 import { createClient, SupabaseClient } from 'npm:@supabase/supabase-js@2';
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { verifyRazorpaySignature } from '../_shared/razorpay_signature.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const RAZORPAY_WEBHOOK_SECRET = Deno.env.get('RAZORPAY_WEBHOOK_SECRET')!;
+const RAZORPAY_WEBHOOK_SECRET = Deno.env.get('RAZORPAY_WEBHOOK_SECRET') ?? '';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
-
-function verifySignature(body: string, signature: string): boolean {
-  const expected = createHmac('sha256', RAZORPAY_WEBHOOK_SECRET)
-    .update(body)
-    .digest('hex');
-  const a = Buffer.from(signature ?? '');
-  const b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -34,7 +25,11 @@ Deno.serve(async (req) => {
 
   const rawBody = await req.text();
   const signature = req.headers.get('x-razorpay-signature') ?? '';
-  if (!verifySignature(rawBody, signature)) {
+  if (!RAZORPAY_WEBHOOK_SECRET) {
+    console.error('razorpay-webhook: webhook secret is not configured');
+    return json({ error: 'webhook_not_configured' }, 424);
+  }
+  if (!await verifyRazorpaySignature(rawBody, signature, RAZORPAY_WEBHOOK_SECRET)) {
     return new Response(JSON.stringify({ error: 'invalid_signature' }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -51,12 +46,13 @@ Deno.serve(async (req) => {
   );
 
   // Idempotency: register the event; skip if it was already handled.
-  const { data: registered } = await supabase.rpc('register_webhook_event', {
+  const { data: registered, error: registrationError } = await supabase.rpc('begin_webhook_event', {
     p_provider: 'razorpay',
     p_event_id: eventId,
     p_event_type: eventType,
     p_payload: event,
   });
+  if (registrationError) return json({ error: 'event_registration_failed' }, 500);
   if (registered === false) {
     return new Response(JSON.stringify({ status: 'duplicate' }), {
       status: 200,
@@ -64,6 +60,7 @@ Deno.serve(async (req) => {
     });
   }
 
+  try {
   // Only payment.captured confirms a booking. Payment.failed releases the hold.
   if (eventType === 'payment.captured') {
     const paymentEntity = event.payload?.payment?.entity;
@@ -72,25 +69,25 @@ Deno.serve(async (req) => {
 
     const { data: payment, error: paymentError } = await supabase
       .from('payments')
-      .select('id, booking_id, amount, status')
+      .select('id, commerce_reference_id, amount, status')
       .eq('provider_order_id', orderId)
       .maybeSingle();
     if (paymentError || !payment) {
-      return new Response(JSON.stringify({ error: 'payment_not_found' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      throw new Error('payment_not_found');
     }
 
-    // Confirm the booking (guarded to status='pending' in SQL).
-    await supabase.rpc('confirm_booking', {
-      p_booking_id: payment.booking_id,
+    // Dispatch module confirmation only after the trusted captured webhook.
+    const { error: applyError } = await supabase.rpc('apply_commerce_payment', {
+      p_reference_id: payment.commerce_reference_id,
       p_payment_ref: paymentId,
     });
-    await supabase
+    if (applyError) throw new Error('commerce_confirmation_failed');
+    const { error: updateError } = await supabase
       .from('payments')
       .update({ status: 'captured', provider_payment_id: paymentId })
       .eq('id', payment.id);
+    if (updateError) throw new Error('payment_update_failed');
+    await completeEvent(supabase, eventId);
 
     return new Response(JSON.stringify({ status: 'confirmed' }), {
       status: 200,
@@ -104,14 +101,37 @@ Deno.serve(async (req) => {
       .from('payments')
       .update({ status: 'failed' })
       .eq('provider_order_id', event.payload?.payment?.entity?.order_id ?? '');
+    await completeEvent(supabase, eventId);
     return new Response(JSON.stringify({ status: 'recorded_failed' }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 
+  await completeEvent(supabase, eventId);
   return new Response(JSON.stringify({ status: 'ignored' }), {
     status: 200,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : 'processing_failed';
+    await supabase.rpc('fail_webhook_event', {
+      p_provider: 'razorpay', p_event_id: eventId, p_error: reason,
+    });
+    console.error('razorpay-webhook: processing failed', reason);
+    return json({ error: reason }, reason === 'payment_not_found' ? 404 : 503);
+  }
 });
+
+async function completeEvent(supabase: SupabaseClient, eventId: string) {
+  const { error } = await supabase.rpc('complete_webhook_event', {
+    p_provider: 'razorpay', p_event_id: eventId,
+  });
+  if (error) throw new Error('event_completion_failed');
+}
+
+function json(body: Record<string, unknown>, status: number) {
+  return new Response(JSON.stringify(body), {
+    status, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}

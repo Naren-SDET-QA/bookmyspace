@@ -1,5 +1,9 @@
 import 'package:bookmyspace/core/localization/app_localizations.dart';
 import 'package:bookmyspace/core/router/app_router.dart';
+import 'package:bookmyspace/core/theme/app_theme.dart';
+import 'package:bookmyspace/core/theme/prototype_visuals.dart';
+import 'package:bookmyspace/features/admin/domain/content_models.dart';
+import 'package:bookmyspace/features/admin/presentation/content_providers.dart';
 import 'package:bookmyspace/features/auth/domain/auth_user.dart';
 import 'package:bookmyspace/features/auth/presentation/auth_providers.dart';
 import 'package:bookmyspace/features/courses/presentation/course_providers.dart';
@@ -67,11 +71,12 @@ void main() {
     await tester.pumpWidget(_app(repo));
     await tester.pumpAndSettle();
 
-    expect(find.text('Sunrise Function Hall'), findsOneWidget);
-    expect(find.text('The Work Nest'), findsOneWidget);
-    expect(find.text('Function Hall'), findsWidgets);
+    expect(find.text('Sunrise Function Hall'), findsWidgets);
+    expect(find.text('The Work Nest'), findsWidgets);
+    expect(find.text('Function Halls'), findsWidgets);
 
-    await tester.tap(find.text('Sunrise Function Hall'));
+    await tester.ensureVisible(find.text('Sunrise Function Hall').first);
+    await tester.tap(find.text('Sunrise Function Hall').first);
     await tester.pumpAndSettle();
     // Navigates to the venue details page.
     expect(find.text('About this venue'), findsOneWidget);
@@ -90,10 +95,18 @@ void main() {
           fullName: identity.$2,
         ),
       );
+      tester.view.physicalSize = const Size(599, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
       await tester.pumpWidget(_app(MockVenueRepository(), authRepo: auth));
       await tester.pumpAndSettle();
 
-      expect(find.text('Welcome, ${identity.$2}'), findsOneWidget);
+      // Prototype greeting is time-of-day, not personalized Welcome.
+      expect(
+        find.textContaining(RegExp(r'Good (morning|afternoon|evening)')),
+        findsOneWidget,
+      );
       expect(find.text('Welcome to Guest'), findsNothing);
       auth.dispose();
     });
@@ -101,18 +114,32 @@ void main() {
 
   testWidgets('home greets guest only when unauthenticated', (tester) async {
     final auth = MockAuthRepository();
+    tester.view.physicalSize = const Size(599, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(_app(MockVenueRepository(), authRepo: auth));
     await tester.pumpAndSettle();
 
-    expect(find.text('Welcome to Guest'), findsOneWidget);
+    expect(
+      find.textContaining(RegExp(r'Good (morning|afternoon|evening)')),
+      findsOneWidget,
+    );
     auth.dispose();
   });
 
   testWidgets('home updates after restored session', (tester) async {
     final auth = MockAuthRepository();
+    tester.view.physicalSize = const Size(599, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(_app(MockVenueRepository(), authRepo: auth));
     await tester.pumpAndSettle();
-    expect(find.text('Welcome to Guest'), findsOneWidget);
+    expect(
+      find.textContaining(RegExp(r'Good (morning|afternoon|evening)')),
+      findsOneWidget,
+    );
 
     auth.restoreSession(
       const AuthUser(
@@ -123,7 +150,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Welcome, Restored User'), findsOneWidget);
+    expect(
+      find.textContaining(RegExp(r'Good (morning|afternoon|evening)')),
+      findsOneWidget,
+    );
     expect(find.text('Welcome to Guest'), findsNothing);
     auth.dispose();
   });
@@ -136,9 +166,10 @@ void main() {
     expect(find.text('Try again'), findsWidgets);
 
     repo.failRequests = false;
+    await tester.ensureVisible(find.text('Try again').first);
     await tester.tap(find.text('Try again').first);
     await tester.pumpAndSettle();
-    expect(find.text('Sunrise Function Hall'), findsOneWidget);
+    expect(find.text('Sunrise Function Hall'), findsWidgets);
   });
 
   testWidgets('favourite toggle updates the saved icon', (tester) async {
@@ -149,6 +180,7 @@ void main() {
     final saveButtons = find.byIcon(Icons.favorite_outline_rounded);
     expect(saveButtons, findsWidgets);
 
+    await tester.ensureVisible(saveButtons.first);
     await tester.tap(saveButtons.first);
     await tester.pumpAndSettle();
     expect(repo.favoriteIds(), completes);
@@ -188,11 +220,118 @@ void main() {
 
     await tester.tap(find.text('Ongole, Andhra Pradesh'));
     await tester.pumpAndSettle();
+    expect(find.text('Choose location'), findsOneWidget);
     await tester.tap(find.text('Guntur'));
     await tester.pumpAndSettle();
 
     expect(find.text('Guntur, Andhra Pradesh'), findsOneWidget);
     expect(find.text('Ongole, Andhra Pradesh'), findsNothing);
+  });
+
+  testWidgets('home shows Current location and Entire city radius', (
+    tester,
+  ) async {
+    final repo = MockVenueRepository();
+    await openMobileHome(tester, repo);
+
+    expect(find.text('Current location'), findsOneWidget);
+    expect(find.text('Entire city'), findsOneWidget);
+    expect(find.textContaining('looking for?'), findsOneWidget);
+  });
+
+  testWidgets('home category tiles expose prototype Function Halls emoji', (
+    tester,
+  ) async {
+    final repo = MockVenueRepository();
+    await openMobileHome(tester, repo);
+
+    expect(find.text('Function Halls'), findsWidgets);
+    expect(find.text('🏛️'), findsWidgets);
+    expect(find.text('🎓'), findsWidgets);
+    expect(find.text('📅'), findsWidgets);
+  });
+
+  testWidgets('home category tiles keep prototype emojis when remote blanks them', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(599, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final auth = MockAuthRepository(
+      initialUser: const AuthUser(id: 'u1', email: 'a@b.com'),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          venueRepositoryProvider.overrideWithValue(MockVenueRepository()),
+          authRepositoryProvider.overrideWithValue(auth),
+          eventRepositoryProvider.overrideWithValue(MockEventRepository()),
+          courseRepositoryProvider.overrideWithValue(MockCourseRepository()),
+          homepageContentConfigProvider.overrideWith(
+            (ref) async => const HomepageContentConfig(
+              categoryTiles: [
+                HomeCategoryTile(
+                  id: '1',
+                  tileKey: 'function_hall',
+                  label: 'Function Halls',
+                  emoji: '',
+                  routeTarget: 'search:function_hall',
+                ),
+                HomeCategoryTile(
+                  id: '2',
+                  tileKey: 'classes',
+                  label: 'Classes',
+                  emoji: '   ',
+                  routeTarget: 'courses',
+                ),
+                HomeCategoryTile(
+                  id: '3',
+                  tileKey: 'events',
+                  label: 'Events',
+                  emoji: '',
+                  routeTarget: 'events',
+                ),
+              ],
+            ),
+          ),
+        ],
+        child: MaterialApp.router(
+          theme: AppTheme.light,
+          routerConfig: createAppRouter(
+            initialLocation: AppRoutes.home,
+            currentUser: const AuthUser(id: 'u1', email: 'a@b.com'),
+          ),
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('🏛️'), findsWidgets);
+    expect(find.text('🎓'), findsWidgets);
+    expect(find.text('📅'), findsWidgets);
+    expect(find.byType(PrototypeCategoryTile), findsNWidgets(3));
+
+    // Brand violet must be the theme primary (prototype #6c3df4).
+    final builtContext = tester.element(find.byType(PrototypeCategoryTile).first);
+    expect(Theme.of(builtContext).colorScheme.primary, AppTheme.brand);
+    expect(
+      PrototypeVisuals.categoryTileDecoration().border?.top.color,
+      AppTheme.line,
+    );
+    expect(
+      PrototypeVisuals.categoryTileDecoration(selected: true).border?.top.color,
+      AppTheme.brand,
+    );
+    auth.dispose();
   });
 
   testWidgets('radius chips invalidate nearby listings query', (tester) async {

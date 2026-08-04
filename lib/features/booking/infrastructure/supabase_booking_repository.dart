@@ -54,38 +54,25 @@ class SupabaseBookingRepository implements BookingRepository {
     int holdMinutes = 10,
   }) async {
     try {
-      final response = await _client.functions.invoke(
-        'create-booking-hold',
-        body: {
-          'venue_id': venueId,
-          'slot_id': slotId,
-          'book_date': _formatDate(bookDate),
-          'idempotency_key': _newUuid(),
-          'amount': amount,
-          'hold_minutes': holdMinutes,
+      final data = await _client.rpc<Map<String, dynamic>>(
+        'acquire_booking_hold_for_current_user',
+        params: {
+          'p_venue_id': venueId,
+          'p_slot_id': slotId,
+          'p_book_date': _formatDate(bookDate),
+          'p_idempotency_key': _newUuid(),
+          'p_hold_minutes': holdMinutes,
         },
       );
-      final data = response.data;
-      if (data is! Map<String, dynamic>) {
-        throw const app_errors.AppError('Empty response from booking service.');
-      }
       return BookingHold.fromResponse(data);
-    } on FunctionException catch (e) {
-      final details = e.details;
-      final error = details is Map<String, dynamic>
-          ? (details['error'] as String? ?? '')
-          : '';
-      if (error == 'slot_unavailable') {
+    } on PostgrestException catch (e) {
+      if (e.code == 'P0001' || e.code == '23P01') {
         throw const app_errors.BookingConflictException(
           'This slot was just taken. Please pick another.',
           code: 'slot_unavailable',
         );
       }
-      throw app_errors.ServerException(
-        'Booking service error (${e.status}).',
-        code: error,
-        statusCode: e.status,
-      );
+      throw app_errors.mapError(e);
     } catch (e) {
       throw app_errors.mapError(e);
     }
@@ -106,39 +93,27 @@ class SupabaseBookingRepository implements BookingRepository {
       if (user == null) {
         throw const app_errors.AuthException('You must be signed in to book.');
       }
-      // Fetch slot times so the booking rows carry authoritative start/end.
-      final slot = await _client
-          .from('time_slots')
-          .select('label, start_time, end_time')
-          .eq('id', slotId)
-          .maybeSingle();
-      final start = slot?['start_time'] as String? ?? '';
-      final end = slot?['end_time'] as String? ?? '';
-
+      final bookingId = await _client.rpc<String>(
+        'create_booking_from_hold_for_current_user',
+        params: {'p_hold_id': hold.id, 'p_booking_ref': _bookingRef()},
+      );
+      if (bookingId.isEmpty) {
+        throw const app_errors.AppError('Empty response from booking service.');
+      }
       final row = await _client
           .from('bookings')
-          .insert({
-            'booking_ref': _bookingRef(),
-            'user_id': user.id,
-            'venue_id': venueId,
-            'slot_id': slotId,
-            'book_date': _formatDate(bookDate),
-            'start_time': start,
-            'end_time': end,
-            'hold_id': hold.id,
-            'status': 'pending',
-            'quantity': 1,
-            'amount': amount,
-            'tax_amount': taxAmount,
-            'total_amount': totalAmount,
-            'currency': 'INR',
-          })
           .select(_slotSelect)
+          .eq('id', bookingId)
           .single();
       return Booking.fromJson(row);
     } on PostgrestException catch (e) {
-      // 23P01 = exclusion_violation (the bookings_no_overlap constraint).
-      if (e.code == '23P01') {
+      if (e.message.toLowerCase().contains('hold expired')) {
+        throw const app_errors.HoldExpiredException(
+          'Checkout hold expired.',
+          code: 'hold_expired',
+        );
+      }
+      if (e.code == 'P0001' || e.code == '23P01') {
         throw const app_errors.BookingConflictException(
           'This slot is no longer available.',
           code: 'slot_unavailable',

@@ -23,6 +23,7 @@ class MockBookingRepository implements BookingRepository {
   String? lastAcquiredSlotId;
   double? lastAcquiredAmount;
   Booking? createdBooking;
+  BookingStatus? createdStatus;
 
   static const List<SlotAvailability> defaultSlots = [
     SlotAvailability(
@@ -118,7 +119,25 @@ class MockBookingRepository implements BookingRepository {
     required double totalAmount,
   }) async {
     if (failCreate) throw Exception('create failed');
-    createdBooking = sampleBooking();
+    createdBooking = Booking(
+      id: 'b1',
+      bookingRef: 'BMS-1A2B3C',
+      venueId: venueId,
+      slotId: slotId,
+      bookDate: bookDate,
+      startTime: '09:00:00',
+      endTime: '13:00:00',
+      status:
+          createdStatus ??
+          (totalAmount == 0
+              ? BookingStatus.confirmed
+              : BookingStatus.paymentPending),
+      amount: amount,
+      taxAmount: taxAmount,
+      totalAmount: totalAmount,
+      venueName: 'Sunrise Function Hall',
+      slotLabel: 'Morning',
+    );
     return createdBooking!;
   }
 

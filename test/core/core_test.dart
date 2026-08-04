@@ -62,6 +62,12 @@ void main() {
         );
       }
     });
+
+    test('maps stack defaults to OSM without Google Places', () {
+      expect(AppConfig.useGooglePlaces, isFalse);
+      expect(AppConfig.osmTileUrlTemplate, contains('{z}/{x}/{y}'));
+      expect(AppConfig.mapsUserAgent, contains('BookMySpace'));
+    });
   });
 
   group('AppExceptions', () {

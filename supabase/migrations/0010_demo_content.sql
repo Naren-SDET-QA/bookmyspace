@@ -18,12 +18,13 @@ begin
   insert into public.venue_images (venue_id, url, alt_text, is_cover, sort_order)
   select v_sunrise, 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3',
     'Sunrise function hall main hall', true, 0
-  where not exists (select 1 from public.venue_images where venue_id = v_sunrise);
+  where v_sunrise is not null
+    and not exists (select 1 from public.venue_images where venue_id = v_sunrise);
 
   insert into public.venue_images (venue_id, url, alt_text, is_cover, sort_order)
   select v_sunrise, 'https://images.unsplash.com/photo-1511578314322-379afb476865',
     'Decorative entrance', false, 1
-  where not exists (
+  where v_sunrise is not null and not exists (
     select 1 from public.venue_images
     where venue_id = v_sunrise and url = 'https://images.unsplash.com/photo-1511578314322-379afb476865'
   );
@@ -31,7 +32,7 @@ begin
   insert into public.venue_images (venue_id, url, alt_text, is_cover, sort_order)
   select v_sunrise, 'https://images.unsplash.com/photo-1505236858219-8359eb29e329',
     'Banquet setup', false, 2
-  where not exists (
+  where v_sunrise is not null and not exists (
     select 1 from public.venue_images
     where venue_id = v_sunrise and url = 'https://images.unsplash.com/photo-1505236858219-8359eb29e329'
   );
@@ -40,7 +41,8 @@ begin
   insert into public.venue_images (venue_id, url, alt_text, is_cover, sort_order)
   select v_boardroom, 'https://images.unsplash.com/photo-1497366216548-37526070297c',
     'Modern meeting room', true, 0
-  where not exists (select 1 from public.venue_images where venue_id = v_boardroom);
+  where v_boardroom is not null
+    and not exists (select 1 from public.venue_images where venue_id = v_boardroom);
 end $$;
 
 -- Operating hours for The Boardroom.

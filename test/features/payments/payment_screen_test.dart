@@ -132,6 +132,6 @@ void main() {
     await tester.tap(find.text('Pay now'));
     await _pumpThroughPayment(tester);
 
-    expect(find.textContaining('order creation failed'), findsOneWidget);
+    expect(find.textContaining('Payment could not start'), findsOneWidget);
   });
 }

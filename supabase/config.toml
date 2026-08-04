@@ -1,5 +1,3 @@
-# Supabase project configuration for BookMySpace.
-# Generated with `supabase init`. Local development only.
 project_id = "bookmyspace"
 
 [api]
@@ -11,55 +9,75 @@ max_rows = 1000
 
 [db]
 port = 54322
+shadow_port = 54320
 major_version = 15
+
+[db.migrations]
+enabled = true
+schema_paths = []
+
+[db.seed]
+enabled = false
+sql_paths = []
+
+[realtime]
+enabled = true
 
 [studio]
 enabled = true
 port = 54323
+api_url = "http://127.0.0.1"
 
-[inbucket]
+[local_smtp]
 enabled = true
 port = 54324
 
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
 [auth]
 enabled = true
-site_url = "http://127.0.0.1:3000"
-additional_redirect_urls = ["http://127.0.0.1:8080"]
+site_url = "http://127.0.0.1:4173"
+additional_redirect_urls = [
+  "http://127.0.0.1:4173",
+  "http://localhost:4173",
+  "http://127.0.0.1:8080"
+]
 jwt_expiry = 3600
 enable_signup = true
+enable_anonymous_sign_ins = false
 
 [auth.email]
 enable_signup = true
 double_confirm_changes = true
 enable_confirmations = false
+otp_length = 6
+otp_expiry = 3600
 
-[auth.email.template.invite]
-subject = "Invite to BookMySpace"
-content_path = "./supabase/templates/invite.html"
-
-[auth.email.template.confirmation]
-subject = "Confirm your BookMySpace signup"
-content_path = "./supabase/templates/confirmation.html"
+[auth.email.template.magic_link]
+subject = "{{ .Token }} is your BookMySpace login code"
+content_path = "./supabase/templates/magic_link.html"
 
 [auth.external.google]
-enabled = true
+enabled = false
 client_id = ""
 secret = ""
 redirect_uri = ""
 
 [auth.external.apple]
-enabled = true
+enabled = false
 client_id = ""
 secret = ""
+redirect_uri = ""
 
 [edge_runtime]
 enabled = true
 policy = "oneshot"
-verify_jwt = true
+inspector_port = 8083
+deno_version = 2
 
 [analytics]
 enabled = true
 port = 54327
-
-[realtime]
-enabled = true
+backend = "postgres"

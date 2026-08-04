@@ -4,10 +4,12 @@ import 'package:bookmyspace/features/auth/domain/auth_user.dart';
 import 'package:bookmyspace/features/auth/presentation/auth_providers.dart';
 import 'package:bookmyspace/features/booking/domain/booking.dart';
 import 'package:bookmyspace/features/booking/presentation/booking_providers.dart';
+import 'package:bookmyspace/features/booking/presentation/screens/booking_result_screen.dart';
 import 'package:bookmyspace/features/booking/presentation/screens/my_bookings_screen.dart';
 import 'package:bookmyspace/features/courses/presentation/course_providers.dart';
 import 'package:bookmyspace/features/events/presentation/event_providers.dart';
 import 'package:bookmyspace/features/payments/presentation/payment_providers.dart';
+import 'package:bookmyspace/features/payments/presentation/screens/payment_screen.dart';
 import 'package:bookmyspace/features/venues/presentation/venue_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -102,6 +104,65 @@ void main() {
     expect(bookingRepo.lastAcquiredSlotId, 's1');
     expect(bookingRepo.lastAcquiredAmount, 35000);
     expect(bookingRepo.createdBooking, isNotNull);
+    expect(find.byType(PaymentScreen), findsOneWidget);
+  });
+
+  testWidgets('free slot confirms and bypasses payment', (tester) async {
+    final bookingRepo = MockBookingRepository(
+      slots: const [
+        SlotAvailability(
+          slotId: 'free-slot',
+          label: 'Community hour',
+          startTime: '09:00:00',
+          endTime: '10:00:00',
+          priceAmount: 0,
+          isAvailable: true,
+          reason: 'available',
+        ),
+      ],
+    );
+    await tester.pumpWidget(_app(bookingRepo));
+
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sunrise Function Hall').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Book now'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Community hour'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirm booking').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirm'));
+    await tester.pumpAndSettle();
+
+    expect(bookingRepo.lastAcquiredAmount, 0);
+    expect(bookingRepo.createdBooking?.status, BookingStatus.confirmed);
+    expect(find.byType(BookingResultScreen), findsOneWidget);
+    expect(find.text('Booking confirmed'), findsOneWidget);
+    expect(find.byType(PaymentScreen), findsNothing);
+  });
+
+  testWidgets('approval booking shows waiting-for-owner screen', (
+    tester,
+  ) async {
+    final bookingRepo = MockBookingRepository()
+      ..createdStatus = BookingStatus.requested;
+    await tester.pumpWidget(_app(bookingRepo));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sunrise Function Hall').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Book now'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Morning'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirm booking').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirm'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BookingResultScreen), findsOneWidget);
+    expect(find.text('Waiting for owner approval'), findsOneWidget);
+    expect(find.byType(PaymentScreen), findsNothing);
   });
 
   testWidgets('slot conflict surfaces a message and does not create', (

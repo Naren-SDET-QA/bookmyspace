@@ -10,19 +10,14 @@
 -- ------------------------------------------------------------
 -- NOTIFICATIONS (in-app, per-user)
 -- ------------------------------------------------------------
-create table public.notifications (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
-  title text not null,
-  body text not null,
-  type text not null check (type in ('booking_confirmed', 'booking_cancelled', 'payment_received', 'refund_processed', 'system', 'support_reply', 'admin')),
-  data jsonb default '{}'::jsonb,
-  read boolean not null default false,
-  read_at timestamptz,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
+alter table public.notifications rename column is_read to read;
+alter table public.notifications
+  alter column body set not null,
+  alter column data set default '{}'::jsonb,
+  add column read_at timestamptz,
+  add column updated_at timestamptz not null default now();
 
+drop index if exists public.idx_notifications_user;
 create index idx_notifications_user on public.notifications(user_id, read, created_at);
 
 create trigger trg_notifications_updated_at
@@ -32,6 +27,7 @@ create trigger trg_notifications_updated_at
 -- RLS: users can read their own notifications and update read state.
 alter table public.notifications enable row level security;
 
+drop policy if exists "notifications_own" on public.notifications;
 create policy "notifications_own" on public.notifications
   for all
   using (auth.uid() = user_id)
@@ -99,24 +95,16 @@ create policy "crash_reports_admin_read" on public.crash_reports
 -- ------------------------------------------------------------
 -- SUPPORT TICKETS
 -- ------------------------------------------------------------
-create type public.ticket_status as enum ('open', 'in_progress', 'resolved', 'closed');
-create type public.ticket_priority as enum ('low', 'medium', 'high', 'urgent');
+alter table public.support_tickets
+  add column admin_reply text,
+  add column admin_id uuid references auth.users(id);
+alter table public.support_tickets drop constraint support_tickets_priority_check;
+update public.support_tickets set priority = 'medium' where priority = 'normal';
+alter table public.support_tickets alter column priority set default 'medium';
+alter table public.support_tickets add constraint support_tickets_priority_check
+  check (priority in ('low', 'medium', 'high', 'urgent'));
 
-create table public.support_tickets (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
-  subject text not null,
-  description text not null,
-  status public.ticket_status not null default 'open',
-  priority public.ticket_priority not null default 'medium',
-  category text not null check (category in ('booking', 'payment', 'venue', 'general', 'other')),
-  admin_reply text,
-  admin_id uuid references auth.users(id),
-  resolved_at timestamptz,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
+drop index if exists public.idx_support_tickets_user;
 create index idx_support_tickets_user on public.support_tickets(user_id, status);
 create index idx_support_tickets_status on public.support_tickets(status, created_at);
 
@@ -150,17 +138,10 @@ create policy "tickets_admin_write" on public.support_tickets
 -- ------------------------------------------------------------
 -- AUDIT LOG
 -- ------------------------------------------------------------
-create table public.audit_logs (
-  id uuid primary key default gen_random_uuid(),
-  actor_id uuid not null references auth.users(id),
-  action text not null,
-  entity_type text not null,
-  entity_id uuid,
-  details jsonb default '{}'::jsonb,
-  ip_address text,
-  created_at timestamptz not null default now()
-);
+alter table public.audit_logs rename column user_id to actor_id;
+alter table public.audit_logs alter column details set default '{}'::jsonb;
 
+drop index if exists public.idx_audit_user;
 create index idx_audit_logs_actor on public.audit_logs(actor_id, created_at);
 create index idx_audit_logs_action on public.audit_logs(action, created_at);
 

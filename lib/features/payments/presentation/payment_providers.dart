@@ -24,6 +24,11 @@ final myPaymentsProvider = FutureProvider<List<Payment>>((ref) {
   return ref.watch(paymentRepositoryProvider).myPayments();
 });
 
+final paymentReceiptProvider = FutureProvider.autoDispose
+    .family<PaymentReceipt, String>((ref, bookingId) {
+      return ref.watch(paymentRepositoryProvider).receipt(bookingId);
+    });
+
 /// Live status of a single booking, refreshed by polling after checkout.
 final bookingStatusProvider = FutureProvider.autoDispose
     .family<BookingStatus, String>((ref, bookingId) {

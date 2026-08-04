@@ -39,6 +39,39 @@ class SupabasePaymentRepository implements PaymentRepository {
   }
 
   @override
+  Future<PaymentOrder> createCommerceOrder({
+    required String referenceId,
+  }) async {
+    try {
+      final response = await _client.functions.invoke(
+        'create-payment-order',
+        body: {'commerce_reference_id': referenceId},
+      );
+      if (response.data is! Map<String, dynamic>) {
+        throw const app_errors.ServerException(
+          'Payment service returned an empty response.',
+        );
+      }
+      return PaymentOrder.fromResponse(response.data as Map<String, dynamic>);
+    } on FunctionException catch (e) {
+      throw _mapFunctionException(e);
+    }
+  }
+
+  @override
+  Future<String> commerceStatus(String referenceId) async => await _client
+      .rpc<String>('commerce_status', params: {'p_reference_id': referenceId});
+
+  @override
+  Future<String> referenceForReservation(
+    String module,
+    String reservationId,
+  ) async => await _client.rpc<String>(
+    'commerce_reference_for_reservation',
+    params: {'p_module': module, 'p_reservation_id': reservationId},
+  );
+
+  @override
   Future<BookingStatus> bookingStatus(String bookingId) async {
     try {
       final user = _client.auth.currentUser;
@@ -47,13 +80,11 @@ class SupabasePaymentRepository implements PaymentRepository {
           'You must be signed in to check a booking.',
         );
       }
-      final row = await _client
-          .from('bookings')
-          .select('status')
-          .eq('id', bookingId)
-          .eq('user_id', user.id)
-          .maybeSingle();
-      return BookingStatus.fromDb(row?['status'] as String? ?? 'pending');
+      final status = await _client.rpc<String>(
+        'commerce_status_for_booking',
+        params: {'p_booking_id': bookingId},
+      );
+      return BookingStatus.fromDb(status);
     } catch (e) {
       throw app_errors.mapError(e);
     }
@@ -108,6 +139,22 @@ class SupabasePaymentRepository implements PaymentRepository {
     }
   }
 
+  @override
+  Future<PaymentReceipt> receipt(String bookingId) async {
+    try {
+      final data = await _client.rpc<Map<String, dynamic>>(
+        'customer_booking_receipt',
+        params: {'p_booking_id': bookingId},
+      );
+      if (data.isEmpty) {
+        throw const app_errors.NotFoundException('Receipt not found.');
+      }
+      return PaymentReceipt.fromJson(data);
+    } catch (e) {
+      throw app_errors.mapError(e);
+    }
+  }
+
   app_errors.AppException _mapFunctionException(FunctionException e) {
     final details = e.details;
     final error = details is Map<String, dynamic>
@@ -148,6 +195,14 @@ class SupabasePaymentRepository implements PaymentRepository {
         'The refund amount is invalid.',
         code: error,
         statusCode: e.status,
+      ),
+      'payment_not_configured' => app_errors.ConfigurationException(
+        'Razorpay is not configured for this environment.',
+        code: error,
+      ),
+      'payment_timeout' => app_errors.TimeoutException(
+        'The payment provider did not respond in time. Please retry.',
+        code: error,
       ),
       'already_refunded' => app_errors.BusinessException(
         'This booking has already been refunded.',

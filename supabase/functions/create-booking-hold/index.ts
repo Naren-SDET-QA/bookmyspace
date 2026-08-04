@@ -34,14 +34,18 @@ Deno.serve(async (req) => {
     });
   }
 
-  const supabase: SupabaseClient = createClient(
+  const userClient: SupabaseClient = createClient(
     SUPABASE_URL,
     SUPABASE_SERVICE_ROLE_KEY,
     { global: { headers: { Authorization: authHeader } } },
   );
+  const adminClient: SupabaseClient = createClient(
+    SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY,
+  );
 
   // Resolve the authenticated user id from the JWT.
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  const { data: { user }, error: userError } = await userClient.auth.getUser();
   if (userError || !user) {
     return new Response(JSON.stringify({ error: 'unauthorized' }), {
       status: 401,
@@ -53,7 +57,10 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { venue_id, slot_id, book_date, idempotency_key, amount, hold_minutes } = body;
 
-    if (!venue_id || !slot_id || !book_date || !idempotency_key || !amount) {
+    if (
+      !venue_id || !slot_id || !book_date || !idempotency_key ||
+      amount === undefined || amount === null
+    ) {
       return new Response(JSON.stringify({ error: 'missing_fields' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -61,10 +68,12 @@ Deno.serve(async (req) => {
     }
 
     // Server-side amount validation: always re-fetch the authoritative price.
-    const { data: slot, error: slotError } = await supabase
+    const { data: slot, error: slotError } = await adminClient
       .from('time_slots')
       .select('id, price_amount')
       .eq('id', slot_id)
+      .eq('venue_id', venue_id)
+      .eq('is_active', true)
       .single();
     if (slotError || !slot) {
       return new Response(JSON.stringify({ error: 'invalid_slot' }), {
@@ -80,7 +89,7 @@ Deno.serve(async (req) => {
     }
 
     // Atomic hold acquisition in the database.
-    const { data: holdId, error: holdError } = await supabase.rpc(
+    const { data: holdId, error: holdError } = await adminClient.rpc(
       'acquire_booking_hold',
       {
         p_venue_id: venue_id,

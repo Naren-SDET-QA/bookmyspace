@@ -11,29 +11,33 @@ final reviewRepositoryProvider = Provider<ReviewRepository>((ref) {
 });
 
 /// Reviews for a specific venue.
-final venueReviewsProvider =
-    FutureProvider.autoDispose.family<List<Review>, String>((ref, venueId) {
-  return ref.watch(reviewRepositoryProvider).venueReviews(venueId);
-});
+final venueReviewsProvider = FutureProvider.autoDispose
+    .family<List<Review>, String>((ref, venueId) {
+      return ref.watch(reviewRepositoryProvider).venueReviews(venueId);
+    });
 
 /// Current user's review for a venue.
-final myReviewProvider =
-    FutureProvider.autoDispose.family<Review?, String>((ref, venueId) {
+final myReviewProvider = FutureProvider.autoDispose.family<Review?, String>((
+  ref,
+  venueId,
+) {
   return ref.watch(reviewRepositoryProvider).myReviewForVenue(venueId);
 });
 
 /// Submit a new review.
 final submitReviewProvider = FutureProvider.autoDispose
-    .family<Review, ({String venueId, int rating, String? title, String? body})>(
-        (ref, params) async {
-  final repo = ref.watch(reviewRepositoryProvider);
-  final review = await repo.submitReview(
-    venueId: params.venueId,
-    rating: params.rating,
-    title: params.title,
-    body: params.body,
-  );
-  ref.invalidate(venueReviewsProvider(params.venueId));
-  ref.invalidate(myReviewProvider(params.venueId));
-  return review;
-});
+    .family<
+      Review,
+      ({String venueId, int rating, String? title, String? body})
+    >((ref, params) async {
+      final repo = ref.watch(reviewRepositoryProvider);
+      final review = await repo.submitReview(
+        venueId: params.venueId,
+        rating: params.rating,
+        title: params.title,
+        body: params.body,
+      );
+      ref.invalidate(venueReviewsProvider(params.venueId));
+      ref.invalidate(myReviewProvider(params.venueId));
+      return review;
+    });

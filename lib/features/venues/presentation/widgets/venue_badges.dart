@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/prototype_visuals.dart';
 
 /// Formats amounts with the Indian rupee grouping (₹ symbol).
 String formatInr(double amount) {
@@ -33,12 +33,13 @@ class RatingBadge extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.star_rounded, size: 16, color: Colors.amber),
+        const Icon(Icons.star_rounded, size: 16, color: PrototypeVisuals.star),
         const SizedBox(width: 2),
         Text(
           rating.toStringAsFixed(1),
           style: theme.textTheme.labelMedium?.copyWith(
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w800,
+            color: PrototypeVisuals.starText,
           ),
         ),
         if (count != null && count! > 0) ...[
@@ -81,17 +82,6 @@ class FavoriteButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IconButton.filledTonal(
-      onPressed: onPressed,
-      style: IconButton.styleFrom(
-        backgroundColor: Colors.black.withValues(alpha: 0.35),
-        foregroundColor: Colors.white,
-      ),
-      icon: Icon(
-        isFavorite ? Icons.favorite_rounded : Icons.favorite_outline_rounded,
-        color: isFavorite ? AppTheme.accent : Colors.white,
-      ),
-      tooltip: isFavorite ? 'Remove from saved' : 'Save venue',
-    );
+    return PrototypeFavButton(isFavorite: isFavorite, onPressed: onPressed);
   }
 }

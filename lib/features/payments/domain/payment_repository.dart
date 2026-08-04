@@ -11,6 +11,9 @@ abstract interface class PaymentRepository {
   /// Creates a Razorpay order for a `pending` booking (server validates the
   /// amount against the DB and returns the order id for checkout).
   Future<PaymentOrder> createOrder({required String bookingId});
+  Future<PaymentOrder> createCommerceOrder({required String referenceId});
+  Future<String> commerceStatus(String referenceId);
+  Future<String> referenceForReservation(String module, String reservationId);
 
   /// Refreshes the current status of [bookingId] (used to reflect the
   /// webhook-driven transition from `pending` to `confirmed`/`cancelled`).
@@ -25,4 +28,6 @@ abstract interface class PaymentRepository {
 
   /// Payments belonging to the signed-in user, newest first.
   Future<List<Payment>> myPayments();
+
+  Future<PaymentReceipt> receipt(String bookingId);
 }

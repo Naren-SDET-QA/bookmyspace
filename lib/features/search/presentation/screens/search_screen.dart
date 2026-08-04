@@ -4,7 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/prototype_visuals.dart';
 import '../../../../core/validators/app_validators.dart';
+import '../../../../core/widgets/app_bottom_sheet.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/skeleton.dart';
@@ -75,9 +78,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   Future<void> _openFilters() async {
-    await showModalBottomSheet<void>(
+    await showAppBottomSheet<void>(
       context: context,
-      isScrollControlled: true,
+      maxHeightFactor: 0.85,
       builder: (_) => _FilterSheet(
         initial: ref.read(searchQueryProvider),
         categories: ref.read(venueCategoriesProvider).value ?? const [],
@@ -93,120 +96,234 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final l10n = AppLocalizations.of(context);
     final query = ref.watch(searchQueryProvider);
     final results = ref.watch(searchResultsProvider);
-    final categories = ref.watch(venueCategoriesProvider);
     final isWide = MediaQuery.sizeOf(context).width >= 700;
+    final radius = ref.watch(searchRadiusKmProvider);
+    final area = ref.watch(searchAreaProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Explore')),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    onChanged: _onQueryChanged,
-                    textInputAction: TextInputAction.search,
-                    decoration: InputDecoration(
-                      hintText: l10n.searchHint,
-                      prefixIcon: const Icon(Icons.search_rounded),
-                      suffixIcon: query.hasFilters
-                          ? IconButton(
-                              icon: const Icon(Icons.close_rounded),
-                              onPressed: _clearFilters,
-                            )
-                          : null,
+      backgroundColor: AppTheme.surfaceLight,
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 2, 18, 12),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Explore',
+                      style: TextStyle(
+                        fontSize: 21,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.5,
+                        color: AppTheme.ink,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                IconButton.filledTonal(
-                  onPressed: _openFilters,
-                  icon: Badge(
-                    isLabelVisible: query.hasFilters,
-                    child: const Icon(Icons.tune_rounded),
+                  PrototypeIconButton(
+                    icon: Icons.notifications_outlined,
+                    showDot: true,
+                    onPressed: () {},
                   ),
-                  tooltip: l10n.filters,
-                ),
-              ],
-            ),
-          ),
-          SizedBox(
-            height: 48,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text(l10n.allCategories),
-                    selected: query.categorySlug == null,
-                    onSelected: (_) {
-                      ref.read(searchQueryProvider.notifier).state = query
-                          .copyWith(categorySlug: () => null);
-                    },
-                  ),
-                ),
-                ...?categories.value?.map((c) {
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: Text(c.name),
-                      selected: query.categorySlug == c.slug,
-                      onSelected: (_) {
-                        ref.read(searchQueryProvider.notifier).state = query
-                            .copyWith(categorySlug: () => c.slug);
-                      },
-                    ),
-                  );
-                }),
-              ],
-            ),
-          ),
-          Expanded(
-            child: results.when(
-              data: (venues) {
-                if (venues.isEmpty) {
-                  return const EmptyState(
-                    icon: Icons.search_off_rounded,
-                    title: 'No results found',
-                    message:
-                        'Try a different keyword, category or price range.',
-                  );
-                }
-                return isWide
-                    ? GridView.builder(
-                        padding: const EdgeInsets.all(16),
-                        gridDelegate:
-                            const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 420,
-                          mainAxisExtent: 132,
-                          mainAxisSpacing: 12,
-                          crossAxisSpacing: 12,
-                        ),
-                        itemCount: venues.length,
-                        itemBuilder: (context, i) =>
-                            VenueCard(venue: venues[i], compact: true),
-                      )
-                    : ListView.separated(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: venues.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 12),
-                        itemBuilder: (context, i) =>
-                            VenueCard(venue: venues[i], compact: true),
-                      );
-              },
-              loading: () => const ListSkeleton(),
-              error: (e, _) => ErrorView(
-                message: e.toString(),
-                onRetry: () => ref.invalidate(searchResultsProvider),
+                ],
               ),
             ),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      onChanged: _onQueryChanged,
+                      textInputAction: TextInputAction.search,
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.ink,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Search halls, classes, events…',
+                        hintStyle: const TextStyle(
+                          color: PrototypeVisuals.searchHint,
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.search_rounded,
+                          color: PrototypeVisuals.searchHint,
+                          size: 17,
+                        ),
+                        filled: true,
+                        fillColor: AppTheme.card,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 15,
+                          vertical: 13,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(color: AppTheme.line),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(color: AppTheme.line),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(
+                            color: AppTheme.brand,
+                            width: 1.5,
+                          ),
+                        ),
+                        suffixIcon: query.hasFilters
+                            ? IconButton(
+                                icon: const Icon(Icons.close_rounded),
+                                onPressed: _clearFilters,
+                              )
+                            : null,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 9),
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      PrototypeIconButton(
+                        icon: Icons.tune_rounded,
+                        tooltip: l10n.filters,
+                        onPressed: _openFilters,
+                      ),
+                      if (query.hasFilters)
+                        Positioned(
+                          top: -5,
+                          right: -5,
+                          child: Container(
+                            width: 17,
+                            height: 17,
+                            alignment: Alignment.center,
+                            decoration: const BoxDecoration(
+                              color: AppTheme.brand,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Text(
+                              '!',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(
+              height: 44,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+                children: [
+                  for (final chip in PrototypeVisuals.exploreChips)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Center(
+                        child: PrototypeFilterChip(
+                          emoji: chip.emoji,
+                          label: chip.label,
+                          selected: chip.key == 'all'
+                              ? query.categorySlug == null
+                              : query.categorySlug == chip.key,
+                          onTap: () {
+                            ref.read(searchQueryProvider.notifier).state =
+                                query.copyWith(
+                              categorySlug: () =>
+                                  chip.key == 'all' ? null : chip.key,
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+              child: results.when(
+                data: (venues) => Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: '${venues.length}',
+                        style: const TextStyle(
+                          color: AppTheme.brand,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      ),
+                      TextSpan(
+                        text:
+                            ' results within ${PrototypeVisuals.radiusLabel(radius)} of ${area.cityLabel.split(',').first}',
+                        style: const TextStyle(
+                          color: AppTheme.muted,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                loading: () => const SizedBox.shrink(),
+                error: (_, _) => const SizedBox.shrink(),
+              ),
+            ),
+            Expanded(
+              child: results.when(
+                data: (venues) {
+                  if (venues.isEmpty) {
+                    return const EmptyState(
+                      icon: Icons.search_off_rounded,
+                      title: 'Nothing matches those filters',
+                      message:
+                          'Try widening the radius or clearing a filter.',
+                    );
+                  }
+                  return isWide
+                      ? GridView.builder(
+                          padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+                          gridDelegate:
+                              const SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: 420,
+                            mainAxisExtent: 132,
+                            mainAxisSpacing: 11,
+                            crossAxisSpacing: 12,
+                          ),
+                          itemCount: venues.length,
+                          itemBuilder: (context, i) =>
+                              VenueCard(venue: venues[i], compact: true),
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+                          itemCount: venues.length,
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: 11),
+                          itemBuilder: (context, i) =>
+                              VenueCard(venue: venues[i], compact: true),
+                        );
+                },
+                loading: () => const ListSkeleton(),
+                error: (e, _) => ErrorView(
+                  message: e.toString(),
+                  onRetry: () => ref.invalidate(searchResultsProvider),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -277,118 +394,154 @@ class _FilterSheetState extends State<_FilterSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  l10n.filters,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+    return AppBottomSheetScrollBody(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                l10n.filters,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
                 ),
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      _sortBy = VenueSortBy.relevance;
-                      _categorySlug = null;
-                      _minController.clear();
-                      _maxController.clear();
-                    });
-                  },
-                  child: Text(l10n.clearFilters),
-                ),
-              ],
+              ),
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _sortBy = VenueSortBy.relevance;
+                    _categorySlug = null;
+                    _minController.clear();
+                    _maxController.clear();
+                  });
+                },
+                child: Text(l10n.clearFilters),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(l10n.sortBy, style: theme.textTheme.titleSmall),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _SortChip(
+                label: l10n.relevance,
+                selected: _sortBy == VenueSortBy.relevance,
+                onTap: () => setState(() => _sortBy = VenueSortBy.relevance),
+              ),
+              _SortChip(
+                label: l10n.priceLowToHigh,
+                selected: _sortBy == VenueSortBy.priceAsc,
+                onTap: () => setState(() => _sortBy = VenueSortBy.priceAsc),
+              ),
+              _SortChip(
+                label: l10n.priceHighToLow,
+                selected: _sortBy == VenueSortBy.priceDesc,
+                onTap: () => setState(() => _sortBy = VenueSortBy.priceDesc),
+              ),
+              _SortChip(
+                label: l10n.topRated,
+                selected: _sortBy == VenueSortBy.rating,
+                onTap: () => setState(() => _sortBy = VenueSortBy.rating),
+              ),
+              _SortChip(
+                label: 'Nearest',
+                selected: _sortBy == VenueSortBy.distance,
+                onTap: () => setState(() => _sortBy = VenueSortBy.distance),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Uses home location & radius.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
             ),
-            const SizedBox(height: 12),
-            Text(l10n.sortBy, style: theme.textTheme.titleSmall),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: [
-                _SortChip(
-                  label: l10n.relevance,
-                  selected: _sortBy == VenueSortBy.relevance,
-                  onTap: () => setState(() => _sortBy = VenueSortBy.relevance),
-                ),
-                _SortChip(
-                  label: l10n.priceLowToHigh,
-                  selected: _sortBy == VenueSortBy.priceAsc,
-                  onTap: () => setState(() => _sortBy = VenueSortBy.priceAsc),
-                ),
-                _SortChip(
-                  label: l10n.priceHighToLow,
-                  selected: _sortBy == VenueSortBy.priceDesc,
-                  onTap: () => setState(() => _sortBy = VenueSortBy.priceDesc),
-                ),
-                _SortChip(
-                  label: l10n.topRated,
-                  selected: _sortBy == VenueSortBy.rating,
-                  onTap: () => setState(() => _sortBy = VenueSortBy.rating),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Text(l10n.allCategories, style: theme.textTheme.titleSmall),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: [
-                ChoiceChip(
-                  label: Text(l10n.allCategories),
-                  selected: _categorySlug == null,
-                  onSelected: (_) => setState(() => _categorySlug = null),
-                ),
-                ...widget.categories.map(
-                  (c) => ChoiceChip(
-                    label: Text(c.name),
-                    selected: _categorySlug == c.slug,
-                    onSelected: (_) => setState(() => _categorySlug = c.slug),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Text(l10n.pricing, style: theme.textTheme.titleSmall),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _minController,
-                    keyboardType: TextInputType.number,
-                    onChanged: (_) => setState(() => _priceError = null),
-                    decoration: InputDecoration(
-                      labelText: l10n.minPrice,
-                      prefixText: '₹ ',
-                      errorText: _priceError,
+          ),
+          const SizedBox(height: 16),
+          Text(l10n.allCategories, style: theme.textTheme.titleSmall),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              PrototypeFilterChip(
+                emoji: '✨',
+                label: l10n.allCategories,
+                selected: _categorySlug == null,
+                onTap: () => setState(() => _categorySlug = null),
+              ),
+              ...PrototypeVisuals.exploreChips
+                  .where((c) => c.key != 'all')
+                  .map(
+                    (c) => PrototypeFilterChip(
+                      emoji: c.emoji,
+                      label: c.label,
+                      selected: _categorySlug == c.key,
+                      onTap: () => setState(() => _categorySlug = c.key),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextField(
-                    controller: _maxController,
-                    keyboardType: TextInputType.number,
-                    onChanged: (_) => setState(() => _priceError = null),
-                    decoration: InputDecoration(
-                      labelText: l10n.maxPrice,
-                      prefixText: '₹ ',
+              ...widget.categories
+                  .where(
+                    (c) => !PrototypeVisuals.exploreChips.any(
+                      (p) => p.key == c.slug,
+                    ),
+                  )
+                  .map(
+                    (c) => PrototypeFilterChip(
+                      emoji: PrototypeVisuals.emojiForCategorySlug(
+                        c.slug,
+                        icon: c.icon,
+                      ),
+                      label: c.name,
+                      selected: _categorySlug == c.slug,
+                      onTap: () => setState(() => _categorySlug = c.slug),
                     ),
                   ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Text(l10n.pricing, style: theme.textTheme.titleSmall),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _minController,
+                  keyboardType: TextInputType.number,
+                  onChanged: (_) => setState(() => _priceError = null),
+                  decoration: InputDecoration(
+                    labelText: l10n.minPrice,
+                    prefixText: '₹ ',
+                    errorText: _priceError,
+                  ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            FilledButton(onPressed: _apply, child: Text(l10n.apply)),
-          ],
-        ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  controller: _maxController,
+                  keyboardType: TextInputType.number,
+                  onChanged: (_) => setState(() => _priceError = null),
+                  decoration: InputDecoration(
+                    labelText: l10n.maxPrice,
+                    prefixText: '₹ ',
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(onPressed: _apply, child: Text(l10n.apply)),
+          ),
+        ],
       ),
     );
   }
@@ -407,10 +560,10 @@ class _SortChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChoiceChip(
-      label: Text(label),
+    return PrototypeFilterChip(
+      label: label,
       selected: selected,
-      onSelected: (_) => onTap(),
+      onTap: onTap,
     );
   }
 }

@@ -114,6 +114,9 @@ class Venue {
     this.foodOptions = '',
     this.rules = '',
     this.isVerified = false,
+    this.isClaimable = false,
+    this.ownerVerified = false,
+    this.isFeatured = false,
     this.isActive = true,
     this.avgRating = 0,
     this.ratingCount = 0,
@@ -122,6 +125,10 @@ class Venue {
     this.facilities = const [],
     this.operatingHours = const [],
     this.distanceKm,
+    this.phone = '',
+    this.website = '',
+    this.offerText = '',
+    this.offerPercent,
   });
 
   final String id;
@@ -144,6 +151,9 @@ class Venue {
   final String foodOptions;
   final String rules;
   final bool isVerified;
+  final bool isClaimable;
+  final bool ownerVerified;
+  final bool isFeatured;
   final bool isActive;
   final double avgRating;
   final int ratingCount;
@@ -156,6 +166,11 @@ class Venue {
 
   /// Distance in kilometres from the query point, when computed.
   final double? distanceKm;
+
+  final String phone;
+  final String website;
+  final String offerText;
+  final double? offerPercent;
 
   /// Cover image URL (first cover, else first image, else placeholder).
   String get coverImageUrl {
@@ -204,10 +219,17 @@ class Venue {
       foodOptions: json['food_options'] as String? ?? '',
       rules: json['rules'] as String? ?? '',
       isVerified: json['is_verified'] as bool? ?? false,
+      isClaimable: json['is_claimable'] as bool? ?? false,
+      ownerVerified: json['owner_verified'] as bool? ?? false,
+      isFeatured: json['is_featured'] as bool? ?? false,
       isActive: json['is_active'] as bool? ?? true,
       avgRating: (json['avg_rating'] as num?)?.toDouble() ?? 0,
       ratingCount: (json['rating_count'] as num?)?.toInt() ?? 0,
       distanceKm: (json['distance_km'] as num?)?.toDouble(),
+      phone: json['phone'] as String? ?? '',
+      website: json['website'] as String? ?? '',
+      offerText: json['offer_text'] as String? ?? '',
+      offerPercent: (json['offer_percent'] as num?)?.toDouble(),
       category: categoryRaw is Map<String, dynamic>
           ? VenueCategory.fromJson(categoryRaw)
           : null,
@@ -261,6 +283,9 @@ class Venue {
       foodOptions: foodOptions,
       rules: rules,
       isVerified: isVerified,
+      isClaimable: isClaimable,
+      ownerVerified: ownerVerified,
+      isFeatured: isFeatured,
       isActive: isActive,
       avgRating: avgRating ?? this.avgRating,
       ratingCount: ratingCount ?? this.ratingCount,
@@ -269,6 +294,10 @@ class Venue {
       facilities: facilities ?? this.facilities,
       operatingHours: operatingHours ?? this.operatingHours,
       distanceKm: distanceKm ?? this.distanceKm,
+      phone: phone,
+      website: website,
+      offerText: offerText,
+      offerPercent: offerPercent,
     );
   }
 }

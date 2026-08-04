@@ -52,9 +52,24 @@ class MockPaymentRepository implements PaymentRepository {
   }
 
   @override
+  Future<PaymentOrder> createCommerceOrder({
+    required String referenceId,
+  }) async => sampleOrder();
+
+  @override
+  Future<String> commerceStatus(String referenceId) async => 'confirmed';
+
+  @override
+  Future<String> referenceForReservation(
+    String module,
+    String reservationId,
+  ) async => 'commerce-ref';
+
+  @override
   Future<BookingStatus> bookingStatus(String bookingId) async {
     statusCalls++;
     if (failStatus) throw Exception('status failed');
+    if (statusCalls == 1) return BookingStatus.paymentPending;
     return statusResult;
   }
 
@@ -75,6 +90,24 @@ class MockPaymentRepository implements PaymentRepository {
   Future<List<Payment>> myPayments() async {
     return List.of(defaultPayments);
   }
+
+  @override
+  Future<PaymentReceipt> receipt(String bookingId) async => PaymentReceipt(
+    bookingId: bookingId,
+    bookingRef: 'BMS-1A2B3C',
+    receiptNumber: 'BMS-R-TEST',
+    hallName: 'Sunrise Function Hall',
+    customerName: 'Test Customer',
+    bookDate: DateTime(2026, 9, 1),
+    startTime: '09:00:00',
+    endTime: '13:00:00',
+    amount: 35000,
+    taxAmount: 6300,
+    totalAmount: 41300,
+    bookingStatus: 'confirmed',
+    paymentStatus: 'captured',
+    paymentRef: 'pay_1',
+  );
 }
 
 /// A checkout service that records the opened order and returns a fixed

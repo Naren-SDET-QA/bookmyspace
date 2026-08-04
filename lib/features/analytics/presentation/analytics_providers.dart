@@ -10,6 +10,8 @@ final analyticsRepositoryProvider = Provider<AnalyticsEventRepository>((ref) {
   return SupabaseAnalyticsRepository(client);
 });
 
-final recentAnalyticsEventsProvider = FutureProvider<List<AnalyticsEvent>>((ref) {
+final recentAnalyticsEventsProvider = FutureProvider<List<AnalyticsEvent>>((
+  ref,
+) {
   return ref.watch(analyticsRepositoryProvider).recentEvents(limit: 50);
 });

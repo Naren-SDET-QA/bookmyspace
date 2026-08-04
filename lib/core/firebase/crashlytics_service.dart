@@ -36,13 +36,13 @@ class CrashlyticsService {
     }
   }
 
-/// Record a Flutter framework error.
+  /// Record a Flutter framework error.
   static void _recordFlutterError(FlutterErrorDetails details) {
     _instance.recordFlutterFatalError(details);
     debugPrint('Crashlytics recorded Flutter error: ${details.exception}');
   }
 
-/// Record a non-fatal error.
+  /// Record a non-fatal error.
   static void recordError(
     Object error,
     StackTrace? stack, {

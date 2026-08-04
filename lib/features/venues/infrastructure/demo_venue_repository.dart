@@ -1,3 +1,5 @@
+import '../../../core/maps/domain/geo_math.dart';
+import '../../../core/maps/domain/geo_point.dart';
 import '../domain/venue.dart';
 import '../domain/venue_repository.dart';
 
@@ -8,14 +10,19 @@ class DemoVenueRepository implements VenueRepository {
   final List<String> _favoriteIds = ['v1', 'v3'];
 
   static const List<VenueCategory> _categories = [
-    VenueCategory(id: 'c1', slug: 'venues', name: 'Venues', icon: 'festival'),
-    VenueCategory(id: 'c2', slug: 'sports', name: 'Sports', icon: 'sports_soccer'),
-    VenueCategory(id: 'c3', slug: 'work', name: 'Work', icon: 'work'),
-    VenueCategory(id: 'c4', slug: 'classes', name: 'Classes', icon: 'menu_book'),
-    VenueCategory(id: 'c5', slug: 'parties', name: 'Parties', icon: 'celebration'),
-    VenueCategory(id: 'c6', slug: 'events', name: 'Events', icon: 'event'),
-    VenueCategory(id: 'c7', slug: 'studios', name: 'Studios', icon: 'mic'),
-    VenueCategory(id: 'c8', slug: 'stays', name: 'Stays', icon: 'bed'),
+    VenueCategory(
+      id: 'c1',
+      slug: 'function_hall',
+      name: 'Function Halls',
+      icon: '🏛️',
+    ),
+    VenueCategory(id: 'c2', slug: 'sports_ground', name: 'Sports', icon: '🏆'),
+    VenueCategory(id: 'c3', slug: 'coworking_space', name: 'Work', icon: '💻'),
+    VenueCategory(id: 'c4', slug: 'classes', name: 'Classes', icon: '🎓'),
+    VenueCategory(id: 'c5', slug: 'parties', name: 'Parties', icon: '🎉'),
+    VenueCategory(id: 'c6', slug: 'events', name: 'Events', icon: '📅'),
+    VenueCategory(id: 'c7', slug: 'meeting_room', name: 'Meetings', icon: '🤝'),
+    VenueCategory(id: 'c8', slug: 'stays', name: 'Stays', icon: '🛏️'),
   ];
 
   static final List<Venue> _sampleVenues = [
@@ -32,7 +39,12 @@ class DemoVenueRepository implements VenueRepository {
       ratingCount: 128,
       isVerified: true,
       distanceKm: 1.2,
-      category: VenueCategory(id: 'c1', slug: 'venues', name: 'Venue', icon: 'festival'),
+      category: VenueCategory(
+        id: 'c1',
+        slug: 'function_hall',
+        name: 'Venue',
+        icon: '🏛️',
+      ),
       images: [
         VenueImage(
           id: 'img1',
@@ -61,7 +73,12 @@ class DemoVenueRepository implements VenueRepository {
       ratingCount: 94,
       isVerified: true,
       distanceKm: 2.1,
-      category: VenueCategory(id: 'c2', slug: 'sports', name: 'Sports', icon: 'sports_soccer'),
+      category: VenueCategory(
+        id: 'c2',
+        slug: 'sports_ground',
+        name: 'Sports',
+        icon: '🏆',
+      ),
       images: [
         VenueImage(
           id: 'img2',
@@ -88,7 +105,12 @@ class DemoVenueRepository implements VenueRepository {
       ratingCount: 56,
       isVerified: true,
       distanceKm: 0.8,
-      category: VenueCategory(id: 'c7', slug: 'studios', name: 'Studio', icon: 'mic'),
+      category: VenueCategory(
+        id: 'c7',
+        slug: 'meeting_room',
+        name: 'Meeting',
+        icon: '🤝',
+      ),
       images: [
         VenueImage(
           id: 'img3',
@@ -115,7 +137,12 @@ class DemoVenueRepository implements VenueRepository {
       ratingCount: 82,
       isVerified: true,
       distanceKm: 3.5,
-      category: VenueCategory(id: 'c1', slug: 'venues', name: 'Venue', icon: 'celebration'),
+      category: VenueCategory(
+        id: 'c1',
+        slug: 'function_hall',
+        name: 'Venue',
+        icon: '🎉',
+      ),
       images: [
         VenueImage(
           id: 'img4',
@@ -142,7 +169,12 @@ class DemoVenueRepository implements VenueRepository {
       ratingCount: 64,
       isVerified: true,
       distanceKm: 2.1,
-      category: VenueCategory(id: 'c1', slug: 'venues', name: 'Venue', icon: 'deck'),
+      category: VenueCategory(
+        id: 'c1',
+        slug: 'function_hall',
+        name: 'Venue',
+        icon: '🏛️',
+      ),
       images: [
         VenueImage(
           id: 'img5',
@@ -168,7 +200,12 @@ class DemoVenueRepository implements VenueRepository {
       ratingCount: 45,
       isVerified: true,
       distanceKm: 0.8,
-      category: VenueCategory(id: 'c3', slug: 'work', name: 'Work', icon: 'work'),
+      category: VenueCategory(
+        id: 'c3',
+        slug: 'coworking_space',
+        name: 'Work',
+        icon: '💻',
+      ),
       images: [
         VenueImage(
           id: 'img6',
@@ -197,11 +234,25 @@ class DemoVenueRepository implements VenueRepository {
     required double longitude,
     double maxDistanceKm = 25,
     int limit = 20,
-  }) async => _sampleVenues.take(limit).toList();
+  }) async {
+    final origin = GeoPoint(latitude, longitude);
+    final scored = _sampleVenues
+        .map((v) {
+          final km = GeoMath.haversineKm(
+            origin,
+            GeoPoint(v.latitude, v.longitude),
+          );
+          return v.copyWith(distanceKm: km);
+        })
+        .where((v) => (v.distanceKm ?? 0) <= maxDistanceKm)
+        .toList()
+      ..sort((a, b) => (a.distanceKm ?? 0).compareTo(b.distanceKm ?? 0));
+    return scored.take(limit).toList();
+  }
 
   @override
   Future<List<Venue>> search(VenueSearchQuery query) async {
-    return _sampleVenues.where((v) {
+    var results = _sampleVenues.where((v) {
       if (query.query.trim().isNotEmpty &&
           !v.name.toLowerCase().contains(query.query.toLowerCase()) &&
           !v.city.toLowerCase().contains(query.query.toLowerCase())) {
@@ -210,8 +261,63 @@ class DemoVenueRepository implements VenueRepository {
       if (query.maxPrice != null && v.pricingBaseAmount > query.maxPrice!) {
         return false;
       }
+      if (query.minPrice != null && v.pricingBaseAmount < query.minPrice!) {
+        return false;
+      }
+      if (query.categorySlug != null &&
+          v.category?.slug != query.categorySlug) {
+        return false;
+      }
       return true;
     }).toList();
+
+    if (query.latitude != null &&
+        query.longitude != null &&
+        query.maxDistanceKm != null) {
+      final origin = GeoPoint(query.latitude!, query.longitude!);
+      results = results
+          .map((v) {
+            final km = GeoMath.haversineKm(
+              origin,
+              GeoPoint(v.latitude, v.longitude),
+            );
+            return v.copyWith(distanceKm: km);
+          })
+          .where((v) => (v.distanceKm ?? 0) <= query.maxDistanceKm!)
+          .toList();
+    } else if (query.latitude != null && query.longitude != null) {
+      final origin = GeoPoint(query.latitude!, query.longitude!);
+      results = results
+          .map(
+            (v) => v.copyWith(
+              distanceKm: GeoMath.haversineKm(
+                origin,
+                GeoPoint(v.latitude, v.longitude),
+              ),
+            ),
+          )
+          .toList();
+    }
+
+    switch (query.sortBy) {
+      case VenueSortBy.priceAsc:
+        results.sort(
+          (a, b) => a.pricingBaseAmount.compareTo(b.pricingBaseAmount),
+        );
+      case VenueSortBy.priceDesc:
+        results.sort(
+          (a, b) => b.pricingBaseAmount.compareTo(a.pricingBaseAmount),
+        );
+      case VenueSortBy.rating:
+        results.sort((a, b) => b.avgRating.compareTo(a.avgRating));
+      case VenueSortBy.distance:
+        results.sort(
+          (a, b) => (a.distanceKm ?? 1e9).compareTo(b.distanceKm ?? 1e9),
+        );
+      case VenueSortBy.relevance:
+        break;
+    }
+    return results;
   }
 
   @override

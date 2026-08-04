@@ -27,6 +27,17 @@ create trigger trg_owner_profiles_updated_at
 -- ------------------------------------------------------------
 create role owner;
 
+-- Resolve the authenticated owner. This must exist before policies reference it.
+create or replace function public.get_owner_user_id()
+returns uuid
+language sql
+stable
+as $$
+  select p.user_id
+  from public.owner_profiles p
+  where p.user_id = (select auth.uid())
+$$;
+
 -- Owner can read/write own rows and anything scoped to their organization.
 -- This role will be used in RLS policies.
 
@@ -38,29 +49,13 @@ create policy "owner_profiles_own" on public.owner_profiles
 -- ------------------------------------------------------------
 -- Extend organizations with primary owner
 -- ------------------------------------------------------------
--- Add an owner_user_id column to organizations, pointing to owner_profiles.id
--- Keep org-level policies intact.
-alter table public.organizations
-  add column owner_user_id uuid references public.owner_profiles(id);
+-- organizations.owner_user_id already references auth.users(id) from 0001.
 
 -- RLS policy so only the primary owner can write org details.
 create policy "organizations_owner_write" on public.organizations
   for all
   using (public.get_owner_user_id() = owner_user_id)
   with check (public.get_owner_user_id() = owner_user_id);
-
--- ------------------------------------------------------------
--- Get current owner user id (null if not an owner)
--- ------------------------------------------------------------
-create or replace function public.get_owner_user_id()
-returns uuid
-language sql
-stable
-as $$
-  select p.user_id
-  from public.owner_profiles p
-  where p.user_id = (select auth.uid())
-$$;
 
 -- ------------------------------------------------------------
 -- Owner registration function (email + password)

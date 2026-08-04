@@ -1,10 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../core/config/app_config.dart';
 import '../../../core/errors/app_exceptions.dart' show AppException, mapError;
 import '../domain/auth_repository.dart';
-import '../domain/auth_user.dart' as domain show AuthUser;
+import '../domain/auth_user.dart' as domain show AppAccessRole, AuthUser;
 
 /// A Supabase authentication error surfaced to the presentation layer.
 class AppAuthException extends AppException {
@@ -29,19 +28,57 @@ class SupabaseAuthRepository implements AuthRepository {
 
   @override
   Stream<domain.AuthUser?> authStateChanges() {
-    return _client.auth.onAuthStateChange.map((data) {
+    return _client.auth.onAuthStateChange.asyncMap((data) async {
       final user = data.session?.user;
       if (user == null) return null;
-      return _toUser(user);
+      return _loadProfile(_toUser(user));
     });
+  }
+
+  Future<domain.AuthUser> _loadProfile(domain.AuthUser user) async {
+    try {
+      final profile = await _client
+          .from('profiles')
+          .select('full_name, email, phone, avatar_url')
+          .eq('id', user.id)
+          .maybeSingle();
+      if (profile == null) return user;
+      final profileEmail = (profile['email'] as String? ?? '').trim();
+      return user.copyWith(
+        fullName: (profile['full_name'] as String? ?? '').trim(),
+        email: profileEmail.isNotEmpty ? profileEmail : user.email,
+        phone: (profile['phone'] as String? ?? '').trim(),
+        avatarUrl: (profile['avatar_url'] as String? ?? '').trim(),
+      );
+    } catch (_) {
+      return user;
+    }
   }
 
   @override
   Future<void> signInWithEmailOtp(String email) async {
     try {
-      await _client.auth.signInWithOtp(email: email);
+      await _client.auth.signInWithOtp(
+        email: email,
+        emailRedirectTo: kIsWeb ? webAuthCallbackUrl() : null,
+      );
     } on AuthException catch (e) {
-      throw AppAuthException(e.message);
+      throw _mapAuthError(e);
+    } catch (e) {
+      throw mapError(e);
+    }
+  }
+
+  @override
+  Future<void> resendSignupConfirmation(String email) async {
+    try {
+      await _client.auth.resend(
+        type: OtpType.signup,
+        email: email,
+        emailRedirectTo: kIsWeb ? webAuthCallbackUrl() : null,
+      );
+    } on AuthException catch (e) {
+      throw _mapAuthError(e);
     } catch (e) {
       throw mapError(e);
     }
@@ -57,10 +94,44 @@ class SupabaseAuthRepository implements AuthRepository {
       );
       return _toUser(res.user!);
     } on AuthException catch (e) {
-      throw AppAuthException(e.message);
+      throw _mapAuthError(e);
     } catch (e) {
       throw mapError(e);
     }
+  }
+
+  @override
+  Future<domain.AuthUser> signInWithPassword(
+    String email,
+    String password,
+  ) async {
+    try {
+      final response = await _client.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+      final user = response.user;
+      if (user == null || response.session == null) {
+        throw const AppAuthException(
+          'Development login did not create a session.',
+        );
+      }
+      return _toUser(user);
+    } on AuthException catch (e) {
+      throw _mapAuthError(e);
+    } catch (e) {
+      throw mapError(e);
+    }
+  }
+
+  @override
+  Future<domain.AppAccessRole> resolveAccessRole() async {
+    final value = await _client.rpc<String>('current_app_role');
+    return switch (value) {
+      'admin' => domain.AppAccessRole.admin,
+      'owner' => domain.AppAccessRole.owner,
+      _ => domain.AppAccessRole.customer,
+    };
   }
 
   @override
@@ -68,7 +139,7 @@ class SupabaseAuthRepository implements AuthRepository {
     try {
       await _client.auth.signInWithOtp(phone: phone);
     } on AuthException catch (e) {
-      throw AppAuthException(e.message);
+      throw _mapAuthError(e);
     } catch (e) {
       throw mapError(e);
     }
@@ -84,7 +155,7 @@ class SupabaseAuthRepository implements AuthRepository {
       );
       return _toUser(res.user!);
     } on AuthException catch (e) {
-      throw AppAuthException(e.message);
+      throw _mapAuthError(e);
     } catch (e) {
       throw mapError(e);
     }
@@ -103,7 +174,7 @@ class SupabaseAuthRepository implements AuthRepository {
       }
       return _toUser(user);
     } on AuthException catch (e) {
-      throw AppAuthException(e.message);
+      throw _mapAuthError(e);
     } catch (e) {
       throw mapError(e);
     }
@@ -122,7 +193,7 @@ class SupabaseAuthRepository implements AuthRepository {
       }
       return _toUser(user);
     } on AuthException catch (e) {
-      throw AppAuthException(e.message);
+      throw _mapAuthError(e);
     } catch (e) {
       throw mapError(e);
     }
@@ -133,7 +204,7 @@ class SupabaseAuthRepository implements AuthRepository {
     try {
       await _client.auth.signOut();
     } on AuthException catch (e) {
-      throw AppAuthException(e.message);
+      throw _mapAuthError(e);
     } catch (e) {
       throw mapError(e);
     }
@@ -159,7 +230,7 @@ class SupabaseAuthRepository implements AuthRepository {
     try {
       await _client.auth.refreshSession();
     } on AuthException catch (e) {
-      throw AppAuthException(e.message);
+      throw _mapAuthError(e);
     } catch (e) {
       throw mapError(e);
     }
@@ -175,8 +246,20 @@ class SupabaseAuthRepository implements AuthRepository {
     );
   }
 
-  String _webRedirect() {
-    final url = Uri.parse(AppConfig.supabaseUrl);
-    return '${url.scheme}://${url.host}';
+  String _webRedirect() => webAuthCallbackUrl();
+
+  AppAuthException _mapAuthError(AuthException error) {
+    final message = switch (error.code) {
+      'otp_expired' =>
+        'That code is expired or has already been used. Send a new code and try again.',
+      'over_email_send_rate_limit' =>
+        'Please wait a minute before requesting another code.',
+      'validation_failed' =>
+        'This sign-in method is not available. Use email OTP instead.',
+      _ => error.message,
+    };
+    return AppAuthException(message, code: error.code);
   }
 }
+
+String webAuthCallbackUrl() => Uri.base.origin;

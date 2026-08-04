@@ -1,16 +1,10 @@
-import { createClient, SupabaseClient } from 'npm:@supabase/supabase-js@2';
-import { createHmac } from 'node:crypto';
-
-// ============================================================
-// Razorpay order creation — runs server-side so secrets stay secret.
-// Called from the Flutter app after a booking hold is acquired.
-// POST body: { booking_id, hold_id, amount }
-// ============================================================
+// Creates Razorpay orders without runtime package downloads.
+// POST body: { commerce_reference_id } or legacy { booking_id }
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const RAZORPAY_KEY_ID = Deno.env.get('RAZORPAY_KEY_ID')!;
-const RAZORPAY_KEY_SECRET = Deno.env.get('RAZORPAY_KEY_SECRET')!;
+const RAZORPAY_KEY_ID = Deno.env.get('RAZORPAY_KEY_ID') ?? '';
+const RAZORPAY_KEY_SECRET = Deno.env.get('RAZORPAY_KEY_SECRET') ?? '';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,109 +12,134 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-async function createRazorpayOrder(amountPaise: number, receipt: string) {
-  const body = new URLSearchParams({ amount: String(amountPaise), currency: 'INR', receipt });
-  const res = await fetch('https://api.razorpay.com/v1/orders', {
-    method: 'POST',
-    headers: {
-      Authorization: `Basic ${btoa(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`)}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body,
-  });
-  if (!res.ok) {
-    throw new Error(`razorpay error ${res.status}: ${await res.text()}`);
-  }
-  return res.json();
-}
-
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+
+  if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
+    console.error('create-payment-order: Razorpay credentials are not configured');
+    return json({ error: 'payment_not_configured' }, 424);
   }
 
   const authHeader = req.headers.get('Authorization');
-  if (!authHeader) {
-    return new Response(JSON.stringify({ error: 'missing_auth' }), {
-      status: 401,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
+  if (!authHeader) return json({ error: 'missing_auth' }, 401);
 
-  const supabase: SupabaseClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    global: { headers: { Authorization: authHeader } },
+  const userResponse = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    headers: { Authorization: authHeader, apikey: SUPABASE_SERVICE_ROLE_KEY },
   });
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return new Response(JSON.stringify({ error: 'unauthorized' }), {
-      status: 401,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
+  if (!userResponse.ok) return json({ error: 'unauthorized' }, 401);
+  const user = await userResponse.json();
 
   try {
-    const { booking_id, amount } = await req.json();
-    if (!booking_id || !amount) {
-      return new Response(JSON.stringify({ error: 'missing_fields' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    const { commerce_reference_id, booking_id } = await req.json();
+    if (!commerce_reference_id && !booking_id) return json({ error: 'missing_fields' }, 400);
 
-    // Validate server-side: the booking must belong to the user and be pending.
-    const { data: booking, error: bookingError } = await supabase
-      .from('bookings')
-      .select('id, user_id, total_amount, status')
-      .eq('id', booking_id)
-      .single();
-    if (bookingError || !booking) {
-      return new Response(JSON.stringify({ error: 'booking_not_found' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    if (booking.user_id !== user.id || booking.status !== 'pending') {
-      return new Response(JSON.stringify({ error: 'not_authorized' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    // The amount is always taken from the DB (never from the client).
-    if (Math.abs(Number(amount) - Number(booking.total_amount)) > 0.01) {
-      return new Response(JSON.stringify({ error: 'amount_mismatch' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const order = await createRazorpayOrder(
-      Math.round(Number(booking.total_amount) * 100),
-      booking.id,
+    const referenceFilter = commerce_reference_id
+      ? `id=eq.${encodeURIComponent(commerce_reference_id)}`
+      : `legacy_booking_id=eq.${encodeURIComponent(booking_id)}`;
+    const bookingResponse = await adminRequest(
+      `/rest/v1/commerce_references?${referenceFilter}` +
+        '&select=id,legacy_booking_id,customer_user_id,amount,currency,booking_status,payment_status&limit=1',
     );
-
-    const { error: insertError } = await supabase.from('payments').insert({
-      booking_id: booking.id,
-      user_id: user.id,
-      provider: 'razorpay',
-      provider_order_id: order.id,
-      amount: booking.total_amount,
-      status: 'pending',
-    });
-    if (insertError) {
-      return new Response(JSON.stringify({ error: 'payment_duplicate' }), {
-        status: 409,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    const bookings = bookingResponse.ok ? await bookingResponse.json() : [];
+    const booking = bookings[0];
+    if (!booking) return json({ error: 'booking_not_found' }, 404);
+    if (booking.customer_user_id !== user.id ||
+        booking.booking_status !== 'payment_pending') {
+      return json({ error: 'not_authorized' }, 403);
+    }
+    if (Number(booking.amount) <= 0) {
+      return json({ error: 'invalid_amount' }, 400);
     }
 
-    return new Response(
-      JSON.stringify({ order_id: order.id, amount: booking.total_amount, currency: 'INR' }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    const existingResponse = await adminRequest(
+      `/rest/v1/payments?commerce_reference_id=eq.${encodeURIComponent(booking.id)}` +
+        '&status=in.(pending,authorized,captured)&select=provider_order_id,amount,currency&limit=1',
     );
-  } catch (e) {
-    return new Response(JSON.stringify({ error: 'internal', detail: String(e) }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    const existing = existingResponse.ok ? (await existingResponse.json())[0] : null;
+    if (existing?.provider_order_id) {
+      return json({
+        order_id: existing.provider_order_id,
+        amount: existing.amount,
+        currency: existing.currency ?? 'INR',
+        key_id: RAZORPAY_KEY_ID,
+      }, 200);
+    }
+
+    const orderResponse = await fetch('https://api.razorpay.com/v1/orders', {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${btoa(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`)}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        amount: String(Math.round(Number(booking.amount) * 100)),
+        currency: booking.currency,
+        receipt: booking.id,
+      }),
+      signal: AbortSignal.timeout(12_000),
     });
+    if (!orderResponse.ok) {
+      console.error('create-payment-order: Razorpay rejected order', orderResponse.status);
+      return json({ error: 'provider_error' }, 502);
+    }
+    const order = await orderResponse.json();
+
+    const insertResponse = await adminRequest('/rest/v1/payments', {
+      method: 'POST',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({
+        booking_id: booking.legacy_booking_id,
+        commerce_reference_id: booking.id,
+        user_id: user.id,
+        provider: 'razorpay',
+        provider_order_id: order.id,
+        amount: booking.amount,
+        currency: booking.currency,
+        status: 'pending',
+      }),
+    });
+    if (!insertResponse.ok) {
+      console.error('create-payment-order: payment insert failed', insertResponse.status);
+      return json({ error: 'payment_duplicate' }, 409);
+    }
+
+    return json(
+      {
+        order_id: order.id,
+        amount: booking.amount,
+        currency: booking.currency,
+        key_id: RAZORPAY_KEY_ID,
+      },
+      200,
+    );
+  } catch (error) {
+    const timedOut = error instanceof DOMException && error.name === 'TimeoutError';
+    console.error(
+      'create-payment-order failed',
+      timedOut ? 'razorpay_timeout' : String(error),
+    );
+    return json(
+      { error: timedOut ? 'payment_timeout' : 'internal' },
+      timedOut ? 504 : 500,
+    );
   }
 });
+
+function adminRequest(path: string, init: RequestInit = {}) {
+  return fetch(`${SUPABASE_URL}${path}`, {
+    ...init,
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      'Content-Type': 'application/json',
+      ...(init.headers ?? {}),
+    },
+  });
+}
+
+function json(body: Record<string, unknown>, status: number) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}

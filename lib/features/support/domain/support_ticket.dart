@@ -1,4 +1,8 @@
-enum TicketStatus { open, inProgress, resolved, closed;
+enum TicketStatus {
+  open,
+  inProgress,
+  resolved,
+  closed;
 
   static TicketStatus fromDb(String value) => switch (value) {
     'open' => TicketStatus.open,
@@ -11,7 +15,11 @@ enum TicketStatus { open, inProgress, resolved, closed;
   String get dbValue => name;
 }
 
-enum TicketPriority { low, medium, high, urgent;
+enum TicketPriority {
+  low,
+  medium,
+  high,
+  urgent;
 
   static TicketPriority fromDb(String value) => switch (value) {
     'low' => TicketPriority.low,
@@ -53,7 +61,8 @@ class SupportTicket {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
-  bool get isResolved => status == TicketStatus.resolved || status == TicketStatus.closed;
+  bool get isResolved =>
+      status == TicketStatus.resolved || status == TicketStatus.closed;
 
   factory SupportTicket.fromJson(Map<String, dynamic> json) => SupportTicket(
     id: json['id'] as String? ?? '',

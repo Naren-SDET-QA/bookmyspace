@@ -75,31 +75,52 @@ class SlotAvailability {
 
 /// Lifecycle status of a booking (`booking_status` enum).
 enum BookingStatus {
+  requested,
   held,
+  approved,
+  paymentPending,
+  paid,
   pending,
   confirmed,
   completed,
+  rejected,
   cancelled,
+  expired,
+  blocked,
   refunded,
   noShow;
 
   static BookingStatus fromDb(String value) => switch (value) {
+    'requested' => BookingStatus.requested,
     'held' => BookingStatus.held,
+    'approved' => BookingStatus.approved,
+    'payment_pending' => BookingStatus.paymentPending,
+    'paid' => BookingStatus.paid,
     'pending' => BookingStatus.pending,
     'confirmed' => BookingStatus.confirmed,
     'completed' => BookingStatus.completed,
+    'rejected' => BookingStatus.rejected,
     'cancelled' => BookingStatus.cancelled,
+    'expired' => BookingStatus.expired,
+    'blocked' => BookingStatus.blocked,
     'refunded' => BookingStatus.refunded,
     'no_show' => BookingStatus.noShow,
     _ => BookingStatus.pending,
   };
 
   String get dbValue => switch (this) {
+    BookingStatus.requested => 'requested',
     BookingStatus.held => 'held',
+    BookingStatus.approved => 'approved',
+    BookingStatus.paymentPending => 'payment_pending',
+    BookingStatus.paid => 'paid',
     BookingStatus.pending => 'pending',
     BookingStatus.confirmed => 'confirmed',
     BookingStatus.completed => 'completed',
+    BookingStatus.rejected => 'rejected',
     BookingStatus.cancelled => 'cancelled',
+    BookingStatus.expired => 'expired',
+    BookingStatus.blocked => 'blocked',
     BookingStatus.refunded => 'refunded',
     BookingStatus.noShow => 'no_show',
   };
@@ -144,11 +165,18 @@ class Booking {
   final DateTime? createdAt;
 
   bool get isActive =>
+      status == BookingStatus.requested ||
+      status == BookingStatus.approved ||
+      status == BookingStatus.paymentPending ||
+      status == BookingStatus.paid ||
       status == BookingStatus.pending ||
       status == BookingStatus.confirmed ||
       status == BookingStatus.held;
 
-  bool get canCancel => status == BookingStatus.pending;
+  bool get canCancel =>
+      status == BookingStatus.pending ||
+      status == BookingStatus.requested ||
+      status == BookingStatus.paymentPending;
 
   /// Confirmed (captured) bookings can be refunded.
   bool get canRefund => status == BookingStatus.confirmed;
@@ -171,7 +199,11 @@ class Booking {
           DateTime(1970),
       startTime: json['start_time'] as String? ?? '',
       endTime: json['end_time'] as String? ?? '',
-      status: BookingStatus.fromDb(json['status'] as String? ?? 'pending'),
+      status: BookingStatus.fromDb(
+        json['workflow_status'] as String? ??
+            json['status'] as String? ??
+            'pending',
+      ),
       amount: (json['amount'] as num?)?.toDouble() ?? 0,
       taxAmount: (json['tax_amount'] as num?)?.toDouble() ?? 0,
       totalAmount: (json['total_amount'] as num?)?.toDouble() ?? 0,

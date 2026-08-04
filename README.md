@@ -3,7 +3,8 @@
 A production-ready platform for discovering and booking venues, events and
 courses — built with Flutter, Supabase, and a fully managed backend.
 
-> **Status:** Milestone 1 (foundation) complete. See [ROADMAP.md](docs/ROADMAP.md).
+> **Status:** Feature-complete production candidate. Environment credentials,
+> store accounts and final staging acceptance are required before launch.
 
 ## Stack
 
@@ -29,8 +30,18 @@ dart format lib test
 flutter analyze
 flutter test
 
-# 4. Run the app (development environment)
-flutter run --dart-define=APP_ENV=development
+# 4. Copy env template and fill in your credentials (never commit .env)
+cp .env.example .env   # Windows: copy .env.example .env
+
+# 5. Run the app (loads dart-defines from .env)
+.\scripts\flutter_run.ps1          # Windows
+# ./scripts/flutter_run.sh         # macOS/Linux
+
+# Or pass defines manually:
+flutter run --dart-define=APP_ENV=development \
+  --dart-define=SUPABASE_URL=<project-url> \
+  --dart-define=SUPABASE_ANON_KEY=<publishable-key> \
+  --dart-define=RAZORPAY_KEY_ID=<rzp_test_key_id>
 ```
 
 ## Environments
@@ -45,7 +56,8 @@ Five environments are supported via `--dart-define=APP_ENV=...`:
 | staging      | Pre-production validation  | `staging`       |
 | production   | Live users                 | `production`    |
 
-All secrets are placeholders in code. Real values are injected at build time.
+Supabase configuration has no runtime fallback. The app fails clearly when
+`SUPABASE_URL` or `SUPABASE_ANON_KEY` is missing. Values are injected at build time.
 See [.env.example](.env.example).
 
 ## Repository layout
@@ -74,6 +86,7 @@ lib/
 - [Database schema](supabase/migrations/README.md)
 - [Deployment](docs/DEPLOYMENT.md)
 - [Security checklist](docs/SECURITY.md)
+- [Free-first production stack](docs/FREE_PRODUCTION_STACK.md)
 
 ## License
 

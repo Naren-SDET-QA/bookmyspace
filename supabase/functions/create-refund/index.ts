@@ -5,7 +5,7 @@
 // the server), a `refunds` row is written, and the booking + payment are
 // moved to their `refunded` states.
 //
-// POST body: { booking_id, amount?, reason? }
+// POST body: { commerce_reference_id } or legacy { booking_id }, amount?, reason?
 import { createClient, SupabaseClient } from 'npm:@supabase/supabase-js@2';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -72,19 +72,19 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { booking_id, amount, reason } = await req.json();
-    if (!booking_id) {
+    const { commerce_reference_id, booking_id, amount, reason } = await req.json();
+    if (!commerce_reference_id && !booking_id) {
       return new Response(JSON.stringify({ error: 'missing_fields' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // The booking must belong to the user and be confirmed (refundable).
-    const { data: booking, error: bookingError } = await supabase
-      .from('bookings')
-      .select('id, user_id, status, total_amount')
-      .eq('id', booking_id)
+    const referenceQuery = supabase.from('commerce_references')
+      .select('id, legacy_booking_id, customer_user_id, booking_status, amount');
+    const { data: booking, error: bookingError } = await (commerce_reference_id
+      ? referenceQuery.eq('id', commerce_reference_id)
+      : referenceQuery.eq('legacy_booking_id', booking_id))
       .single();
     if (bookingError || !booking) {
       return new Response(JSON.stringify({ error: 'booking_not_found' }), {
@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    if (booking.user_id !== user.id || booking.status !== 'confirmed') {
+    if (booking.customer_user_id !== user.id || booking.booking_status !== 'confirmed') {
       return new Response(JSON.stringify({ error: 'not_refundable' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
     const { data: payment, error: paymentError } = await supabase
       .from('payments')
       .select('id, provider_payment_id, amount, status')
-      .eq('booking_id', booking_id)
+      .eq('commerce_reference_id', booking.id)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -155,7 +155,8 @@ Deno.serve(async (req) => {
       .from('refunds')
       .insert({
         payment_id: payment.id,
-        booking_id: booking.id,
+        booking_id: booking.legacy_booking_id,
+        commerce_reference_id: booking.id,
         amount: refundAmount,
         reason: reason ?? null,
         status: 'processed',
@@ -171,14 +172,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Move the booking + payment to their refunded states.
-    await supabase
-      .from('bookings')
-      .update({ status: 'refunded' })
-      .eq('id', booking.id);
+    // Dispatch the verified refund to the owning module.
+    await supabase.rpc('apply_commerce_refund', {
+      p_reference_id: booking.id,
+      p_partial: refundAmount + 0.01 < Number(payment.amount),
+    });
     await supabase
       .from('payments')
-      .update({ status: 'refunded' })
+      .update({ status: refundAmount + 0.01 < Number(payment.amount)
+        ? 'partially_refunded' : 'refunded' })
       .eq('id', payment.id);
 
     return new Response(JSON.stringify(refundRow), {

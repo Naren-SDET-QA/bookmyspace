@@ -36,7 +36,7 @@ class OwnerVenuesScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(myVenuesProvider),
         ),
         data: (items) => items.isEmpty
-            ? EmptyState(
+            ? const EmptyState(
                 icon: Icons.storefront_rounded,
                 title: 'No venues yet',
                 message: 'Tap + to add your first venue.',
@@ -61,73 +61,90 @@ class _VenueTile extends StatelessWidget {
     final theme = Theme.of(context);
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    venue.name,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
+      child: InkWell(
+        onTap: () => context.push(
+          AppRoutes.ownerVenueEdit.replaceAll(':id', venue.id),
+          extra: venue,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      venue.name,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: venue.isActive
-                        ? AppTheme.brand.withValues(alpha: 0.12)
-                        : theme.colorScheme.error.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    venue.isActive ? 'Active' : 'Inactive',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: venue.isActive ? AppTheme.brand : theme.colorScheme.error,
-                      fontWeight: FontWeight.w700,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: venue.isActive
+                          ? AppTheme.brand.withValues(alpha: 0.12)
+                          : theme.colorScheme.error.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      venue.isActive ? 'Active' : 'Inactive',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: venue.isActive
+                            ? AppTheme.brand
+                            : theme.colorScheme.error,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '${venue.city}, ${venue.state}',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+                ],
               ),
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(Icons.star_rounded, size: 16, color: AppTheme.accent),
-                const SizedBox(width: 4),
-                Text(
-                  venue.avgRating.toStringAsFixed(1),
-                  style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+              const SizedBox(height: 6),
+              Text(
+                '${venue.city}, ${venue.state}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  '(${venue.ratingCount})',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.star_rounded,
+                    size: 16,
+                    color: AppTheme.accent,
                   ),
-                ),
-                const Spacer(),
-                Text(
-                  '₹${venue.pricingBaseAmount.toStringAsFixed(0)}',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.brand,
+                  const SizedBox(width: 4),
+                  Text(
+                    venue.avgRating.toStringAsFixed(1),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                  const SizedBox(width: 4),
+                  Text(
+                    '(${venue.ratingCount})',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '₹${venue.pricingBaseAmount.toStringAsFixed(0)}',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.brand,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -22,10 +23,20 @@ class NotificationsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(l10n.notifications),
         actions: [
+          IconButton(
+            tooltip: 'Notification preferences',
+            onPressed: () => showDialog<void>(
+              context: context,
+              builder: (_) => const _NotificationPreferencesDialog(),
+            ),
+            icon: const Icon(Icons.tune_rounded),
+          ),
           if (unreadCount.valueOrNull != null && unreadCount.valueOrNull! > 0)
-            Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: Text('${unreadCount.valueOrNull!}'),
+            IconButton(
+              tooltip: 'Mark all as read (${unreadCount.valueOrNull!})',
+              onPressed: () =>
+                  ref.read(markAllNotificationsReadProvider.future),
+              icon: const Icon(Icons.done_all_rounded),
             ),
         ],
       ),
@@ -53,9 +64,16 @@ class NotificationsScreen extends ConsumerWidget {
                 itemCount: items.length,
                 itemBuilder: (context, i) => _NotificationTile(
                   notification: items[i],
-                  onTap: () => ref.read(
-                    markNotificationReadProvider(items[i].id).future,
-                  ),
+                  onTap: () async {
+                    await ref.read(
+                      markNotificationReadProvider(items[i].id).future,
+                    );
+                    if (!context.mounted) return;
+                    final route = items[i].targetRoute;
+                    if (route != null && route.startsWith('/')) {
+                      context.go(route);
+                    }
+                  },
                 ),
               ),
       ),
@@ -74,9 +92,7 @@ class _NotificationTile extends ConsumerWidget {
     final theme = Theme.of(context);
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      color: notification.read
-          ? null
-          : AppTheme.brand.withValues(alpha: 0.04),
+      color: notification.read ? null : AppTheme.brand.withValues(alpha: 0.04),
       child: InkWell(
         onTap: onTap,
         child: Padding(
@@ -99,7 +115,7 @@ class _NotificationTile extends ConsumerWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                notification.read ? '' : 'Unread',
+                notification.read ? 'Read' : 'Unread',
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: AppTheme.brand,
                   fontWeight: FontWeight.w600,
@@ -109,6 +125,96 @@ class _NotificationTile extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _NotificationPreferencesDialog extends ConsumerStatefulWidget {
+  const _NotificationPreferencesDialog();
+
+  @override
+  ConsumerState<_NotificationPreferencesDialog> createState() =>
+      _NotificationPreferencesDialogState();
+}
+
+class _NotificationPreferencesDialogState
+    extends ConsumerState<_NotificationPreferencesDialog> {
+  notification_domain.NotificationPreferences? _value;
+  bool _saving = false;
+
+  Future<void> _save() async {
+    final value = _value;
+    if (value == null || _saving) return;
+    setState(() => _saving = true);
+    try {
+      await ref.read(notificationRepositoryProvider).updatePreferences(value);
+      ref.invalidate(notificationPreferencesProvider);
+      if (mounted) Navigator.of(context).pop();
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final asyncPreferences = ref.watch(notificationPreferencesProvider);
+    return AlertDialog(
+      title: const Text('Notification preferences'),
+      content: asyncPreferences.when(
+        loading: () => const SizedBox(
+          height: 120,
+          child: Center(child: CircularProgressIndicator()),
+        ),
+        error: (error, _) => Text(error.toString()),
+        data: (loaded) {
+          final value = _value ??= loaded;
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Booking updates'),
+                value: value.bookingUpdates,
+                onChanged: (enabled) => setState(
+                  () => _value = value.copyWith(bookingUpdates: enabled),
+                ),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Payment updates'),
+                value: value.paymentUpdates,
+                onChanged: (enabled) => setState(
+                  () => _value = value.copyWith(paymentUpdates: enabled),
+                ),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Upcoming reminders'),
+                value: value.reminders,
+                onChanged: (enabled) =>
+                    setState(() => _value = value.copyWith(reminders: enabled)),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('In-app notifications'),
+                value: value.inApp,
+                onChanged: (enabled) =>
+                    setState(() => _value = value.copyWith(inApp: enabled)),
+              ),
+            ],
+          );
+        },
+      ),
+      actions: [
+        TextButton(
+          onPressed: _saving ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _value == null || _saving ? null : _save,
+          child: Text(_saving ? 'Saving…' : 'Save'),
+        ),
+      ],
     );
   }
 }

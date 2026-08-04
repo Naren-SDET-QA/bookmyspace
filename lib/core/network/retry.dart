@@ -50,7 +50,10 @@ Future<T> withRetry<T>(
 /// Rate-limit aware wrapper. Tracks request timestamps and throws
 /// [RateLimitException] if too many requests are made in a window.
 class RateLimiter {
-  RateLimiter({this.maxRequests = 30, this.window = const Duration(minutes: 1)});
+  RateLimiter({
+    this.maxRequests = 30,
+    this.window = const Duration(minutes: 1),
+  });
 
   final int maxRequests;
   final Duration window;
@@ -80,5 +83,6 @@ class RateLimitException implements Exception {
   final Duration retryAfter;
 
   @override
-  String toString() => 'RateLimitException: $message (retry after ${retryAfter.inSeconds}s)';
+  String toString() =>
+      'RateLimitException: $message (retry after ${retryAfter.inSeconds}s)';
 }

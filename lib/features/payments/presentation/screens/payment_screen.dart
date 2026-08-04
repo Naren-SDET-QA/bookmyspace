@@ -2,10 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/config/app_config.dart';
-import '../../../../core/errors/app_exceptions.dart';
+import '../../../../core/errors/app_exceptions.dart' as app_errors;
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../booking/domain/booking.dart';
@@ -34,12 +35,19 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   Timer? _pollTimer;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _recoverStatus());
+  }
+
+  @override
   void dispose() {
     _pollTimer?.cancel();
     super.dispose();
   }
 
   Future<void> _pay() async {
+    if (_phase != _PaymentPhase.idle || widget.booking.totalAmount <= 0) return;
     final l10n = AppLocalizations.of(context);
     setState(() => _phase = _PaymentPhase.creatingOrder);
     try {
@@ -54,7 +62,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         orderId: order.orderId,
         amount: order.amount,
         currency: order.currency,
-        keyId: AppConfig.razorpayKeyId,
+        keyId: order.keyId ?? AppConfig.razorpayKeyId,
       );
       if (!mounted) return;
 
@@ -71,11 +79,57 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
           _errorMessage = l10n.paymentFailed;
         });
       }
-    } on ConfigurationException catch (e) {
+    } on app_errors.ConfigurationException catch (e) {
       _fail(e.message);
     } catch (e) {
-      _fail(e.toString());
+      _fail(_paymentError(e));
     }
+  }
+
+  Future<void> _recoverStatus() async {
+    if (!mounted) return;
+    setState(() => _phase = _PaymentPhase.verifying);
+    try {
+      final status = await ref
+          .read(paymentRepositoryProvider)
+          .bookingStatus(widget.booking.id);
+      if (!mounted) return;
+      if (status == BookingStatus.confirmed) {
+        ref.invalidate(myBookingsProvider);
+        setState(() {
+          _phase = _PaymentPhase.done;
+          _confirmed = true;
+        });
+      } else if (status == BookingStatus.cancelled) {
+        setState(() {
+          _phase = _PaymentPhase.error;
+          _errorMessage = 'This booking was cancelled and cannot be paid.';
+        });
+      } else {
+        setState(() => _phase = _PaymentPhase.idle);
+      }
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _phase = _PaymentPhase.idle;
+        _errorMessage =
+            'Could not refresh payment status. Check your connection and retry.';
+      });
+    }
+  }
+
+  String _paymentError(Object error) {
+    if (error is app_errors.TimeoutException) {
+      return 'Payment service timed out. Check status before trying again.';
+    }
+    if (error is app_errors.NetworkException) {
+      return 'Network interrupted. Check payment status before retrying.';
+    }
+    if (error is app_errors.ServerException && error.statusCode == 503) {
+      return 'Payment service is temporarily unavailable. Check status shortly.';
+    }
+    if (error is app_errors.AppException) return error.message;
+    return 'Payment could not start. Check status and try again.';
   }
 
   void _fail(String message) {
@@ -147,7 +201,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
 
   Widget _buildIdle(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppTheme.pagePadding),
       children: [
         _SummaryCard(booking: widget.booking),
         if (_errorMessage != null) ...[
@@ -215,6 +269,20 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
+            if (_confirmed)
+              OutlinedButton.icon(
+                onPressed: () =>
+                    context.push('/bookings/${widget.booking.id}/receipt'),
+                icon: const Icon(Icons.receipt_long_rounded),
+                label: const Text('View receipt'),
+              )
+            else
+              OutlinedButton.icon(
+                onPressed: _recoverStatus,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Check payment status'),
+              ),
+            const SizedBox(height: 8),
             FilledButton(
               onPressed: () {
                 ref.invalidate(myBookingsProvider);
@@ -248,9 +316,10 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text(l10n.done),
+            FilledButton.icon(
+              onPressed: () => setState(() => _phase = _PaymentPhase.idle),
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Check status / retry'),
             ),
           ],
         ),
@@ -271,6 +340,11 @@ class _SummaryCard extends StatelessWidget {
     final name = booking.venueName.isEmpty ? l10n.venues : booking.venueName;
 
     return Card(
+      color: const Color(0xFFF8F6FF),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: Color(0xFFE6DFFF)),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -343,7 +417,12 @@ class _PayBar extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        padding: const EdgeInsets.fromLTRB(
+          AppTheme.pagePadding,
+          13,
+          AppTheme.pagePadding,
+          16,
+        ),
         child: Row(
           children: [
             Column(

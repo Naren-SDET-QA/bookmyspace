@@ -35,16 +35,20 @@ class PaymentOrder {
     required this.orderId,
     required this.amount,
     required this.currency,
+    this.keyId,
   });
 
   final String orderId;
   final double amount;
   final String currency;
+  /// Public Razorpay key id returned by `create-payment-order` when configured.
+  final String? keyId;
 
   factory PaymentOrder.fromResponse(Map<String, dynamic> json) => PaymentOrder(
     orderId: json['order_id'] as String? ?? '',
     amount: (json['amount'] as num?)?.toDouble() ?? 0,
     currency: json['currency'] as String? ?? 'INR',
+    keyId: json['key_id'] as String?,
   );
 }
 
@@ -128,4 +132,60 @@ class Refund {
       'Could not read the refund response.',
     );
   }
+}
+
+class PaymentReceipt {
+  const PaymentReceipt({
+    required this.bookingId,
+    required this.bookingRef,
+    required this.hallName,
+    required this.customerName,
+    required this.bookDate,
+    required this.startTime,
+    required this.endTime,
+    required this.amount,
+    required this.taxAmount,
+    required this.totalAmount,
+    required this.bookingStatus,
+    required this.paymentStatus,
+    this.receiptNumber = '',
+    this.customerPhone = '',
+    this.paymentRef = '',
+  });
+
+  final String bookingId;
+  final String bookingRef;
+  final String receiptNumber;
+  final String hallName;
+  final String customerName;
+  final String customerPhone;
+  final DateTime bookDate;
+  final String startTime;
+  final String endTime;
+  final double amount;
+  final double taxAmount;
+  final double totalAmount;
+  final String bookingStatus;
+  final String paymentStatus;
+  final String paymentRef;
+
+  factory PaymentReceipt.fromJson(Map<String, dynamic> json) => PaymentReceipt(
+    bookingId: json['booking_id'] as String? ?? '',
+    bookingRef: json['booking_ref'] as String? ?? '',
+    receiptNumber: json['receipt_number'] as String? ?? '',
+    hallName: json['hall_name'] as String? ?? '',
+    customerName: json['customer_name'] as String? ?? '',
+    customerPhone: json['customer_phone'] as String? ?? '',
+    bookDate:
+        DateTime.tryParse(json['book_date']?.toString() ?? '') ??
+        DateTime(1970),
+    startTime: json['start_time']?.toString() ?? '',
+    endTime: json['end_time']?.toString() ?? '',
+    amount: (json['amount'] as num?)?.toDouble() ?? 0,
+    taxAmount: (json['tax_amount'] as num?)?.toDouble() ?? 0,
+    totalAmount: (json['total_amount'] as num?)?.toDouble() ?? 0,
+    bookingStatus: json['booking_status'] as String? ?? '',
+    paymentStatus: json['payment_status'] as String? ?? '',
+    paymentRef: json['payment_ref'] as String? ?? '',
+  );
 }

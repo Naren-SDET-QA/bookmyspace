@@ -25,3 +25,14 @@ key.properties
 .idea/
 *.iml
 .vscode/
+
+# Local/temp files
+.tmp/
+.tmp-supabase-config/
+supabase/.temp/
+supabase/.branches/
+
+# Secrets
+.env
+.env.local
+.env.*.local

@@ -7,9 +7,13 @@ import '../../../../core/location/device_location_service.dart';
 import '../../../../core/location/location_providers.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/prototype_visuals.dart';
+import '../../../../core/widgets/app_bottom_sheet.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/skeleton.dart';
+import '../../../admin/domain/content_models.dart';
+import '../../../admin/presentation/content_providers.dart';
 import '../../../auth/presentation/auth_providers.dart';
 import '../../../courses/presentation/course_providers.dart';
 import '../../../courses/presentation/widgets/course_card.dart';
@@ -31,19 +35,12 @@ class HomeScreen extends ConsumerWidget {
     final nearby = ref.watch(nearbyVenuesProvider);
     final events = ref.watch(upcomingEventsProvider);
     final courses = ref.watch(publishedCoursesProvider);
-    final repository = ref.watch(authRepositoryProvider);
     final searchArea = ref.watch(searchAreaProvider);
-    final user =
-        ref.watch(authStateProvider).asData?.value ?? repository.currentUser;
-    final displayName = user == null
-        ? null
-        : (user.fullName.trim().isNotEmpty
-              ? user.fullName.trim()
-              : user.email.trim());
+    // Rebuild when session restores so location/greeting stay in sync.
+    ref.watch(authStateProvider);
 
     if (MediaQuery.sizeOf(context).width >= 600) {
       return _WideHome(
-        displayName: displayName,
         popular: popular,
         nearby: nearby,
         searchArea: searchArea,
@@ -57,6 +54,7 @@ class HomeScreen extends ConsumerWidget {
     }
 
     return Scaffold(
+      backgroundColor: AppTheme.surfaceLight,
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(popularVenuesProvider);
@@ -64,6 +62,7 @@ class HomeScreen extends ConsumerWidget {
           ref.invalidate(venueCategoriesProvider);
           ref.invalidate(upcomingEventsProvider);
           ref.invalidate(publishedCoursesProvider);
+          ref.invalidate(homepageContentConfigProvider);
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -73,91 +72,97 @@ class HomeScreen extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  InkWell(
-                    onTap: () => _showLocationPicker(context, ref),
-                    borderRadius: BorderRadius.circular(14),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 42,
-                          height: 42,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [AppTheme.brandLight, AppTheme.accent],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => _showLocationPicker(context, ref),
+                      borderRadius: BorderRadius.circular(14),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              gradient: AppTheme.brandGradient,
+                              borderRadius: BorderRadius.circular(14),
                             ),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: const Icon(
-                            Icons.location_on_rounded,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(width: 9),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Your location',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
+                            child: const Icon(
+                              Icons.location_on_rounded,
+                              color: Colors.white,
+                              size: 19,
                             ),
-                            Row(
+                          ),
+                          const SizedBox(width: 9),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  searchArea.cityLabel,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w800,
+                                  'Current location',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: AppTheme.muted,
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                const Icon(
-                                  Icons.keyboard_arrow_down_rounded,
-                                  size: 17,
+                                Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        searchArea.cityLabel,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w800,
+                                          color: AppTheme.ink,
+                                        ),
+                                      ),
+                                    ),
+                                    const Icon(
+                                      Icons.keyboard_arrow_down_rounded,
+                                      size: 13,
+                                      color: AppTheme.ink,
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
-                          ],
-                        ),
-                      ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  const Spacer(),
-                  IconButton.outlined(
+                  const SizedBox(width: 8),
+                  PrototypeIconButton(
+                    icon: Icons.notifications_outlined,
+                    showDot: true,
                     onPressed: () => context.push(AppRoutes.notifications),
-                    icon: const Badge(
-                      smallSize: 8,
-                      child: Icon(Icons.notifications_outlined),
-                    ),
-                    tooltip: 'Notifications',
                   ),
                 ],
               ),
               const SizedBox(height: 20),
               Text(
-                displayName == null
-                    ? 'Welcome to Guest'
-                    : 'Welcome, $displayName',
+                PrototypeVisuals.timeGreeting(),
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+                  color: AppTheme.muted,
                   fontWeight: FontWeight.w600,
+                  fontSize: 13,
                 ),
               ),
               Text.rich(
-                TextSpan(
+                const TextSpan(
                   children: [
-                    const TextSpan(text: 'What will you '),
+                    TextSpan(text: 'What are you '),
                     TextSpan(
-                      text: 'book today?',
-                      style: TextStyle(color: theme.colorScheme.primary),
+                      text: 'looking for?',
+                      style: TextStyle(color: AppTheme.brand),
                     ),
                   ],
                 ),
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w800,
                   letterSpacing: -.6,
+                  fontSize: 24,
+                  color: AppTheme.ink,
                 ),
               ),
               const SizedBox(height: 14),
@@ -167,25 +172,26 @@ class HomeScreen extends ConsumerWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
-                    vertical: 15,
+                    vertical: 14,
                   ),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerLowest,
-                    border: Border.all(color: theme.colorScheme.outlineVariant),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
+                  decoration: PrototypeVisuals.searchFieldDecoration(),
+                  child: const Row(
                     children: [
                       Icon(
                         Icons.search_rounded,
-                        color: theme.colorScheme.onSurfaceVariant,
+                        color: PrototypeVisuals.searchHint,
+                        size: 20,
                       ),
-                      const SizedBox(width: 10),
-                      Text(
-                        'Search halls, classes, events…',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w600,
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Search halls, classes, events…',
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: PrototypeVisuals.searchHint,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13.5,
+                          ),
                         ),
                       ),
                     ],
@@ -194,41 +200,43 @@ class HomeScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 18),
               const _PrimaryCategories(),
-              const SizedBox(height: 10),
+              const SizedBox(height: 4),
               const _RadiusSelector(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 12),
               _DynamicSection(
                 async: events,
-                title: l10n.upcomingEvents,
+                title: '⚡ Happening near you',
                 onViewAll: () => context.push(AppRoutes.eventsList),
                 loading: const _LoadingCardRow(),
                 itemBuilder: (items) => _HorizontalList(
+                  height: 198,
                   items: items
                       .map(
-                        (e) => SizedBox(width: 280, child: EventCard(event: e)),
+                        (e) => SizedBox(width: 208, child: EventCard(event: e)),
                       )
                       .toList(),
                 ),
               ),
               _DynamicSection(
                 async: courses,
-                title: l10n.courses,
+                title: '🎓 Popular institutes',
                 onViewAll: () => context.push(AppRoutes.coursesList),
                 loading: const _LoadingCardRow(),
                 itemBuilder: (items) => _HorizontalList(
+                  height: 220,
                   items: items
                       .map(
                         (c) =>
-                            SizedBox(width: 280, child: CourseCard(course: c)),
+                            SizedBox(width: 240, child: CourseCard(course: c)),
                       )
                       .toList(),
                 ),
               ),
               _SectionHeader(
-                title: l10n.popularVenues,
+                title: '🏛️ Halls free this weekend',
                 onViewAll: () => context.go(AppRoutes.search),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               popular.when(
                 data: (venues) => _VenueList(venues: venues),
                 loading: () => const _LoadingGrid(),
@@ -238,8 +246,8 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 24),
-              _SectionHeader(title: l10n.nearbyVenues, onViewAll: null),
-              const SizedBox(height: 8),
+              _SectionHeader(title: '📍 Nearby venues', onViewAll: null),
+              const SizedBox(height: 12),
               nearby.when(
                 data: (venues) => venues.isEmpty
                     ? const EmptyState(
@@ -266,56 +274,170 @@ class HomeScreen extends ConsumerWidget {
     WidgetRef ref,
   ) async {
     final current = ref.read(searchAreaProvider);
-    await showModalBottomSheet<void>(
+    await showAppBottomSheet<void>(
       context: context,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+      maxHeightFactor: 0.78,
+      builder: (sheetContext) {
+        final cities = kSearchCities.entries.toList(growable: false);
+        return AppBottomSheetScrollBody(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Choose location',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Choose location',
+                      style: Theme.of(sheetContext).textTheme.titleLarge
+                          ?.copyWith(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.3,
+                          ),
+                    ),
+                  ),
+                  PrototypeIconButton(
+                    icon: Icons.close_rounded,
+                    onPressed: () => Navigator.pop(sheetContext),
+                  ),
+                ],
               ),
-              const SizedBox(height: 10),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.my_location_rounded),
-                title: const Text('Use my current location'),
-                subtitle: const Text('Uses GPS to find venues near you'),
-                onTap: () => _useCurrentLocation(context, ref),
+              const SizedBox(height: 14),
+              Material(
+                color: AppTheme.card,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  side: const BorderSide(color: AppTheme.line),
+                ),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(15),
+                  onTap: () => _useCurrentLocation(sheetContext, ref),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: PrototypeVisuals.softIconBg,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.my_location_rounded,
+                            color: AppTheme.brand,
+                            size: 18,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'GPS',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.muted,
+                                  letterSpacing: 0.4,
+                                ),
+                              ),
+                              Text(
+                                'Use my current location',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppTheme.ink,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-              for (final entry in kSearchCities.entries)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(entry.key),
-                  trailing: entry.value.cityLabel == current.cityLabel
-                      ? const Icon(
-                          Icons.check_circle_rounded,
-                          color: AppTheme.brand,
-                        )
-                      : null,
+              const SizedBox(height: 12),
+              const Text(
+                'OR SEARCH A CITY',
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.muted,
+                  letterSpacing: 0.4,
+                ),
+              ),
+              const SizedBox(height: 6),
+              for (final entry in cities)
+                InkWell(
                   onTap: () {
                     ref.read(searchAreaProvider.notifier).state = entry.value;
                     ref.invalidate(nearbyVenuesProvider);
                     final query = ref.read(searchQueryProvider);
-                    ref.read(searchQueryProvider.notifier).state = query.copyWith(
-                      city: () => entry.key,
-                      latitude: () => entry.value.latitude,
-                      longitude: () => entry.value.longitude,
-                    );
-                    Navigator.pop(context);
+                    ref.read(searchQueryProvider.notifier).state = query
+                        .copyWith(
+                          city: () => entry.key,
+                          latitude: () => entry.value.latitude,
+                          longitude: () => entry.value.longitude,
+                        );
+                    Navigator.pop(sheetContext);
                   },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 13,
+                      horizontal: 4,
+                    ),
+                    decoration: const BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(color: PrototypeVisuals.menuRowBorder),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            entry.key,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.ink,
+                            ),
+                          ),
+                        ),
+                        if (entry.value.cityLabel == current.cityLabel)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: PrototypeVisuals.badgeVenueBg,
+                              borderRadius: BorderRadius.circular(7),
+                            ),
+                            child: const Text(
+                              'CURRENT',
+                              style: TextStyle(
+                                color: AppTheme.brand,
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.6,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
             ],
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -381,7 +503,6 @@ class HomeScreen extends ConsumerWidget {
 
 class _WideHome extends ConsumerWidget {
   const _WideHome({
-    required this.displayName,
     required this.popular,
     required this.nearby,
     required this.searchArea,
@@ -391,7 +512,6 @@ class _WideHome extends ConsumerWidget {
   });
 
   final AsyncValue<List<Venue>> popular;
-  final String? displayName;
   final AsyncValue<List<Venue>> nearby;
   final SearchArea searchArea;
   final Future<void> Function() onRefresh;
@@ -400,16 +520,17 @@ class _WideHome extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => Scaffold(
+    backgroundColor: AppTheme.surfaceLight,
     appBar: AppBar(
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            displayName == null ? 'Welcome to Guest' : 'Welcome, $displayName',
+            PrototypeVisuals.timeGreeting(),
             style: const TextStyle(fontSize: 12),
           ),
           const Text(
-            'Find your perfect space',
+            'What are you looking for?',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
           ),
         ],
@@ -450,69 +571,75 @@ class _WideHome extends ConsumerWidget {
     ),
     body: RefreshIndicator(
       onRefresh: onRefresh,
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          InkWell(
-            onTap: () => context.go(AppRoutes.search),
-            child: const IgnorePointer(
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: 'Search halls, classes, events…',
-                  prefixIcon: Icon(Icons.search_rounded),
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              onTap: () => context.go(AppRoutes.search),
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+                decoration: PrototypeVisuals.searchFieldDecoration(),
+                child: const Row(
+                  children: [
+                    Icon(
+                      Icons.search_rounded,
+                      color: PrototypeVisuals.searchHint,
+                    ),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Search halls, classes, events…',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: PrototypeVisuals.searchHint,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13.5,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            children: [
-              ActionChip(
-                label: const Text('Function Hall'),
-                onPressed: () => _openPrimaryCategory(context, 'function_hall'),
+            const SizedBox(height: 16),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 560),
+                child: const _PrimaryCategories(),
               ),
-              ActionChip(
-                label: const Text('Classes'),
-                onPressed: () => _openPrimaryCategory(context, 'classes'),
+            ),
+            const SizedBox(height: 12),
+            const _SectionHeader(title: '🏛️ Popular venues'),
+            const SizedBox(height: 12),
+            popular.when(
+              data: (venues) => _VenueList(venues: venues),
+              loading: () => const _LoadingGrid(),
+              error: (error, _) => ErrorView(
+                message: error.toString(),
+                onRetry: onPopularRetry,
               ),
-              ActionChip(
-                label: const Text('Events'),
-                onPressed: () => _openPrimaryCategory(context, 'events'),
+            ),
+            const SizedBox(height: 24),
+            const _SectionHeader(title: '📍 Nearby venues'),
+            const SizedBox(height: 12),
+            nearby.when(
+              data: (venues) => _VenueList(venues: venues),
+              loading: () => const _LoadingGrid(),
+              error: (error, _) => ErrorView(
+                message: error.toString(),
+                onRetry: onNearbyRetry,
               ),
-              ActionChip(
-                label: const Text('Meetings'),
-                onPressed: () => _openPrimaryCategory(context, 'meeting_room'),
-              ),
-              ActionChip(
-                label: const Text('PG / Co-Living'),
-                onPressed: () => _openPrimaryCategory(context, 'pg'),
-              ),
-              ActionChip(
-                label: const Text('Rooms & Stays'),
-                onPressed: () => _openPrimaryCategory(context, 'stays'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const _SectionHeader(title: 'Popular venues'),
-          const SizedBox(height: 8),
-          popular.when(
-            data: (venues) => _VenueList(venues: venues),
-            loading: () => const _LoadingGrid(),
-            error: (error, _) =>
-                ErrorView(message: error.toString(), onRetry: onPopularRetry),
-          ),
-          const SizedBox(height: 24),
-          const _SectionHeader(title: 'Nearby venues'),
-          const SizedBox(height: 8),
-          nearby.when(
-            data: (venues) => _VenueList(venues: venues),
-            loading: () => const _LoadingGrid(),
-            error: (error, _) =>
-                ErrorView(message: error.toString(), onRetry: onNearbyRetry),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     ),
   );
@@ -526,86 +653,116 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(title, style: Theme.of(context).textTheme.titleMedium),
-        if (onViewAll != null)
-          TextButton(onPressed: onViewAll, child: const Text('View all')),
-      ],
+    // Prototype `.secHead`: margin 24px 0 12px; h2 16.5/800; See all 12/700 pri
+    return Padding(
+      padding: const EdgeInsets.only(top: 24, bottom: 0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 16.5,
+                letterSpacing: -0.3,
+                color: AppTheme.ink,
+                fontFamilyFallback: AppTheme.emojiFontFallbacks,
+              ),
+            ),
+          ),
+          if (onViewAll != null)
+            GestureDetector(
+              onTap: onViewAll,
+              child: const Padding(
+                padding: EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                child: Text(
+                  'See all',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.brand,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
 
-class _PrimaryCategories extends StatelessWidget {
+class _PrimaryCategories extends ConsumerWidget {
   const _PrimaryCategories();
 
-  static const _items = [
-    (Icons.celebration_rounded, 'Function halls', 'function_hall'),
-    (Icons.school_rounded, 'Classes', 'classes'),
-    (Icons.event_rounded, 'Events', 'events'),
-    (Icons.groups_rounded, 'Meetings', 'meeting_room'),
-    (Icons.apartment_rounded, 'PG / Co-Living', 'pg'),
-    (Icons.hotel_rounded, 'Rooms & Stays', 'stays'),
-    (Icons.sports_soccer_rounded, 'Sports', 'sports_ground'),
-  ];
-
   @override
-  Widget build(BuildContext context) => GridView.builder(
-    shrinkWrap: true,
-    physics: const NeverScrollableScrollPhysics(),
-    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-      crossAxisCount: 3,
-      mainAxisSpacing: 10,
-      crossAxisSpacing: 10,
-      childAspectRatio: .88,
-    ),
-    itemCount: _items.length,
-    itemBuilder: (context, index) {
-      final item = _items[index];
-      return InkWell(
-        key: ValueKey('home-category-${item.$3}'),
-        onTap: () => _openPrimaryCategory(context, item.$3),
-        borderRadius: BorderRadius.circular(18),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerLowest,
-            border: Border.all(
-              color: Theme.of(context).colorScheme.outlineVariant,
-            ),
-            borderRadius: BorderRadius.circular(18),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final remote = ref.watch(homepageContentConfigProvider);
+    final tiles = remote.maybeWhen(
+      data: (cfg) => cfg.categoryTiles.isNotEmpty
+          ? cfg.categoryTiles
+          : _fallbackTiles(),
+      orElse: _fallbackTiles,
+    );
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        // Prototype catT is roughly square (emoji 23 + label + padding).
+        childAspectRatio: 1.02,
+      ),
+      itemCount: tiles.length,
+      itemBuilder: (context, index) {
+        final item = tiles[index];
+        return PrototypeCategoryTile(
+          key: ValueKey('home-category-${item.tileKey}'),
+          emoji: PrototypeVisuals.emojiForCategorySlug(
+            item.tileKey,
+            icon: item.emoji,
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(item.$1, color: AppTheme.brand, size: 25),
-              const SizedBox(height: 6),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 3),
-                child: Text(
-                  item.$2,
-                  maxLines: 2,
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
-                ),
-              ),
-            ],
+          label: item.label,
+          onTap: () => _openPrimaryCategory(
+            context,
+            item.routeTarget.isNotEmpty ? item.routeTarget : item.tileKey,
           ),
-        ),
-      );
-    },
-  );
+        );
+      },
+    );
+  }
+
+  static List<HomeCategoryTile> _fallbackTiles() => [
+        for (final c in PrototypeVisuals.homeCategories)
+          HomeCategoryTile(
+            id: c.key,
+            tileKey: c.key,
+            label: c.label,
+            emoji: c.emoji,
+            routeTarget: c.key,
+          ),
+      ];
 }
 
-void _openPrimaryCategory(BuildContext context, String category) {
-  switch (category) {
+void _openPrimaryCategory(BuildContext context, String categoryOrRoute) {
+  final category = categoryOrRoute.contains(':')
+      ? categoryOrRoute.split(':').last
+      : categoryOrRoute;
+  final target = categoryOrRoute.contains(':')
+      ? categoryOrRoute.split(':').first
+      : categoryOrRoute;
+
+  switch (target) {
+    case 'courses':
     case 'classes':
       context.push(AppRoutes.coursesList);
       return;
     case 'events':
+    case 'conferences':
+    case 'parties':
+    case 'shows':
       context.push(AppRoutes.eventsList);
       return;
     case 'pg':
@@ -614,11 +771,21 @@ void _openPrimaryCategory(BuildContext context, String category) {
     case 'stays':
       context.push(AppRoutes.staysList);
       return;
+    case 'meeting_rooms':
     case 'meeting_room':
       context.push(AppRoutes.meetingRooms);
       return;
+    case 'sports':
     case 'sports_ground':
       context.push(AppRoutes.sportsVenues);
+      return;
+    case 'search':
+      context.go(
+        Uri(
+          path: AppRoutes.search,
+          queryParameters: {'category': category},
+        ).toString(),
+      );
       return;
     default:
       context.go(
@@ -637,35 +804,61 @@ class _RadiusSelector extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selected = ref.watch(searchRadiusKmProvider);
-  return SizedBox(
-    height: 38,
-    child: ListView(
-      scrollDirection: Axis.horizontal,
-      children: [
-        Center(
-          child: Text(
-            'Show within',
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w700,
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: SizedBox(
+        height: 40,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          children: [
+            Center(
+              child: Text(
+                '📍 Within',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.muted,
+                  fontFamilyFallback: AppTheme.emojiFontFallbacks,
+                ),
+              ),
             ),
-          ),
+            const SizedBox(width: 8),
+            for (final radius in PrototypeVisuals.radiusOptionsKm) ...[
+              _RadiusChip(
+                label: PrototypeVisuals.radiusLabel(radius),
+                selected: selected == radius,
+                onTap: () {
+                  ref.read(searchRadiusKmProvider.notifier).state = radius;
+                  ref.invalidate(nearbyVenuesProvider);
+                },
+              ),
+              const SizedBox(width: 8),
+            ],
+          ],
         ),
-        const SizedBox(width: 8),
-        for (final radius in const [3.0, 5.0, 10.0, 25.0]) ...[
-          ChoiceChip(
-            label: Text('${radius.toInt()} km'),
-            selected: selected == radius,
-            onSelected: (_) {
-              ref.read(searchRadiusKmProvider.notifier).state = radius;
-              ref.invalidate(nearbyVenuesProvider);
-            },
-          ),
-          const SizedBox(width: 8),
-        ],
-      ],
-    ),
-  );
+      ),
+    );
+  }
+}
+
+class _RadiusChip extends StatelessWidget {
+  const _RadiusChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return PrototypeFilterChip(
+      label: label,
+      selected: selected,
+      onTap: onTap,
+    );
   }
 }
 
@@ -688,17 +881,23 @@ class _VenueList extends StatelessWidget {
 }
 
 /// A horizontal, scrollable row of fixed-width cards.
+///
+/// Matches prototype `.hScroll` edge bleed (`margin: 0 -18px; padding: 0 18px`).
 class _HorizontalList extends StatelessWidget {
-  const _HorizontalList({required this.items});
+  const _HorizontalList({required this.items, this.height = 260});
 
   final List<Widget> items;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 260,
+      height: height,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
+        // Bleed past the parent 18px pad like prototype `.hScroll`.
+        padding: const EdgeInsets.fromLTRB(0, 2, 0, 8),
+        clipBehavior: Clip.none,
         itemCount: items.length,
         separatorBuilder: (context, i) => const SizedBox(width: 12),
         itemBuilder: (context, i) => items[i],
@@ -727,12 +926,21 @@ class _DynamicSection<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     if (async.isLoading && !async.hasValue) {
       return Padding(
-        padding: const EdgeInsets.only(bottom: 24),
+        padding: const EdgeInsets.only(bottom: 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
+            Text(
+              title,
+              style: const TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 16.5,
+                letterSpacing: -0.3,
+                color: AppTheme.ink,
+                fontFamilyFallback: AppTheme.emojiFontFallbacks,
+              ),
+            ),
+            const SizedBox(height: 12),
             loading,
           ],
         ),
@@ -741,12 +949,12 @@ class _DynamicSection<T> extends StatelessWidget {
     final items = async.valueOrNull;
     if (items == null || items.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SectionHeader(title: title, onViewAll: onViewAll),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           itemBuilder(items),
         ],
       ),
