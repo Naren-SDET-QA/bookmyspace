@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/validators/app_validators.dart';
 import '../../../venues/presentation/venue_providers.dart';
+import '../../../venues/domain/venue.dart';
 import '../providers/owner_venue_providers.dart';
 
 /// Screen for owners to create a new venue.
 class CreateVenueScreen extends ConsumerStatefulWidget {
-  const CreateVenueScreen({super.key});
+  const CreateVenueScreen({super.key, this.venue});
+  final Venue? venue;
 
   @override
   ConsumerState<CreateVenueScreen> createState() => _CreateVenueScreenState();
@@ -24,6 +27,23 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
   String? _selectedCategoryId;
   bool _submitting = false;
 
+  bool get _editing => widget.venue != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final v = widget.venue;
+    if (v != null) {
+      _nameController.text = v.name;
+      _descriptionController.text = v.description;
+      _cityController.text = v.city;
+      _stateController.text = v.state;
+      _capacityController.text = '${v.capacity}';
+      _priceController.text = '${v.pricingBaseAmount}';
+      _selectedCategoryId = v.category?.id;
+    }
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -38,15 +58,15 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedCategoryId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a category')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please select a category')));
       return;
     }
 
     setState(() => _submitting = true);
     try {
-      await ref.read(createVenueProvider((
+      final params = (
         name: _nameController.text.trim(),
         categoryId: _selectedCategoryId!,
         description: _descriptionController.text.trim(),
@@ -56,18 +76,42 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
         longitude: 78.4867,
         capacity: int.tryParse(_capacityController.text) ?? 50,
         pricingBaseAmount: double.tryParse(_priceController.text) ?? 0,
-      )).future);
+      );
+      if (_editing) {
+        await ref.read(
+          updateVenueProvider((
+            venueId: widget.venue!.id,
+            name: params.name,
+            categoryId: params.categoryId,
+            description: params.description,
+            city: params.city,
+            state: params.state,
+            latitude: params.latitude,
+            longitude: params.longitude,
+            capacity: params.capacity,
+            pricingBaseAmount: params.pricingBaseAmount,
+          )).future,
+        );
+      } else {
+        await ref.read(createVenueProvider(params).future);
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Venue created successfully')),
+          SnackBar(
+            content: Text(
+              _editing
+                  ? 'Hall updated successfully'
+                  : 'Hall created successfully',
+            ),
+          ),
         );
         context.pop();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -79,7 +123,7 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
     final categories = ref.watch(venueCategoriesProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Venue')),
+      appBar: AppBar(title: Text(_editing ? 'Edit Hall' : 'Add Hall')),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -91,16 +135,18 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
                 labelText: 'Venue Name',
                 border: OutlineInputBorder(),
               ),
-              validator: (v) => v == null || v.trim().isEmpty ? 'Name is required' : null,
+              validator: (v) => AppValidators.required(v, fieldName: 'Name'),
             ),
             const SizedBox(height: 16),
             categories.when(
               loading: () => const LinearProgressIndicator(),
               error: (e, _) => Text('Error loading categories: $e'),
               data: (cats) => DropdownButtonFormField<String>(
-                value: _selectedCategoryId,
+                initialValue: _selectedCategoryId,
                 items: cats
-                    .map((c) => DropdownMenuItem(value: c.id, child: Text(c.name)))
+                    .map(
+                      (c) => DropdownMenuItem(value: c.id, child: Text(c.name)),
+                    )
                     .toList(),
                 onChanged: (v) => setState(() => _selectedCategoryId = v),
                 decoration: const InputDecoration(
@@ -117,7 +163,7 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
                 border: OutlineInputBorder(),
               ),
               maxLines: 3,
-              validator: (v) => v == null || v.trim().isEmpty ? 'Description is required' : null,
+              validator: AppValidators.description,
             ),
             const SizedBox(height: 16),
             Row(
@@ -129,7 +175,8 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
                       labelText: 'City',
                       border: OutlineInputBorder(),
                     ),
-                    validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
+                    validator: (v) =>
+                        AppValidators.required(v, fieldName: 'City'),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -140,7 +187,8 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
                       labelText: 'State',
                       border: OutlineInputBorder(),
                     ),
-                    validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
+                    validator: (v) =>
+                        AppValidators.required(v, fieldName: 'State'),
                   ),
                 ),
               ],
@@ -156,12 +204,8 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
                       border: OutlineInputBorder(),
                     ),
                     keyboardType: TextInputType.number,
-                    validator: (v) {
-                      if (v == null || v.isEmpty) return 'Required';
-                      final n = int.tryParse(v);
-                      if (n == null || n <= 0) return 'Invalid';
-                      return null;
-                    },
+                    validator: (v) =>
+                        AppValidators.positiveInt(v, fieldName: 'capacity'),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -173,12 +217,7 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
                       border: OutlineInputBorder(),
                     ),
                     keyboardType: TextInputType.number,
-                    validator: (v) {
-                      if (v == null || v.isEmpty) return 'Required';
-                      final n = double.tryParse(v);
-                      if (n == null || n < 0) return 'Invalid';
-                      return null;
-                    },
+                    validator: AppValidators.nonNegativePrice,
                   ),
                 ),
               ],
@@ -192,7 +231,7 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Create Venue'),
+                  : Text(_editing ? 'Save Hall' : 'Create Hall'),
             ),
           ],
         ),

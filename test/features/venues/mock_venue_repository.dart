@@ -13,6 +13,10 @@ class MockVenueRepository implements VenueRepository {
   /// Tracks the last query passed to [search].
   VenueSearchQuery? lastSearchQuery;
 
+  double? lastNearbyRadiusKm;
+  double? lastNearbyLatitude;
+  double? lastNearbyLongitude;
+
   static const VenueCategory _functionHall = VenueCategory(
     id: 'cat-1',
     slug: 'function_hall',
@@ -123,6 +127,9 @@ class MockVenueRepository implements VenueRepository {
     int limit = 20,
   }) async {
     if (failRequests) throw Exception('network down');
+    lastNearbyRadiusKm = maxDistanceKm;
+    lastNearbyLatitude = latitude;
+    lastNearbyLongitude = longitude;
     final withDistance = _venues
         .map((v) => v.copyWith(distanceKm: 1.0))
         .toList();

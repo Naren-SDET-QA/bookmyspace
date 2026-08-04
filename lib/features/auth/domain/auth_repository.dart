@@ -17,6 +17,16 @@ abstract interface class AuthRepository {
   /// Verifies an email OTP token.
   Future<AuthUser> verifyEmailOtp(String email, String token);
 
+  /// Development-only entry point; implementations still create a real
+  /// provider session and never bypass authorization or RLS.
+  Future<AuthUser> signInWithPassword(String email, String password);
+
+  /// Resolves the authenticated user's authoritative database role.
+  Future<AppAccessRole> resolveAccessRole();
+
+  /// Resends an expired signup confirmation email.
+  Future<void> resendSignupConfirmation(String email);
+
   /// Signs in with a phone OTP.
   Future<void> signInWithPhoneOtp(String phone);
 

@@ -12,15 +12,26 @@ import 'venue_badges.dart';
 
 /// A tappable venue card used in listings and the home screen.
 class VenueCard extends ConsumerWidget {
-  const VenueCard({super.key, required this.venue});
+  const VenueCard({super.key, required this.venue, this.compact = false});
 
   final Venue venue;
+  final bool compact;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
     final favorite = ref.watch(isFavoriteProvider(venue.id));
+
+    if (compact) {
+      return _CompactVenueCard(
+        venue: venue,
+        favorite: favorite,
+        onTap: () =>
+            context.push(AppRoutes.venueDetails.replaceAll(':id', venue.id)),
+        onFavorite: () => ref.read(toggleFavoriteProvider(venue.id).future),
+      );
+    }
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -158,6 +169,155 @@ class VenueCard extends ConsumerWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CompactVenueCard extends StatelessWidget {
+  const _CompactVenueCard({
+    required this.venue,
+    required this.favorite,
+    required this.onTap,
+    required this.onFavorite,
+  });
+
+  final Venue venue;
+  final AsyncValue<bool?> favorite;
+  final VoidCallback onTap;
+  final VoidCallback onFavorite;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: Semantics(
+        label: '${venue.name}, ${venue.city}',
+        button: true,
+        child: InkWell(
+          onTap: onTap,
+          child: SizedBox(
+            height: 116,
+            child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(15),
+                  child: SizedBox(
+                    width: 88,
+                    height: 96,
+                    child: AppNetworkImage(
+                      url: venue.coverImageUrl,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.brand.withValues(alpha: .10),
+                          borderRadius: BorderRadius.circular(7),
+                        ),
+                        child: const Text(
+                          'VENUE',
+                          style: TextStyle(
+                            color: AppTheme.brand,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: .5,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        venue.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.location_on_outlined,
+                            size: 13,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 2),
+                          Expanded(
+                            child: Text(
+                              [
+                                if (venue.city.isNotEmpty) venue.city,
+                                if (venue.distanceKm != null)
+                                  formatDistance(venue.distanceKm),
+                              ].join(' · '),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                          if (venue.avgRating > 0) ...[
+                            const Icon(
+                              Icons.star_rounded,
+                              color: Color(0xFFF59E0B),
+                              size: 14,
+                            ),
+                            Text(
+                              venue.avgRating.toStringAsFixed(1),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 7),
+                      Text(
+                        '${formatInr(venue.price)} / day',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                favorite.when(
+                  data: (value) => IconButton(
+                    onPressed: onFavorite,
+                    icon: Icon(
+                      value ?? false
+                          ? Icons.favorite_rounded
+                          : Icons.favorite_border_rounded,
+                      color: value ?? false
+                          ? const Color(0xFFE11D48)
+                          : theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  loading: () => const SizedBox(width: 40),
+                  error: (_, _) => const SizedBox(width: 40),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

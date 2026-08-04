@@ -14,6 +14,9 @@ class AppConstants {
   /// Key used to persist the theme mode.
   static const String prefsThemeModeKey = 'bms_theme_mode';
 
+  /// Key used to persist the selected theme colour.
+  static const String prefsThemeColorKey = 'bms_theme_color';
+
   /// Key used to flag whether onboarding has been completed.
   static const String prefsOnboardingDoneKey = 'bms_onboarding_done';
 

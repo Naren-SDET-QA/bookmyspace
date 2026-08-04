@@ -93,7 +93,11 @@ class AppValidators {
   }
 
   /// Validates a description with optional min/max length.
-  static String? description(String? value, {int minLength = 10, int maxLength = 1000}) {
+  static String? description(
+    String? value, {
+    int minLength = 10,
+    int maxLength = 1000,
+  }) {
     if (value == null || value.trim().isEmpty) {
       return 'Description is required';
     }
@@ -106,8 +110,26 @@ class AppValidators {
     return null;
   }
 
+  /// Validates optional min/max price filters (INR).
+  static String? priceRange({double? min, double? max}) {
+    if (min != null && min < 0) {
+      return 'Minimum price cannot be negative';
+    }
+    if (max != null && max < 0) {
+      return 'Maximum price cannot be negative';
+    }
+    if (min != null && max != null && min > max) {
+      return 'Minimum price cannot exceed maximum';
+    }
+    return null;
+  }
+
   /// Validates a subject/title with optional min/max length.
-  static String? subject(String? value, {int minLength = 3, int maxLength = 100}) {
+  static String? subject(
+    String? value, {
+    int minLength = 3,
+    int maxLength = 100,
+  }) {
     if (value == null || value.trim().isEmpty) {
       return 'Subject is required';
     }
@@ -116,6 +138,36 @@ class AppValidators {
     }
     if (value.trim().length > maxLength) {
       return 'Subject must be at most $maxLength characters';
+    }
+    return null;
+  }
+
+  /// Validates a positive integer (e.g. capacity).
+  static String? positiveInt(
+    String? value, {
+    String fieldName = 'Value',
+  }) {
+    if (value == null || value.trim().isEmpty) {
+      return '$fieldName is required';
+    }
+    final n = int.tryParse(value.trim());
+    if (n == null || n <= 0) {
+      return 'Enter a valid $fieldName';
+    }
+    return null;
+  }
+
+  /// Validates a non-negative price amount.
+  static String? nonNegativePrice(
+    String? value, {
+    String fieldName = 'Price',
+  }) {
+    if (value == null || value.trim().isEmpty) {
+      return '$fieldName is required';
+    }
+    final n = double.tryParse(value.trim());
+    if (n == null || n < 0) {
+      return 'Enter a valid $fieldName';
     }
     return null;
   }

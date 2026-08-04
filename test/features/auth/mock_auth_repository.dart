@@ -18,6 +18,7 @@ class MockAuthRepository implements AuthRepository {
   bool failSignOut = false;
   int signInCount = 0;
   int verifyCount = 0;
+  AppAccessRole accessRole = AppAccessRole.customer;
 
   @override
   AuthUser? get currentUser => _user;
@@ -46,6 +47,24 @@ class MockAuthRepository implements AuthRepository {
       throw Exception('OTP send failed');
     }
   }
+
+  @override
+  Future<void> resendSignupConfirmation(String email) async {
+    signInCount++;
+    if (failSignIn) throw Exception('Confirmation resend failed');
+  }
+
+  @override
+  Future<AuthUser> signInWithPassword(String email, String password) async {
+    signInCount++;
+    if (failSignIn) throw Exception('Development login failed');
+    _user = AuthUser(id: 'mock-user', email: email, fullName: 'Test User');
+    _controller.add(_user);
+    return _user!;
+  }
+
+  @override
+  Future<AppAccessRole> resolveAccessRole() async => accessRole;
 
   Future<AuthUser> _signIn() async {
     signInCount++;
@@ -99,6 +118,11 @@ class MockAuthRepository implements AuthRepository {
 
   @override
   Future<void> refreshSession() async {}
+
+  void restoreSession(AuthUser? user) {
+    _user = user;
+    _controller.add(user);
+  }
 
   void dispose() => _controller.close();
 }

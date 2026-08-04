@@ -4,6 +4,7 @@ import 'package:riverpod/riverpod.dart';
 
 import '../constants/app_constants.dart';
 import '../localization/app_localizations.dart';
+import '../theme/app_theme.dart';
 
 /// Persisted user preferences backed by [FlutterSecureStorage].
 class Preferences {
@@ -57,6 +58,41 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
 
 final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(
   ThemeModeNotifier.new,
+);
+
+/// User-selectable accent colour, persisted independently of theme mode.
+class ThemeColorNotifier extends Notifier<AppThemeColor> {
+  @override
+  AppThemeColor build() {
+    _load();
+    return AppThemeColor.violet;
+  }
+
+  bool _loaded = false;
+
+  Future<void> _load() async {
+    final saved = await ref
+        .read(preferencesProvider)
+        .read(AppConstants.prefsThemeColorKey);
+    if (saved != null && !_loaded) {
+      _loaded = true;
+      state = AppThemeColor.values.firstWhere(
+        (choice) => choice.name == saved,
+        orElse: () => AppThemeColor.violet,
+      );
+    }
+  }
+
+  Future<void> setThemeColor(AppThemeColor choice) async {
+    state = choice;
+    await ref
+        .read(preferencesProvider)
+        .write(AppConstants.prefsThemeColorKey, choice.name);
+  }
+}
+
+final themeColorProvider = NotifierProvider<ThemeColorNotifier, AppThemeColor>(
+  ThemeColorNotifier.new,
 );
 
 /// Locale controller (en / te), persisted.

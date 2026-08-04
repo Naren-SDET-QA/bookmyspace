@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/config/settings_controller.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/router/app_router.dart';
+import '../../../../core/theme/app_theme.dart';
 
 /// Settings screen: theme, language and account management entry points.
 class SettingsScreen extends ConsumerWidget {
@@ -15,69 +16,191 @@ class SettingsScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final themeMode = ref.watch(themeModeProvider);
     final locale = ref.watch(localeProvider);
+    final themeColor = ref.watch(themeColorProvider);
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settings)),
       body: ListView(
+        padding: const EdgeInsets.fromLTRB(
+          AppTheme.pagePadding,
+          8,
+          AppTheme.pagePadding,
+          28,
+        ),
         children: [
-          ListTile(
-            leading: const Icon(Icons.brightness_6_rounded),
-            title: Text(l10n.themeMode),
-            subtitle: Text(themeMode.name.toUpperCase()),
-            trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () => _showThemePicker(context, ref),
-          ),
-          ListTile(
-            leading: const Icon(Icons.language_rounded),
-            title: Text(l10n.language),
-            subtitle: Text(locale.languageCode.toUpperCase()),
-            trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () => _showLanguagePicker(context, ref),
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.notifications_outlined),
-            title: Text(l10n.notifications),
-            trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () {},
-          ),
-          ListTile(
-            leading: const Icon(Icons.support_agent_rounded),
-            title: Text(l10n.support),
-            trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () {},
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.privacy_tip_outlined),
-            title: Text(l10n.privacyPolicy),
-            trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () => context.push(AppRoutes.privacyPolicy),
-          ),
-          ListTile(
-            leading: const Icon(Icons.description_outlined),
-            title: Text(l10n.termsAndConditions),
-            trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () => context.push(AppRoutes.termsOfService),
-          ),
-          ListTile(
-            leading: const Icon(Icons.info_outline),
-            title: Text(l10n.about),
-            onTap: () => _showAboutDialog(context, l10n),
-          ),
-          const Divider(),
-          ListTile(
-            leading: Icon(
-              Icons.delete_forever_outlined,
-              color: Theme.of(context).colorScheme.error,
+          Text('Appearance', style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 10),
+          Card(
+            margin: EdgeInsets.zero,
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.brightness_6_rounded),
+                  title: Text(l10n.themeMode),
+                  subtitle: Text(themeMode.name.toUpperCase()),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => _showThemePicker(context, ref),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: Icon(
+                    Icons.palette_outlined,
+                    color: themeColor.color,
+                  ),
+                  title: const Text('Theme colour'),
+                  subtitle: Text(themeColor.label),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => _showThemeColorPicker(context, ref, themeColor),
+                ),
+              ],
             ),
-            title: Text(
-              l10n.deleteAccount,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+          const SizedBox(height: 22),
+          Text('Preferences', style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 10),
+          Card(
+            margin: EdgeInsets.zero,
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.language_rounded),
+                  title: Text(l10n.language),
+                  subtitle: Text(locale.languageCode.toUpperCase()),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => _showLanguagePicker(context, ref),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.notifications_outlined),
+                  title: Text(l10n.notifications),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push(AppRoutes.notifications),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.support_agent_rounded),
+                  title: Text(l10n.support),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () {},
+                ),
+              ],
             ),
-            onTap: () => _confirmDeleteAccount(context, l10n),
+          ),
+          const SizedBox(height: 22),
+          Text('Legal', style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 10),
+          Card(
+            margin: EdgeInsets.zero,
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.privacy_tip_outlined),
+                  title: Text(l10n.privacyPolicy),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push(AppRoutes.privacyPolicy),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.description_outlined),
+                  title: Text(l10n.termsAndConditions),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push(AppRoutes.termsOfService),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.info_outline),
+                  title: Text(l10n.about),
+                  onTap: () => _showAboutDialog(context, l10n),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 22),
+          Card(
+            margin: EdgeInsets.zero,
+            child: ListTile(
+              leading: Icon(
+                Icons.delete_forever_outlined,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              title: Text(
+                l10n.deleteAccount,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+              onTap: () => _confirmDeleteAccount(context, l10n),
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showThemeColorPicker(
+    BuildContext context,
+    WidgetRef ref,
+    AppThemeColor selected,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Choose your colour',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: AppThemeColor.values.map((choice) {
+                  final active = choice == selected;
+                  return Semantics(
+                    selected: active,
+                    label: '${choice.label} theme colour',
+                    button: true,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () {
+                        ref
+                            .read(themeColorProvider.notifier)
+                            .setThemeColor(choice);
+                        Navigator.pop(sheetContext);
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        width: 68,
+                        height: 68,
+                        decoration: BoxDecoration(
+                          color: choice.color,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: active ? Colors.white : Colors.transparent,
+                            width: 3,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: choice.color.withValues(alpha: .28),
+                              blurRadius: active ? 18 : 10,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: active
+                            ? const Icon(
+                                Icons.check_rounded,
+                                color: Colors.white,
+                              )
+                            : null,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

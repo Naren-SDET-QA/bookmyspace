@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/validators/app_validators.dart';
 import '../owner_providers.dart';
 
 /// Owner registration form with email/password.
@@ -9,10 +10,13 @@ class OwnerRegistrationScreen extends ConsumerStatefulWidget {
   const OwnerRegistrationScreen({super.key});
 
   @override
-  ConsumerState<OwnerRegistrationScreen> createState() => _OwnerRegistrationScreenState();
+  ConsumerState<OwnerRegistrationScreen> createState() =>
+      _OwnerRegistrationScreenState();
 }
 
-class _OwnerRegistrationScreenState extends ConsumerState<OwnerRegistrationScreen> {
+class _OwnerRegistrationScreenState
+    extends ConsumerState<OwnerRegistrationScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _nameController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -27,6 +31,8 @@ class _OwnerRegistrationScreenState extends ConsumerState<OwnerRegistrationScree
   }
 
   Future<void> _register() async {
+    if (!_formKey.currentState!.validate()) return;
+
     final l10n = AppLocalizations.of(context);
     final createOwner = ref.read(
       createOwnerProvider((
@@ -39,9 +45,9 @@ class _OwnerRegistrationScreenState extends ConsumerState<OwnerRegistrationScree
     try {
       await createOwner;
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.signUp)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.signUp)));
         Navigator.of(context).pop();
       }
     } catch (e) {
@@ -68,43 +74,58 @@ class _OwnerRegistrationScreenState extends ConsumerState<OwnerRegistrationScree
       appBar: AppBar(title: Text(l10n.signUp)),
       body: Padding(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextField(
-              controller: _emailController,
-              decoration: InputDecoration(
-                labelText: l10n.email,
-                border: const OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _nameController,
-              decoration: InputDecoration(
-                labelText: l10n.name,
-                border: const OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _passwordController,
-              obscureText: _obscurePassword,
-              decoration: InputDecoration(
-                labelText: l10n.password,
-                border: const OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
-                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+        child: Form(
+          key: _formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextFormField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                autofillHints: const [AutofillHints.email],
+                validator: AppValidators.email,
+                decoration: InputDecoration(
+                  labelText: l10n.email,
+                  border: const OutlineInputBorder(),
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: createOwner.isLoading ? null : _register,
-              child: Text(createOwner.isLoading ? l10n.loading : l10n.signUp),
-            ),
-          ],
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _nameController,
+                textCapitalization: TextCapitalization.words,
+                autofillHints: const [AutofillHints.name],
+                validator: AppValidators.name,
+                decoration: InputDecoration(
+                  labelText: l10n.name,
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _passwordController,
+                obscureText: _obscurePassword,
+                autofillHints: const [AutofillHints.newPassword],
+                validator: AppValidators.password,
+                decoration: InputDecoration(
+                  labelText: l10n.password,
+                  border: const OutlineInputBorder(),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                    ),
+                    onPressed: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              FilledButton(
+                onPressed: createOwner.isLoading ? null : _register,
+                child: Text(createOwner.isLoading ? l10n.loading : l10n.signUp),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -24,11 +24,43 @@ Widget _wrap(Widget child) {
 }
 
 void main() {
+  test('development test login is fail-closed outside debug development', () {
+    bool allowed(AppEnvironment environment, {bool release = false}) =>
+        AppConfig.isDevelopmentTestLoginAllowed(
+          environment: environment,
+          releaseMode: release,
+          profileMode: false,
+          email: 'test@example.invalid',
+          password: 'test-password',
+        );
+
+    expect(allowed(AppEnvironment.development), isTrue);
+    expect(allowed(AppEnvironment.development, release: true), isFalse);
+    expect(allowed(AppEnvironment.staging), isFalse);
+    expect(allowed(AppEnvironment.production), isFalse);
+    expect(
+      AppConfig.isDevelopmentTestLoginAllowed(
+        environment: AppEnvironment.development,
+        releaseMode: false,
+        profileMode: false,
+        email: '',
+        password: '',
+      ),
+      isFalse,
+    );
+  });
   group('AppConfig', () {
-    test('exposes the app name and a default environment', () {
+    test('requires explicit Supabase dart-defines', () {
       expect(AppConfig.appName, 'BookMySpace');
-      expect(AppConfig.supabaseUrl, isNotEmpty);
       expect(AppConfig.razorpayKeyId, isNotEmpty);
+      if (AppConfig.hasSupabaseConfiguration) {
+        expect(AppConfig.requireSupabaseConfiguration, returnsNormally);
+      } else {
+        expect(
+          AppConfig.requireSupabaseConfiguration,
+          throwsA(isA<StateError>()),
+        );
+      }
     });
   });
 
