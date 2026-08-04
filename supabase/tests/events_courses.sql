@@ -1,4 +1,6 @@
 -- ============================================================
+begin;
+select plan(1);
 -- BookMySpace — Events & Courses Tests
 --
 -- Verifies the atomic capacity logic behind event registration and
@@ -20,18 +22,11 @@ declare
   v_course uuid;
   v_event uuid;
 begin
-  delete from public.event_registrations;
-  delete from public.course_enrollments;
-  delete from public.course_batches;
-  delete from public.courses;
-  delete from public.institutes;
-  delete from public.events;
-  delete from public.bookings;
-  delete from public.booking_holds;
-  delete from public.time_slots;
-  delete from public.venues;
-  delete from public.organizations;
-  delete from auth.users;
+  delete from public.events where title='EC Workshop';
+  delete from public.institutes where name='EC Institute';
+  delete from public.venues where name='EC Test Hall';
+  delete from public.organizations where name='EC Test Org';
+  delete from auth.users where email in('ec_owner@test.com','ec_user_a@test.com','ec_user_b@test.com');
 
   insert into auth.users (id, email) values
     (gen_random_uuid(), 'ec_owner@test.com'),
@@ -66,7 +61,6 @@ begin
   insert into public.course_batches (course_id, label, starts_on, capacity)
   values (v_course, 'Batch 1', current_date + interval '10 days', 2);
 end $$;
-
 -- ------------------------------------------------------------
 -- Test 1: event registration succeeds up to capacity
 -- ------------------------------------------------------------
@@ -254,7 +248,7 @@ begin
     raise exception 'FAIL: event_detail user_registered should be false for other user';
   end if;
 
-  if (select count(*) from public.event_summaries(v_user_a)) <> 1 then
+  if (select count(*) from public.event_summaries(v_user_a) where id=v_event) <> 1 then
     raise exception 'FAIL: event_summaries should return the published event';
   end if;
   raise notice 'PASS: read models expose live counts and my state';
@@ -275,3 +269,6 @@ begin
   perform test_read_models();
   raise notice 'ALL EVENTS/COURSES TESTS PASSED';
 end $$;
+select pass('events and courses regression');
+select * from finish();
+rollback;

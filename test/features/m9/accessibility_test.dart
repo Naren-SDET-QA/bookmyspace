@@ -111,10 +111,16 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(
-        find.bySemanticsLabel('${venue.name}, ${venue.city}'),
-        findsOneWidget,
+      final semantics = tester.widget<Semantics>(
+        find.descendant(
+          of: find.byType(VenueCard),
+          matching: find.byWidgetPredicate(
+            (w) => w is Semantics && w.properties.label != null,
+          ),
+        ),
       );
+      expect(semantics.properties.label, '${venue.name}, ${venue.city}');
+      expect(semantics.properties.button, isTrue);
     });
   });
 }

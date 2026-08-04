@@ -1,4 +1,6 @@
 -- ============================================================
+begin;
+select plan(1);
 -- BookMySpace — Payments & Refunds Tests
 --
 -- Simulates the DB operations performed by the `create-refund` Edge
@@ -18,14 +20,14 @@
 create or replace function test_pay_fixture()
 returns void language plpgsql as $$
 begin
-  delete from public.refunds;
-  delete from public.payments;
-  delete from public.bookings;
-  delete from public.booking_holds;
-  delete from public.time_slots;
-  delete from public.venues;
-  delete from public.organizations;
-  delete from auth.users;
+  delete from public.refunds where booking_id in(select b.id from bookings b join venues v on v.id=b.venue_id where v.name='Pay Test Hall');
+  delete from public.payments where booking_id in(select b.id from bookings b join venues v on v.id=b.venue_id where v.name='Pay Test Hall');
+  delete from public.bookings where venue_id in(select id from venues where name='Pay Test Hall');
+  delete from public.booking_holds where venue_id in(select id from venues where name='Pay Test Hall');
+  delete from public.time_slots where venue_id in(select id from venues where name='Pay Test Hall');
+  delete from public.venues where name='Pay Test Hall';
+  delete from public.organizations where name='Pay Test Org';
+  delete from auth.users where email in('pay_owner@test.com','pay_user@test.com');
 
   insert into auth.users (id, email) values
     (gen_random_uuid(), 'pay_owner@test.com'),
@@ -42,7 +44,6 @@ begin
   select v.id, 'Morning', '09:00', '12:00', 5000
   from public.venues v where v.name = 'Pay Test Hall';
 end $$;
-
 -- ------------------------------------------------------------
 -- Helper: create a confirmed booking with a captured payment,
 -- mirroring the app + webhook flow.
@@ -190,3 +191,6 @@ begin
   perform test_refund_no_duplicate();
   raise notice 'ALL PAYMENT/REFUND TESTS PASSED';
 end $$;
+select pass('payments and refunds regression');
+select * from finish();
+rollback;

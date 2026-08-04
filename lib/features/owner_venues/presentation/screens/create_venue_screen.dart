@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/maps/domain/geo_point.dart';
+import '../../../../core/maps/presentation/map_view.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/validators/app_validators.dart';
-import '../../../venues/presentation/venue_providers.dart';
 import '../../../venues/domain/venue.dart';
+import '../../../venues/presentation/venue_providers.dart';
 import '../providers/owner_venue_providers.dart';
 
 /// Screen for owners to create a new venue.
@@ -26,6 +29,7 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
   final _priceController = TextEditingController();
   String? _selectedCategoryId;
   bool _submitting = false;
+  late GeoPoint _location;
 
   bool get _editing => widget.venue != null;
 
@@ -41,6 +45,9 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
       _capacityController.text = '${v.capacity}';
       _priceController.text = '${v.pricingBaseAmount}';
       _selectedCategoryId = v.category?.id;
+      _location = GeoPoint(v.latitude, v.longitude);
+    } else {
+      _location = const GeoPoint(15.5057, 80.0495); // Ongole default
     }
   }
 
@@ -72,8 +79,8 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
         description: _descriptionController.text.trim(),
         city: _cityController.text.trim(),
         state: _stateController.text.trim(),
-        latitude: 17.3850,
-        longitude: 78.4867,
+        latitude: _location.latitude,
+        longitude: _location.longitude,
         capacity: int.tryParse(_capacityController.text) ?? 50,
         pricingBaseAmount: double.tryParse(_priceController.text) ?? 0,
       );
@@ -126,9 +133,11 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
       appBar: AppBar(title: Text(_editing ? 'Edit Hall' : 'Add Hall')),
       body: Form(
         key: _formKey,
-        child: ListView(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
-          children: [
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
             TextFormField(
               controller: _nameController,
               decoration: const InputDecoration(
@@ -194,6 +203,33 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
               ],
             ),
             const SizedBox(height: 16),
+            Text(
+              'Location',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: AppTheme.ink,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Search an address or tap the map. '
+              '${_location.latitude.toStringAsFixed(5)}, '
+              '${_location.longitude.toStringAsFixed(5)}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.muted,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            MapView(
+              initialCenter: _location,
+              height: 160,
+              pickOnTap: true,
+              showAddressSearch: true,
+              showUserLocation: true,
+              markers: [MapMarkerData(point: _location)],
+              onLocationPicked: (point) => setState(() => _location = point),
+            ),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
@@ -234,6 +270,7 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
                   : Text(_editing ? 'Save Hall' : 'Create Hall'),
             ),
           ],
+          ),
         ),
       ),
     );

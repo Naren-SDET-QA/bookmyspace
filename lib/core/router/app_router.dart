@@ -6,6 +6,7 @@ import '../../features/accommodations/presentation/screens/accommodation_detail_
 import '../../features/accommodations/presentation/screens/accommodation_list_screen.dart';
 import '../../features/accommodations/presentation/screens/stay_management_screens.dart';
 import '../../features/admin/presentation/screens/admin_audit_screen.dart';
+import '../../features/admin/presentation/screens/admin_content_screen.dart';
 import '../../features/admin/presentation/screens/admin_dashboard_screen.dart';
 import '../../features/analytics/presentation/screens/analytics_screen.dart';
 import '../../features/auth/domain/auth_user.dart';
@@ -45,9 +46,12 @@ import '../../features/search/presentation/screens/search_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/sports/presentation/screens/sports_screens.dart';
 import '../../features/support/presentation/screens/support_screen.dart';
+import '../../features/venue_import/presentation/screens/admin_venue_claims_screen.dart';
+import '../../features/venue_import/presentation/screens/venue_import_screen.dart';
 import '../../features/venues/domain/venue.dart';
 import '../../features/venues/presentation/screens/venue_details_screen.dart';
 import '../localization/app_localizations.dart';
+import '../theme/prototype_visuals.dart';
 
 /// Route names used for navigation.
 abstract class AppRoutes {
@@ -93,6 +97,9 @@ abstract class AppRoutes {
   static const analytics = '/analytics';
   static const support = '/support';
   static const adminAudit = '/admin/audit';
+  static const adminVenueImport = '/admin/venue-import';
+  static const adminVenueClaims = '/admin/venue-claims';
+  static const adminContent = '/admin/content';
   static const adminDashboard = '/admin';
   static const ownerRegistration = '/owner/register';
   static const ownerDashboard = '/owner';
@@ -343,6 +350,21 @@ GoRouter createAppRouter({
         builder: (context, state) => const AdminAuditScreen(),
       ),
       GoRoute(
+        path: AppRoutes.adminVenueImport,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const VenueImportScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminVenueClaims,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const AdminVenueClaimsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminContent,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const AdminContentScreen(),
+      ),
+      GoRoute(
         path: AppRoutes.commercePayment,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => CommercePaymentScreen(
@@ -537,7 +559,7 @@ class _AppShell extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
       body: navigationShell,
-      bottomNavigationBar: NavigationBar(
+      bottomNavigationBar: PrototypeBottomNav(
         selectedIndex: navigationShell.currentIndex,
         onDestinationSelected: (index) {
           navigationShell.goBranch(
@@ -546,29 +568,29 @@ class _AppShell extends StatelessWidget {
           );
         },
         destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.home_outlined),
-            selectedIcon: const Icon(Icons.home_rounded),
+          PrototypeNavDestination(
+            icon: Icons.home_outlined,
+            selectedIcon: Icons.home_rounded,
             label: l10n.navHome,
           ),
-          NavigationDestination(
-            icon: const Icon(Icons.search_outlined),
-            selectedIcon: const Icon(Icons.search_rounded),
+          const PrototypeNavDestination(
+            icon: Icons.search_outlined,
+            selectedIcon: Icons.search_rounded,
             label: 'Explore',
           ),
-          NavigationDestination(
-            icon: const Icon(Icons.receipt_long_outlined),
-            selectedIcon: const Icon(Icons.receipt_long_rounded),
+          PrototypeNavDestination(
+            icon: Icons.confirmation_number_outlined,
+            selectedIcon: Icons.confirmation_number_rounded,
             label: l10n.navBookings,
           ),
-          const NavigationDestination(
-            icon: Icon(Icons.favorite_border_rounded),
-            selectedIcon: Icon(Icons.favorite_rounded),
+          const PrototypeNavDestination(
+            icon: Icons.favorite_border_rounded,
+            selectedIcon: Icons.favorite_rounded,
             label: 'Saved',
           ),
-          NavigationDestination(
-            icon: const Icon(Icons.person_outline_rounded),
-            selectedIcon: const Icon(Icons.person_rounded),
+          PrototypeNavDestination(
+            icon: Icons.person_outline_rounded,
+            selectedIcon: Icons.person_rounded,
             label: l10n.navProfile,
           ),
         ],

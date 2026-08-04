@@ -2,20 +2,11 @@
 -- BookMySpace — Migration 0016: Reviews & Venue Management
 -- ============================================================
 
--- Reviews table: users can review venues they've booked.
-create table public.reviews (
-  id uuid primary key default gen_random_uuid(),
-  venue_id uuid not null references public.venues(id) on delete cascade,
-  user_id uuid not null references auth.users(id) on delete cascade,
-  booking_id uuid references public.bookings(id) on delete set null,
-  rating integer not null check (rating >= 1 and rating <= 5),
-  title text,
-  body text,
-  is_verified boolean not null default false,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  unique (venue_id, user_id)
-);
+-- Reviews were introduced in 0006. Relax booking linkage for direct reviews
+-- and enforce one review per user and venue.
+alter table public.reviews alter column booking_id drop not null;
+create unique index reviews_venue_user_unique
+  on public.reviews(venue_id, user_id);
 
 -- Index for fast venue lookups.
 create index idx_reviews_venue_id on public.reviews(venue_id);

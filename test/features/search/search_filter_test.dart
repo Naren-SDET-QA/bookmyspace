@@ -11,6 +11,11 @@ import '../venues/mock_venue_repository.dart';
 
 void main() {
   testWidgets('filter sheet blocks invalid price ranges', (tester) async {
+    tester.view.physicalSize = const Size(400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -28,15 +33,31 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
 
     await tester.tap(find.byTooltip('Filters'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
 
-    await tester.enterText(find.widgetWithText(TextField, 'Min price'), '5000');
-    await tester.enterText(find.widgetWithText(TextField, 'Max price'), '100');
-    await tester.tap(find.text('Apply'));
-    await tester.pumpAndSettle();
+    final minField = find.widgetWithText(TextField, 'Min price');
+    final maxField = find.widgetWithText(TextField, 'Max price');
+    await tester.scrollUntilVisible(
+      minField,
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.enterText(minField, '5000');
+    await tester.enterText(maxField, '100');
+
+    final apply = find.text('Apply');
+    await tester.scrollUntilVisible(
+      apply,
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(apply);
+    await tester.pump();
 
     expect(
       AppValidators.priceRange(min: 5000, max: 100),

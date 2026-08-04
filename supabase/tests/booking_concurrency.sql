@@ -1,4 +1,6 @@
 -- ============================================================
+begin;
+select plan(1);
 -- BookMySpace — Concurrency Tests: Double-Booking Prevention
 --
 -- Self-asserting plpgsql test that proves two users can NEVER
@@ -14,14 +16,9 @@
 create or replace function test_setup_fixture()
 returns void language plpgsql as $$
 begin
-  delete from public.refunds;
-  delete from public.payments;
-  delete from public.bookings;
-  delete from public.booking_holds;
-  delete from public.time_slots;
-  delete from public.venues;
-  delete from public.organizations;
-  delete from auth.users;
+  delete from public.venues where name = 'Test Hall';
+  delete from public.organizations where name = 'Test Org';
+  delete from auth.users where email in ('owner@test.com','user_a@test.com','user_b@test.com');
 
   insert into auth.users (id, email) values
     (gen_random_uuid(), 'owner@test.com'),
@@ -50,8 +47,8 @@ declare
   v_hold_a uuid;
   v_exc text;
 begin
-  select id into v_venue from public.venues limit 1;
-  select id into v_slot from public.time_slots limit 1;
+  select id into v_venue from public.venues where name='Test Hall';
+  select id into v_slot from public.time_slots where venue_id=v_venue and label='Morning';
   select id into v_a from auth.users where email = 'user_a@test.com';
   select id into v_b from auth.users where email = 'user_b@test.com';
 
@@ -82,8 +79,8 @@ declare
   v_venue uuid; v_slot uuid; v_a uuid; v_b uuid;
   v_hold_a uuid; v_exc text;
 begin
-  select id into v_venue from public.venues limit 1;
-  select id into v_slot from public.time_slots limit 1;
+  select id into v_venue from public.venues where name='Test Hall';
+  select id into v_slot from public.time_slots where venue_id=v_venue and label='Morning';
   select id into v_a from auth.users where email = 'user_a@test.com';
   select id into v_b from auth.users where email = 'user_b@test.com';
 
@@ -112,8 +109,8 @@ declare
   v_venue uuid; v_slot uuid; v_a uuid;
   v_hold1 uuid; v_hold2 uuid;
 begin
-  select id into v_venue from public.venues limit 1;
-  select id into v_slot from public.time_slots limit 1;
+  select id into v_venue from public.venues where name='Test Hall';
+  select id into v_slot from public.time_slots where venue_id=v_venue and label='Morning';
   select id into v_a from auth.users where email = 'user_a@test.com';
 
   v_hold1 := public.acquire_booking_hold(v_venue, v_slot, '2026-09-03', v_a, 'cccccccc-cccc-cccc-cccc-cccccccccccc', 5000, 10);
@@ -135,8 +132,8 @@ declare
   v_venue uuid; v_slot uuid; v_a uuid; v_b uuid;
   v_hold uuid;
 begin
-  select id into v_venue from public.venues limit 1;
-  select id into v_slot from public.time_slots limit 1;
+  select id into v_venue from public.venues where name='Test Hall';
+  select id into v_slot from public.time_slots where venue_id=v_venue and label='Morning';
   select id into v_a from auth.users where email = 'user_a@test.com';
   select id into v_b from auth.users where email = 'user_b@test.com';
 
@@ -152,7 +149,6 @@ begin
     raise exception 'FAIL: slot not released after expiry';
   end if;
 end $$;
-
 -- ------------------------------------------------------------
 -- RUNNER
 -- ------------------------------------------------------------
@@ -165,3 +161,6 @@ begin
   perform test_hold_expiry();
   raise notice 'ALL CONCURRENCY TESTS PASSED';
 end $$;
+select pass('booking concurrency regression');
+select * from finish();
+rollback;

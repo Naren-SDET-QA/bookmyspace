@@ -29,3 +29,10 @@ bookmyspace_BACKUP_20260805/
 supabase/.temp/
 .tmp/
 .temp/
+.tmp-supabase-config/
+supabase/.branches/
+
+# Secrets
+.env
+.env.local
+.env.*.local

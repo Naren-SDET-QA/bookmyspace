@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BookMySpace — Discover. Book. Celebrate.</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --pri:#6c3df4; --pri2:#4f46e5; --grad:linear-gradient(135deg,#7c3aed,#4f46e5);
+  --ink:#17132b; --mut:#6f6a8f; --bg:#f4f2fb; --card:#fff; --line:#e9e6f5;
+  --ok:#16a34a; --bad:#e11d48; --warn:#d97706; --teal:#0d9488;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#0d0a24;color:var(--ink);overflow:hidden;display:flex;align-items:center;justify-content:center}
+.blob{position:fixed;border-radius:50%;filter:blur(90px);opacity:.5;pointer-events:none}
+.blob.b1{width:520px;height:520px;background:#5b21b6;top:-160px;left:-120px}
+.blob.b2{width:460px;height:460px;background:#1e3a8a;bottom:-140px;right:-100px}
+.blob.b3{width:300px;height:300px;background:#9d174d;top:55%;left:8%}
+.stage{display:flex;align-items:center;gap:56px;z-index:1}
+.side{color:#cfc9f2;max-width:300px}
+.side h1{font-size:40px;font-weight:800;color:#fff;letter-spacing:-1px;margin-bottom:6px}
+.side h1 span{background:linear-gradient(90deg,#c4b5fd,#818cf8);-webkit-background-clip:text;background-clip:text;color:transparent}
+.side p{font-size:14px;line-height:1.7;color:#9d94d6}
+.side ul{list-style:none;margin-top:20px}
+.side li{font-size:13px;padding:7px 0;color:#b3abe4;display:flex;gap:9px;align-items:center}
+.side li i{font-style:normal}
+.side .tag{display:inline-block;margin-top:22px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#7f76c2;border:1px solid #37306b;padding:7px 14px;border-radius:999px}
+@media(max-width:1180px){.side{display:none}}
+/* ---------- PHONE ---------- */
+.phone{width:400px;height:min(862px,96vh);background:var(--bg);border-radius:46px;position:relative;overflow:hidden;box-shadow:0 40px 90px rgba(0,0,0,.6),0 0 0 10px #1b1636,0 0 0 12px #2c2452}
+.island{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:112px;height:28px;background:#0b0b12;border-radius:20px;z-index:60}
+.statusbar{position:absolute;top:0;left:0;right:0;height:52px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 6px;font-size:13.5px;font-weight:700;z-index:55;pointer-events:none;color:var(--ink)}
+.sicons{display:flex;gap:5px;align-items:center}
+#screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;padding-top:56px;padding-bottom:104px;scrollbar-width:none;animation:fadeUp .35s ease}
+#screen::-webkit-scrollbar{display:none}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes pop{0%{transform:scale(.3);opacity:0}70%{transform:scale(1.12)}100%{transform:scale(1)}}
+/* ---------- NAV ---------- */
+#nav{position:absolute;bottom:0;left:0;right:0;height:88px;background:rgba(255,255,255,.92);backdrop-filter:blur(14px);border-top:1px solid var(--line);display:flex;padding:10px 8px 22px;z-index:50}
+.navIt{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#a29ec4;cursor:pointer;border:none;background:none;font-family:inherit}
+.navIt.on{color:var(--pri)}
+.navIt .ni{width:44px;height:27px;display:flex;align-items:center;justify-content:center;border-radius:999px;transition:.2s}
+.navIt.on .ni{background:#efe9ff}
+/* ---------- COMMON ---------- */
+.pad{padding:0 18px}
+.iconBtn{width:42px;height:42px;border-radius:14px;background:var(--card);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink);position:relative;font-family:inherit}
+.iconBtn .ndot{position:absolute;top:9px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--bad);border:2px solid #fff}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:8px 13px;border-radius:999px;background:#fff;border:1px solid var(--line);font-size:12.5px;font-weight:600;color:var(--mut);cursor:pointer;white-space:nowrap;font-family:inherit}
+.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:9.5px;font-weight:800;letter-spacing:.6px;padding:4px 8px;border-radius:7px;text-transform:uppercase}
+.b-venue{background:#efe9ff;color:#6c3df4}.b-class{background:#e0edff;color:#1d4ed8}.b-event{background:#d9f7ef;color:#0f766e}.b-feat{background:#fff3d6;color:#b45309}
+.secHead{display:flex;align-items:center;justify-content:space-between;margin:24px 0 12px}
+.secHead h2{font-size:16.5px;font-weight:800;letter-spacing:-.3px}
+.secHead span{font-size:12px;font-weight:700;color:var(--pri);cursor:pointer}
+.hScroll{display:flex;gap:12px;overflow-x:auto;padding:2px 18px 8px;scrollbar-width:none;margin:0 -18px}
+.hScroll::-webkit-scrollbar{display:none}
+/* gradient thumbs */
+.g1{background:linear-gradient(135deg,#8b5cf6,#6366f1)}.g2{background:linear-gradient(135deg,#0ea5e9,#2563eb)}
+.g3{background:linear-gradient(135deg,#fb7185,#e11d48)}.g4{background:linear-gradient(135deg,#34d399,#0d9488)}
+.g5{background:linear-gradient(135deg,#fbbf24,#ea580c)}.g6{background:linear-gradient(135deg,#f472b6,#a21caf)}
+/* ---------- HOME ---------- */
+.homeTop{display:flex;justify-content:space-between;align-items:center;padding:4px 18px 0}
+.locBtn{display:flex;align-items:center;gap:9px;background:none;border:none;cursor:pointer;font-family:inherit;text-align:left;color:var(--ink)}
+.locBtn .lpin{width:40px;height:40px;border-radius:14px;background:var(--grad);color:#fff;display:flex;align-items:center;justify-content:center}
+.locBtn small{font-size:10.5px;color:var(--mut);font-weight:600;display:block}
+.locBtn b{font-size:14px;font-weight:800;display:flex;align-items:center;gap:3px}
+.greet{padding:20px 18px 0}
+.greet p{font-size:13px;color:var(--mut);font-weight:600}
+.greet h1{font-size:24px;font-weight:800;letter-spacing:-.6px;margin-top:2px}
+.greet h1 em{font-style:normal;color:var(--pri)}
+.searchFake{margin:14px 18px 0;width:calc(100% - 36px);display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px 16px;font-size:13.5px;color:#9b96ba;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 4px 14px rgba(108,61,244,.06)}
+.catGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:18px 18px 0}
+.catT{background:#fff;border:1px solid var(--line);border-radius:18px;padding:13px 4px 11px;text-align:center;cursor:pointer;font-family:inherit;transition:.15s}
+.catT:active{transform:scale(.93)}
+.catT .ce{font-size:23px}
+.catT p{font-size:10px;font-weight:700;color:var(--ink);margin-top:6px;line-height:1.2}
+.radRow{display:flex;align-items:center;gap:8px;padding:16px 18px 0;overflow-x:auto;scrollbar-width:none}
+.radRow::-webkit-scrollbar{display:none}
+.radRow .rl{font-size:12px;font-weight:700;color:var(--mut);white-space:nowrap}
+/* event mini card */
+.evMini{min-width:208px;background:#fff;border:1px solid var(--line);border-radius:20px;overflow:hidden;cursor:pointer;flex-shrink:0}
+.evMini .em{height:96px;display:flex;align-items:center;justify-content:center;font-size:40px;position:relative}
+.evMini .dp{position:absolute;top:9px;left:9px;background:rgba(255,255,255,.92);border-radius:10px;padding:4px 9px;font-size:10px;font-weight:800;color:var(--ink)}
+.evMini .eb{padding:11px 13px 13px}
+.evMini h4{font-size:13.5px;font-weight:800;letter-spacing:-.2px}
+.evMini .em2{font-size:11px;color:var(--mut);font-weight:600;margin-top:4px;display:flex;align-items:center;gap:4px}
+.evMini .pr{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+.evMini .pr b{font-size:13px;color:var(--pri)}
+.freeTag{font-size:10px;font-weight:800;color:var(--ok);background:#e6f9ee;padding:3px 8px;border-radius:7px}
+/* row cards */
+.rCard{display:flex;gap:13px;background:#fff;border:1px solid var(--line);border-radius:20px;padding:11px;margin:0 18px 11px;cursor:pointer;position:relative}
+.rThumb{width:82px;height:88px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:34px;flex-shrink:0}
+.rBody{flex:1;min-width:0}
+.rBody .bb{display:flex;gap:5px;margin-bottom:4px}
+.rBody h3{font-size:14.5px;font-weight:800;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rMeta{font-size:11.5px;color:var(--mut);font-weight:600;display:flex;align-items:center;gap:4px;margin-top:3px}
+.rBot{display:flex;align-items:center;justify-content:space-between;margin-top:7px}
+.rBot b{font-size:13.5px}
+.rBot b small{font-weight:600;color:var(--mut);font-size:10.5px}
+.stars{display:inline-flex;align-items:center;gap:3px;font-size:11.5px;font-weight:800;color:#b45309}
+.stars svg{color:#f59e0b}
+.avail{font-size:10.5px;font-weight:800;color:var(--ok);background:#e6f9ee;padding:4px 8px;border-radius:7px;white-space:nowrap}
+.avail.no{color:var(--bad);background:#fde8ee}
+.avail.warn{color:var(--warn);background:#fdf3e0}
+.favBtn{position:absolute;top:9px;right:9px;width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.9);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#b9b4d6;font-family:inherit;z-index:2}
+.favBtn.on{color:var(--bad)}
+.favBtn.on svg{fill:var(--bad)}
+/* ---------- EXPLORE ---------- */
+.pgHead{display:flex;align-items:center;gap:12px;padding:2px 18px 12px}
+.pgHead h1{font-size:21px;font-weight:800;letter-spacing:-.5px;flex:1}
+.searchRow{display:flex;gap:9px;padding:0 18px 12px}
+.searchRow input{flex:1;border:1px solid var(--line);background:#fff;border-radius:15px;padding:13px 15px 13px 40px;font-family:inherit;font-size:13.5px;font-weight:600;outline:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239b96ba' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:13px center;background-size:17px}
+.filterBtn{position:relative}
+.filterBtn .fc{position:absolute;top:-5px;right:-5px;background:var(--pri);color:#fff;font-size:9px;font-weight:800;width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.chipRow{display:flex;gap:8px;padding:0 18px 12px;overflow-x:auto;scrollbar-width:none}
+.chipRow::-webkit-scrollbar{display:none}
+.resCount{font-size:12px;font-weight:700;color:var(--mut);padding:0 18px 12px}
+.resCount b{color:var(--pri)}
+.empty{text-align:center;padding:50px 30px;color:var(--mut)}
+.empty .ee{font-size:42px;margin-bottom:10px}
+.empty h3{color:var(--ink);font-size:15px;margin-bottom:5px}
+.empty p{font-size:12.5px;font-weight:600}
+/* ---------- DETAIL ---------- */
+.hero{height:224px;position:relative;display:flex;align-items:center;justify-content:center;font-size:76px;margin-top:-56px;padding-top:56px}
+.hero .hb{position:absolute;top:64px;left:16px;right:16px;display:flex;justify-content:space-between}
+.hero .hb .iconBtn{background:rgba(255,255,255,.92);border:none}
+.heroPills{position:absolute;bottom:16px;left:16px;right:16px;display:flex;justify-content:space-between;align-items:center}
+.pillW{background:rgba(255,255,255,.93);border-radius:11px;padding:6px 11px;font-size:11px;font-weight:800;display:flex;align-items:center;gap:5px}
+.pillW svg{color:#f59e0b}
+.dBody{background:var(--bg);border-radius:26px 26px 0 0;margin-top:-22px;position:relative;padding:20px 0 20px}
+.dBody h1{font-size:21px;font-weight:800;letter-spacing:-.5px;padding:0 18px}
+.dSub{display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--mut);font-weight:600;padding:6px 18px 0}
+.mapLink{color:var(--pri);font-weight:800;cursor:pointer;white-space:nowrap}
+.statRow{display:flex;gap:9px;padding:14px 18px 0}
+.statB{flex:1;background:#fff;border:1px solid var(--line);border-radius:15px;padding:10px 6px;text-align:center}
+.statB b{font-size:13px;display:block}
+.statB span{font-size:9.5px;color:var(--mut);font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.facRow{display:flex;flex-wrap:wrap;gap:8px;padding:12px 18px 0}
+.fac{font-size:11.5px;font-weight:700;background:#fff;border:1px solid var(--line);padding:8px 12px;border-radius:11px}
+.aboutTxt{font-size:13px;line-height:1.7;color:var(--mut);font-weight:500;padding:12px 18px 0}
+/* calendar */
+.calCard{margin:16px 18px 0;background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px}
+.calHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.calHead b{font-size:14.5px;font-weight:800}
+.calNav{display:flex;gap:6px}
+.calNav button{width:30px;height:30px;border-radius:10px;border:1px solid var(--line);background:#fff;cursor:pointer;color:var(--ink);display:flex;align-items:center;justify-content:center;font-family:inherit}
+.calNav button:disabled{opacity:.3;cursor:default}
+.wkRow,.calGrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.wkRow span{text-align:center;font-size:10px;font-weight:800;color:#b0abd0;padding:5px 0}
+.calC{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;border-radius:11px;position:relative;background:none;border:none;font-family:inherit;color:var(--ink)}
+.calC.av{background:#e9fbef;color:#15803d;cursor:pointer}
+.calC.av:hover{outline:2px solid #86efac}
+.calC.bk{background:#fde8ee;color:#be123c}
+.calC.pt{background:#fdf3e0;color:#b45309;cursor:pointer}
+.calC.cl{background:#f1f0f7;color:#a5a0c4}
+.calC.past{color:#cfccdf}
+.calC.sel{outline:2.5px solid var(--pri);outline-offset:1px}
+.calC .dn{position:absolute;bottom:3px;font-size:8px;font-weight:800;background:var(--pri);color:#fff;border-radius:6px;padding:1px 4px}
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+.legend span{font-size:10px;font-weight:700;color:var(--mut);display:flex;align-items:center;gap:5px}
+.dot{width:9px;height:9px;border-radius:4px;display:inline-block}
+/* slots */
+.slotWrap{padding:14px 18px 0}
+.slotCard{display:flex;align-items:center;gap:12px;background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:13px 14px;margin-bottom:9px;cursor:pointer;transition:.15s}
+.slotCard.sel{border-color:var(--pri);background:#faf8ff;box-shadow:0 4px 14px rgba(108,61,244,.12)}
+.slotCard.dis{opacity:.5;cursor:not-allowed;background:#f6f5fb}
+.slotCard .si{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:19px}
+.slotCard .sb2{flex:1}
+.slotCard h4{font-size:13.5px;font-weight:800}
+.slotCard p{font-size:11px;color:var(--mut);font-weight:600;margin-top:2px}
+.slotCard b{font-size:14px}
+.bookedTag{font-size:10px;font-weight:800;color:var(--bad);background:#fde8ee;padding:4px 9px;border-radius:7px}
+.ctaBar{position:sticky;bottom:0;margin:18px 0 0;padding:13px 18px 16px;background:rgba(244,242,251,.94);backdrop-filter:blur(10px);border-top:1px solid var(--line);display:flex;gap:10px;align-items:center;z-index:5}
+.ctaPrice{flex:1}
+.ctaPrice small{font-size:10px;color:var(--mut);font-weight:700;display:block}
+.ctaPrice b{font-size:17px}
+.btn{border:none;border-radius:15px;padding:14px 22px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;background:var(--grad);color:#fff;box-shadow:0 8px 20px rgba(108,61,244,.3)}
+.btn:disabled{background:#d5d1e6;box-shadow:none;cursor:not-allowed}
+.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line);box-shadow:none}
+.btn.full{width:100%}
+.btn.sm{padding:9px 14px;font-size:12px;border-radius:11px}
+.btn.danger{background:var(--bad)}
+/* course cards */
+.courseC{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px;margin:0 18px 12px}
+.courseC .ct{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.courseC h4{font-size:14.5px;font-weight:800}
+.modeB{font-size:9.5px;font-weight:800;padding:4px 8px;border-radius:7px;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+.m-off{background:#e6f9ee;color:#15803d}.m-on{background:#e0edff;color:#1d4ed8}.m-hyb{background:#efe9ff;color:#6c3df4}
+.cMeta{display:flex;flex-wrap:wrap;gap:10px;font-size:11.5px;color:var(--mut);font-weight:600;margin-top:8px}
+.cMeta span{display:flex;align-items:center;gap:4px}
+.seatBar{height:6px;background:#f0eef8;border-radius:99px;margin-top:10px;overflow:hidden}
+.seatBar i{display:block;height:100%;border-radius:99px}
+.seatTxt{font-size:10.5px;font-weight:700;color:var(--mut);margin-top:5px}
+.seatTxt b{color:var(--warn)}
+.cFoot{display:flex;align-items:center;justify-content:space-between;margin-top:11px}
+.cFoot .fee b{font-size:15px}
+.cFoot .fee small{font-size:10px;color:var(--mut);font-weight:700}
+.cActs{display:flex;gap:8px}
+/* event meta rows */
+.evRows{padding:14px 18px 0}
+.evRow{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:15px;padding:12px 14px;margin-bottom:8px}
+.evRow .ei{width:38px;height:38px;border-radius:12px;background:#f4f1ff;color:var(--pri);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.evRow small{font-size:10px;color:var(--mut);font-weight:700;text-transform:uppercase;letter-spacing:.4px;display:block}
+.evRow b{font-size:13px}
+/* ---------- BOOKINGS ---------- */
+.segToggle{display:flex;background:#eae7f5;border-radius:14px;padding:4px;margin:0 18px 14px}
+.segToggle button{flex:1;border:none;background:none;padding:9px;border-radius:11px;font-family:inherit;font-size:12.5px;font-weight:800;color:var(--mut);cursor:pointer}
+.segToggle button.on{background:#fff;color:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.tkCard{background:#fff;border:1px solid var(--line);border-radius:20px;margin:0 18px 13px;overflow:hidden}
+.tkTop{display:flex;gap:12px;padding:14px}
+.tkIcon{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:21px;flex-shrink:0}
+.tkTop h4{font-size:14px;font-weight:800}
+.tkTop .tm{font-size:11.5px;color:var(--mut);font-weight:600;margin-top:3px}
+.stChip{font-size:9.5px;font-weight:800;padding:4px 9px;border-radius:7px;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+.st-conf{background:#e6f9ee;color:#15803d}.st-pend{background:#fdf3e0;color:#b45309}.st-canc{background:#fde8ee;color:#be123c}
+.tkDiv{border-top:1.5px dashed var(--line);margin:0 14px;position:relative}
+.tkDiv:before,.tkDiv:after{content:'';position:absolute;top:-8px;width:16px;height:16px;border-radius:50%;background:var(--bg);border:1px solid var(--line)}
+.tkDiv:before{left:-23px}.tkDiv:after{right:-23px}
+.tkBot{display:flex;align-items:center;justify-content:space-between;padding:12px 14px}
+.tkBot .bid{font-size:10.5px;font-weight:800;color:var(--mut);letter-spacing:.5px}
+.tkActs{display:flex;gap:7px}
+.lnkBtn{border:1px solid var(--line);background:#fff;border-radius:10px;padding:7px 11px;font-size:11px;font-weight:800;color:var(--ink);cursor:pointer;font-family:inherit}
+.lnkBtn.red{color:var(--bad);border-color:#fbd0da}
+.lnkBtn.pri{color:var(--pri);border-color:#ddd2fc}
+/* ---------- SHEET / MODAL ---------- */
+#modalRoot{position:absolute;inset:0;z-index:70;pointer-events:none}
+#modalRoot.live{pointer-events:auto}
+.backdrop{position:absolute;inset:0;background:rgba(20,14,45,.45);backdrop-filter:blur(2px);animation:fadeIn .25s}
+@keyframes fadeIn{from{opacity:0}}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:28px 28px 0 0;padding:14px 20px 30px;max-height:82%;overflow-y:auto;animation:slideUp .32s cubic-bezier(.2,.9,.3,1);scrollbar-width:none}
+.sheet::-webkit-scrollbar{display:none}
+@keyframes slideUp{from{transform:translateY(100%)}}
+.grab{width:42px;height:5px;border-radius:99px;background:#e3dff2;margin:0 auto 14px}
+.shHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.shHead h2{font-size:17px;font-weight:800;letter-spacing:-.3px}
+.steps{display:flex;gap:6px;margin-bottom:16px}
+.steps i{flex:1;height:4px;border-radius:99px;background:#ece9f6}
+.steps i.on{background:var(--pri)}
+.fRow{margin-bottom:13px}
+.fRow label{font-size:11.5px;font-weight:800;color:var(--mut);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px}
+.fRow input,.fRow select{width:100%;border:1.5px solid var(--line);border-radius:13px;padding:13px 14px;font-family:inherit;font-size:14px;font-weight:600;outline:none;background:#fbfaff}
+.fRow input:focus,.fRow select:focus{border-color:var(--pri)}
+.f2{display:flex;gap:10px}.f2 .fRow{flex:1}
+.sumBox{background:#f8f6ff;border:1px solid #e6dfff;border-radius:16px;padding:14px;margin-bottom:14px}
+.sumBox .sr{display:flex;justify-content:space-between;font-size:12.5px;font-weight:600;color:var(--mut);padding:4px 0}
+.sumBox .sr b{color:var(--ink)}
+.sumBox .tot{border-top:1px dashed #d9cffc;margin-top:8px;padding-top:9px}
+.sumBox .tot b{font-size:15px;color:var(--pri)}
+.payOpt{display:flex;align-items:center;gap:12px;border:1.5px solid var(--line);border-radius:14px;padding:13px 14px;margin-bottom:9px;cursor:pointer;font-size:13.5px;font-weight:700}
+.payOpt input{accent-color:var(--pri);width:17px;height:17px}
+.payOpt .pl{flex:1}
+.payOpt small{display:block;font-size:10.5px;color:var(--mut);font-weight:600}
+.payOpt:has(input:checked){border-color:var(--pri);background:#faf8ff}
+.qtyRow{display:flex;align-items:center;gap:14px}
+.qtyRow button{width:36px;height:36px;border-radius:12px;border:1.5px solid var(--line);background:#fff;font-size:17px;font-weight:800;cursor:pointer;font-family:inherit;color:var(--ink)}
+.qtyRow b{font-size:17px;min-width:22px;text-align:center}
+/* success */
+.succWrap{text-align:center;padding:10px 0 4px}
+.succCk{width:78px;height:78px;border-radius:50%;background:var(--grad);color:#fff;display:flex;align-items:center;justify-content:center;margin:8px auto 14px;animation:pop .5s cubic-bezier(.2,.9,.3,1.4)}
+.succWrap h2{font-size:19px;font-weight:800;letter-spacing:-.4px}
+.succWrap p{font-size:12.5px;color:var(--mut);font-weight:600;margin-top:5px}
+.tkt{background:#fbfaff;border:1.5px solid var(--line);border-radius:18px;margin:18px 0 6px;overflow:hidden;text-align:left}
+.tkt .th2{padding:14px 16px}
+.tkt .th2 h4{font-size:14.5px;font-weight:800}
+.tkt .th2 p{font-size:11.5px;color:var(--mut);font-weight:600;margin-top:3px}
+.tkt .trow{display:flex;justify-content:space-between;align-items:center;padding:12px 16px}
+.tkt .bid2{font-size:12px;font-weight:800;letter-spacing:1px;color:var(--pri)}
+.qrBox{background:#fff;border:1px solid var(--line);border-radius:12px;padding:7px}
+.procWrap{text-align:center;padding:44px 0}
+.spin{width:46px;height:46px;border:4px solid #ece7fb;border-top-color:var(--pri);border-radius:50%;margin:0 auto 16px;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.procWrap p{font-size:13px;font-weight:700;color:var(--mut)}
+/* toast */
+#toastRoot{position:absolute;bottom:106px;left:0;right:0;display:flex;justify-content:center;z-index:90;pointer-events:none}
+.toast{background:var(--ink);color:#fff;font-size:12.5px;font-weight:700;padding:12px 18px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.35);animation:tIn .3s cubic-bezier(.2,.9,.3,1.3);max-width:82%;text-align:center}
+@keyframes tIn{from{transform:translateY(16px);opacity:0}}
+/* notifs */
+.ntf{display:flex;gap:12px;background:#fff;border:1px solid var(--line);border-radius:17px;padding:13px 14px;margin:0 18px 10px}
+.ntf .ni2{width:40px;height:40px;border-radius:13px;background:#f4f1ff;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.ntf h4{font-size:13px;font-weight:800}
+.ntf p{font-size:12px;color:var(--mut);font-weight:600;margin-top:3px;line-height:1.5}
+.ntf small{font-size:10px;color:#b0abd1;font-weight:700;display:block;margin-top:5px}
+/* profile */
+.proHead{display:flex;align-items:center;gap:14px;padding:6px 18px 18px}
+.avatar{width:60px;height:60px;border-radius:20px;background:var(--grad);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800}
+.menuC{background:#fff;border:1px solid var(--line);border-radius:20px;margin:0 18px 14px;overflow:hidden}
+.mRow{display:flex;align-items:center;gap:13px;padding:15px 16px;border-bottom:1px solid #f3f1fa;cursor:pointer;font-size:13.5px;font-weight:700}
+.mRow:last-child{border:none}
+.mRow .mi{width:34px;height:34px;border-radius:11px;background:#f4f1ff;color:var(--pri);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.mRow span{flex:1}
+.mRow .mc{color:#c6c2de}
+/* owner */
+.statGrid{display:grid;grid-template-columns:1fr 1fr;gap:11px;padding:0 18px}
+.oStat{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px}
+.oStat small{font-size:10px;font-weight:800;color:var(--mut);text-transform:uppercase;letter-spacing:.5px}
+.oStat b{font-size:20px;display:block;margin-top:5px;letter-spacing:-.5px}
+.oStat .up{font-size:10px;font-weight:800;color:var(--ok)}
+.chart{background:#fff;border:1px solid var(--line);border-radius:20px;margin:14px 18px 0;padding:16px}
+.bars{display:flex;align-items:flex-end;gap:9px;height:92px;margin-top:12px}
+.bar{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px}
+.bar i{width:100%;border-radius:7px 7px 3px 3px;background:linear-gradient(180deg,#8b5cf6,#6c3df4)}
+.bar i.dim{background:#e6e2f5}
+.bar span{font-size:9px;font-weight:800;color:#b0abd1}
+.qAct{display:flex;gap:10px;padding:14px 18px 0}
+.qAct button{flex:1;background:#fff;border:1px solid var(--line);border-radius:16px;padding:13px 8px;font-family:inherit;font-size:11px;font-weight:800;color:var(--ink);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:7px}
+.qAct button i{font-style:normal;font-size:20px}
+.reqC{background:#fff;border:1px solid var(--line);border-radius:20px;margin:0 18px 13px;padding:15px}
+.reqC .rh{display:flex;justify-content:space-between;align-items:flex-start}
+.reqC h4{font-size:14.5px;font-weight:800}
+.reqC .rm{font-size:12px;color:var(--mut);font-weight:600;margin-top:4px}
+.reqC .note{font-size:11.5px;background:#f8f6ff;border-radius:10px;padding:8px 11px;margin-top:10px;color:var(--mut);font-weight:600}
+.reqActs{display:flex;gap:9px;margin-top:12px}
+/* splash */
+#splash{position:absolute;inset:0;background:linear-gradient(160deg,#6d28d9,#4338ca 60%,#312e81);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;transition:opacity .5s,transform .5s}
+#splash.bye{opacity:0;transform:scale(1.06);pointer-events:none}
+#splash .logo{width:88px;height:88px;border-radius:26px;background:rgba(255,255,255,.14);border:1.5px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;font-size:42px;animation:pop .6s cubic-bezier(.2,.9,.3,1.4)}
+#splash h1{color:#fff;font-size:27px;font-weight:800;letter-spacing:-.5px}
+#splash p{color:#c9c2f5;font-size:13px;font-weight:600}
+#splash .ld{display:flex;gap:7px;margin-top:14px}
+#splash .ld i{width:8px;height:8px;border-radius:50%;background:#fff;animation:bl 1s infinite}
+#splash .ld i:nth-child(2){animation-delay:.15s}#splash .ld i:nth-child(3){animation-delay:.3s}
+@keyframes bl{0%,100%{opacity:.3}50%{opacity:1}}
+</style>
+</head>
+<body>
+<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+<div class="stage">
+  <div class="side">
+    <div class="tag">Interactive Prototype</div>
+    <h1>Book<span>My</span>Space</h1>
+    <p>Discover what is happening, what is available, and what can be booked around you.</p>
+    <ul>
+      <li><i>📍</i> Location-based discovery with radius search</li>
+      <li><i>🏛️</i> Function halls with live availability calendars</li>
+      <li><i>🎓</i> Institutes, online / offline / hybrid classes</li>
+      <li><i>📅</i> Local events, meetings, sports &amp; conferences</li>
+      <li><i>🔒</i> Double-booking prevention engine</li>
+    </ul>
+  </div>
+
+  <div class="phone">
+    <div class="island"></div>
+    <div class="statusbar"><span>10:32</span>
+      <div class="sicons">
+        <svg width="17" height="12" viewBox="0 0 17 12" fill="currentColor"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="4.5" y="5" width="3" height="7" rx="1"/><rect x="9" y="2.5" width="3" height="9.5" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1"/></svg>
+        <svg width="24" height="12" viewBox="0 0 25 12" fill="none" stroke="currentColor"><rect x="1" y="1" width="20" height="10" rx="3"/><rect x="3" y="3" width="13" height="6" rx="1.5" fill="currentColor" stroke="none"/><path d="M23 4v4" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+    </div>
+    <div id="screen"></div>
+    <nav id="nav"></nav>
+    <div id="modalRoot"></div>
+    <div id="toastRoot"></div>
+    <div id="splash">
+      <div class="logo">📍</div>
+      <h1>BookMySpace</h1>
+      <p>Discover · Book · Celebrate</p>
+      <div class="ld"><i></i><i></i><i></i></div>
+    </div>
+  </div>
+
+  <div class="side">
+    <div class="tag">Try these flows</div>
+    <ul>
+      <li><i>👉</i> Open <b style="color:#fff">ABC Function Hall</b> → pick Aug 11 on the calendar → book a slot</li>
+      <li><i>👉</i> Filter “Halls available on Aug 15 within 10 km”</li>
+      <li><i>👉</i> Enroll in the hybrid AI course at ABC Institute</li>
+      <li><i>👉</i> Register for the free Residents Meeting</li>
+      <li><i>👉</i> Profile → switch to <b style="color:#fff">Owner Mode</b> → accept your booking</li>
+    </ul>
+    <p style="margin-top:22px">Target stack: Flutter · Spring Boot / Node · PostgreSQL · Razorpay · FCM · Google Maps</p>
+  </div>
+</div>
+
+<script>
+/* ================= DATA ================= */
+const TODAY='2026-08-01', TOMORROW='2026-08-02';
+const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONF=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const pad=n=>String(n).padStart(2,'0');
+const ds=(y,m,d)=>y+'-'+pad(m)+'-'+pad(d);
+function pretty(s){const[a,b,c]=s.split('-').map(Number);return DAYS[new Date(a,b-1,c).getDay()]+', '+c+' '+MON[b-1];}
+function hsh(s){let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return h;}
+const inr=n=>'₹'+Math.round(n).toLocaleString('en-IN');
+
+const VENUES=[
+ {id:'abc-hall',name:'ABC Function Hall',emoji:'🏛️',g:'g1',area:'Kurnool Road, Ongole',km:1.2,rating:4.6,reviews:212,price:25000,cap:500,featured:true,
+  fac:['❄️ Full AC','🅿️ Parking 200+','🍽️ In-house Catering','🎤 Stage & Sound','🛏️ 12 Guest Rooms','🔌 Power Backup'],
+  about:'Premium AC function hall in the heart of Ongole, ideal for weddings, receptions, engagements and corporate events. Dedicated dining hall for 300, bridal suites and ample parking.',
+  bookedSlots:{'2026-08-06':['evening'],'2026-08-10':['morning','evening'],'2026-08-13':['fullday'],'2026-08-20':['morning'],'2026-08-22':['morning','evening'],'2026-08-29':['fullday']},
+  closed:['2026-08-17']},
+ {id:'slk-conv',name:'Sri Lakshmi Convention Center',emoji:'🏨',g:'g2',area:'MG Road, Ongole',km:3.4,rating:4.8,reviews:341,price:60000,cap:1200,featured:true,
+  fac:['❄️ Central AC','🅿️ Valet Parking','🍽️ Multi-cuisine Catering','🎥 LED Wall','🛏️ 30 Rooms','🌐 High-speed Wi-Fi'],
+  about:'Ongole’s largest convention center with a 1200-guest pillar-less hall, LED backdrop walls and premium décor partners. Perfect for grand weddings and expos.',
+  bookedSlots:{'2026-08-08':['fullday'],'2026-08-09':['morning'],'2026-08-21':['morning','evening']},closed:[]},
+ {id:'sai-kalyan',name:'Sai Kalyana Mandapam',emoji:'💍',g:'g3',area:'Trunk Road, Ongole',km:2.1,rating:4.3,reviews:128,price:18000,cap:300,
+  fac:['❄️ AC Hall','🅿️ Parking 80','🍽️ Veg Catering','🎤 Sound System'],
+  about:'A trusted, budget-friendly kalyana mandapam for intimate weddings, seemantham and family functions. Traditional mandapam décor included.',
+  bookedSlots:{'2026-08-15':['morning','evening'],'2026-08-16':['morning']},closed:[]},
+ {id:'green-park',name:'Green Park Banquets',emoji:'🌿',g:'g4',area:'Lawyer Pet, Ongole',km:4.8,rating:4.5,reviews:167,price:35000,cap:700,featured:true,
+  fac:['❄️ AC','🌳 Lawn + Hall','🅿️ Parking 150','🍽️ Catering','📸 Photo Zones','🔌 Backup'],
+  about:'Scenic banquet hall with an attached open lawn — a favourite for receptions, birthday parties and sangeet nights under the lights.',
+  bookedSlots:{'2026-08-15':['fullday'],'2026-08-23':['evening']},closed:['2026-08-04']},
+ {id:'royal-palm',name:'Royal Palm Marriage Hall',emoji:'🌴',g:'g5',area:'Addanki Road, Ongole',km:7.6,rating:4.1,reviews:89,price:22000,cap:450,
+  fac:['❄️ AC','🅿️ Parking 120','🍽️ Catering','🛏️ 6 Rooms'],
+  about:'Spacious marriage hall on the city outskirts with easy highway access — great value for large gatherings.',
+  bookedSlots:{'2026-08-09':['fullday']},closed:[]}
+];
+const SLOTS={morning:{label:'Morning',time:'9 AM – 2 PM',mult:.6,ic:'🌅'},evening:{label:'Evening',time:'6 PM – 11 PM',mult:.6,ic:'🌆'},fullday:{label:'Full Day',time:'9 AM – 11 PM',mult:1,ic:'☀️'}};
+
+const INSTITUTES=[
+ {id:'abc-inst',name:'ABC Training Institute',emoji:'🎓',g:'g1',area:'Court Centre, Ongole',km:0.8,rating:4.7,reviews:305,
+  about:'Ongole’s most loved software & language training hub. 12+ years, 9,000 alumni, placement assistance and free demo classes for every course.',
+  courses:[
+   {id:'c1',name:'Java Full Stack',mode:'Offline',time:'9:00 AM',days:'Mon–Sat',fee:6000,total:40,left:6,inst:'Ravi Kumar',demo:true},
+   {id:'c2',name:'Python & Data Science',mode:'Online',time:'11:00 AM',days:'Mon–Fri',fee:4500,total:60,left:15,inst:'Sneha Reddy',demo:true},
+   {id:'c3',name:'AI & ML Master Program',mode:'Hybrid',time:'6:00 PM',days:'Mon–Sat',fee:9000,total:50,left:9,inst:'Dr. K. Prasad',demo:true},
+   {id:'c4',name:'Spoken English',mode:'Offline',time:'7:00 PM',days:'Daily',fee:2000,total:30,left:12,inst:'Mary Joseph',demo:false}]},
+ {id:'vision-ias',name:'Vision IAS Academy',emoji:'📚',g:'g2',area:'Gandhi Nagar, Ongole',km:2.9,rating:4.4,reviews:188,
+  about:'Civil services coaching with weekend test series, current-affairs labs and mentorship from serving officers.',
+  courses:[
+   {id:'c1',name:'UPSC Foundation',mode:'Offline',time:'7:00 AM',days:'Mon–Sat',fee:8000,total:80,left:22,inst:'Senior Faculty Panel',demo:true},
+   {id:'c2',name:'APPSC Group I & II',mode:'Hybrid',time:'5:00 PM',days:'Daily',fee:5000,total:100,left:31,inst:'Lakshmaiah Sir',demo:true}]},
+ {id:'speakwell',name:'SpeakWell English',emoji:'🗣️',g:'g6',area:'Trunk Road, Ongole',km:1.6,rating:4.2,reviews:96,
+  about:'Spoken English, IELTS and personality development with small batches and daily speaking practice.',
+  courses:[
+   {id:'c1',name:'Spoken English Pro',mode:'Online',time:'8:00 PM',days:'Mon–Fri',fee:1500,total:40,left:18,inst:'Anitha V.',demo:true},
+   {id:'c2',name:'IELTS 7+ Band',mode:'Hybrid',time:'10:00 AM',days:'Mon–Sat',fee:7500,total:25,left:4,inst:'British Council Certified',demo:false}]},
+ {id:'codecraft',name:'CodeCraft Academy',emoji:'💻',g:'g4',area:'Bhagya Nagar, Ongole',km:5.3,rating:4.5,reviews:142,
+  about:'Project-first coding bootcamps. Build 6 real apps, crack interviews with mock drives every month.',
+  courses:[
+   {id:'c1',name:'MERN Stack Bootcamp',mode:'Offline',time:'10:00 AM',days:'Mon–Sat',fee:12000,total:35,left:8,inst:'Vamsi K.',demo:true},
+   {id:'c2',name:'UI/UX Design',mode:'Online',time:'7:00 PM',days:'Tue–Sat',fee:6500,total:45,left:20,inst:'Divya S.',demo:true}]}
+];
+const EVENTS=[
+ {id:'food-fest',title:'Andhra Food Festival',emoji:'🍛',g:'g5',cat:'Entertainment',date:TODAY,time:'5:00 PM onwards',venue:'Town Hall, Ongole',km:1.4,price:99,total:400,left:87,org:'Ongole Foodies Club',about:'40+ stalls of Rayalaseema and Coastal Andhra delicacies, live counters, music and a kids zone. Entry includes 2 tasting coupons.'},
+ {id:'music-night',title:'Indie Music Night',emoji:'🎵',g:'g6',cat:'Entertainment',date:TOMORROW,time:'7:00 PM',venue:'Green Park Lawns',km:4.9,price:499,total:250,left:23,org:'SoundWave Live',about:'Three indie bands from Hyderabad and Chennai, open-air stage, food trucks and flea stalls.'},
+ {id:'book-fair',title:'Ongole Book Fair',emoji:'📚',g:'g2',cat:'Exhibition',date:'2026-08-08',time:'10:00 AM',venue:'Municipal Grounds',km:2.2,price:0,total:500,left:312,org:'District Library Trust',about:'120 publishers, author meet-and-greets, storytelling corner for kids and up to 60% off on Telugu & English titles.'},
+ {id:'marathon',title:'Sunrise 10K Marathon',emoji:'🏃',g:'g4',cat:'Sports',date:'2026-08-09',time:'5:30 AM',venue:'Beach Road Start Line',km:3.1,price:299,total:300,left:41,org:'Ongole Runners',about:'Chip-timed 10K and 5K fun run along the coast. Finisher medal, breakfast and hydration stations included.'},
+ {id:'founders',title:'Tech Founders Meetup',emoji:'🎤',g:'g1',cat:'Conference',date:'2026-08-14',time:'4:00 PM',venue:'Hotel Central, Ongole',km:1.1,price:0,total:120,left:56,org:'Startup Prakasam',about:'Fireside chat with two SaaS founders, lightning pitches and networking over high tea. Bring your ideas!'},
+ {id:'res-meet',title:'Residents Association Meeting',emoji:'🤝',g:'g3',cat:'Meeting',date:'2026-08-15',time:'6:00 PM',venue:'Community Hall, Gandhi Nagar',km:0.9,price:0,total:100,left:64,org:'Gandhi Nagar Residents Assoc.',about:'Monthly community meeting — agenda includes street lighting, water supply timings, festival planning and the new security proposal. All residents welcome.'},
+ {id:'art-ws',title:'Kids Art Workshop',emoji:'🎨',g:'g6',cat:'Workshop',date:'2026-08-16',time:'11:00 AM',venue:'ABC Training Institute',km:0.8,price:199,total:40,left:9,org:'Creative Minds',about:'A 3-hour guided acrylic painting workshop for ages 6–12. All materials and snacks included; take your canvas home!'},
+ {id:'dj-night',title:'DJ Night @ Skyline',emoji:'🎉',g:'g5',cat:'Party',date:'2026-08-07',time:'8:00 PM',venue:'Skyline Lounge',km:6.2,price:699,total:200,left:140,org:'Skyline Events',about:'Bollywood & EDM night with DJ Arjun. Couple and stag entries, unlimited mocktails till 9 PM.'},
+ {id:'dance',title:'Classical Dance Evening',emoji:'🎭',g:'g3',cat:'Cultural',date:'2026-08-22',time:'6:30 PM',venue:'Sri Lakshmi Convention',km:3.4,price:149,total:600,left:210,org:'Nritya Kala Academy',about:'Kuchipudi and Bharatanatyam performances by award-winning artists, celebrating classical arts of Andhra.'}
+];
+
+/* ================= STATE ================= */
+const S={
+ mode:'customer', screen:'home', param:null, hist:[],
+ city:'Ongole', q:'',
+ f:{cat:'all', date:null, mode:'any', price:'any', radius:10, rating:0, seats:false},
+ favs:new Set(['venue:slk-conv']),
+ bookings:[{id:'BMS-501042',kind:'event',refId:'book-fair',title:'Ongole Book Fair',meta:'Sat, 8 Aug · 10 AM · Municipal Grounds',date:'2026-08-08',qty:2,amount:0,status:'confirmed'}],
+ notifs:[
+  {ic:'🎉',t:'Welcome to BookMySpace!',b:'Discover function halls, classes & events around Ongole — all in one app.',w:'2h ago'},
+  {ic:'⏰',t:'Event reminder',b:'Ongole Book Fair on Sat, 8 Aug at 10 AM. You have 2 passes.',w:'5h ago'},
+  {ic:'📍',t:'New near you',b:'3 new events were published within 5 km of your location.',w:'1d ago'},
+  {ic:'🏷️',t:'Weekday offer',b:'10% off Green Park Banquets for Mon–Thu bookings this month.',w:'2d ago'}],
+ unread:2,
+ pick:{ds:null,slot:null}, calM:0, oCalM:0, btab:'list', bSelDay:TODAY, oSelDay:null,
+ requests:[
+  {id:'RQ-221',name:'Priya Sharma',date:'2026-08-11',slot:'Evening',amount:15000,note:'Engagement · ~200 guests · veg catering',status:'pending'},
+  {id:'RQ-219',name:'Koteswara Rao',date:'2026-08-06',slot:'Evening',amount:15000,note:'Sangeet function',status:'confirmed'}]
+};
+
+/* ================= ICONS ================= */
+const P={
+home:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/>',
+search:'<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
+cal:'<rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4M16 2v4M3 9h18"/>',
+heart:'<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/>',
+user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>',
+bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
+pin:'<path d="M12 21s7-5.1 7-11a7 7 0 1 0-14 0c0 5.9 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/>',
+back:'<path d="M15 18l-6-6 6-6"/>',check:'<path d="M20 6 9 17l-5-5"/>',
+clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M16 5a3.5 3.5 0 0 1 0 6.7M17.5 14.7c2 .8 3.4 2.5 3.9 5.3"/>',
+grid:'<rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/>',
+inbox:'<path d="M22 12h-5l-2 3h-6l-2-3H2"/><path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6l3.5-7z"/>',
+mega:'<path d="M3 10v4l14 5V5L3 10z"/><path d="M7 14.5V19h2.5v-3.6"/>',
+filter:'<path d="M4 6h16M7 12h10M10 18h4"/>',
+share:'<path d="M12 15V4M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/>',
+star:'<path fill="currentColor" stroke="none" d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.4L12 17.4l-5.8 3 1.1-6.4L2.6 9.4l6.5-.9z"/>',
+x:'<path d="M18 6 6 18M6 6l12 12"/>',chev:'<path d="m6 9 6 6 6-6"/>',
+ticket:'<path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4V8z"/><path d="M13 6v2M13 11v2M13 16v2"/>',
+zap:'<path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/>'};
+const I=(n,s=20)=>'<svg viewBox="0 0 24 24" width="'+s+'" height="'+s+'" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+P[n]+'</svg>';
+
+/* ================= HELPERS ================= */
+const el=id=>document.getElementById(id);
+const venue=id=>VENUES.find(v=>v.id===id);
+const inst=id=>INSTITUTES.find(v=>v.id===id);
+const ev=id=>EVENTS.find(v=>v.id===id);
+function toast(msg){el('toastRoot').innerHTML='<div class="toast">'+msg+'</div>';setTimeout(()=>{el('toastRoot').innerHTML=''},2600);}
+function notify(ic,t,b){S.notifs.unshift({ic,t,b,w:'now'});S.unread++;updateDot();}
+function updateDot(){document.querySelectorAll('.ndot').forEach(d=>d.style.display=S.unread>0?'block':'none');}
+function dayStatus(v,d){
+ if(d<TODAY)return 'past';
+ if((v.closed||[]).includes(d))return 'cl';
+ const b=v.bookedSlots[d]||[];
+ if(b.includes('fullday')||(b.includes('morning')&&b.includes('evening')))return 'bk';
+ if(b.length)return 'pt';
+ if(d.startsWith('2026-08'))return 'av';
+ const r=hsh(d+v.id)%10;
+ return r<6?'av':r<8?'bk':r<9?'pt':'cl';
+}
+function slotTaken(v,d,sk){const b=v.bookedSlots[d]||[];if(b.includes('fullday'))return true;if(sk==='fullday')return b.length>0;return b.includes(sk);}
+function nextFree(v){let d=new Date(2026,7,1);for(let i=0;i<45;i++){const s=ds(d.getFullYear(),d.getMonth()+1,d.getDate());const st=dayStatus(v,s);if(st==='av'||st==='pt')return s;d.setDate(d.getDate()+1);}return null;}
+function seatsTxt(e){return e.left+' / '+e.total+' seats left';}
+function qr(seed){let cells='';for(let r=0;r<9;r++)for(let c=0;c<9;c++){if(hsh(seed+r+','+c)%3===0)cells+='<rect x="'+(c*8)+'" y="'+(r*8)+'" width="7" height="7" rx="1.5"/>';}
+ return '<svg width="72" height="72" viewBox="0 0 72 72" fill="#17132b">'+cells+'</svg>';}
+function badge(kind){if(kind==='venue')return '<span class="badge b-venue">🏛️ Venue</span>';if(kind==='class')return '<span class="badge b-class">🎓 Institute</span>';return '<span class="badge b-event">📅 Event</span>';}
+function stars(r){return '<span class="stars">'+I('star',12)+r+'</span>';}
+function modeChip(m){return '<span class="modeB '+(m==='Online'?'m-on':m==='Offline'?'m-off':'m-hyb')+'">'+(m==='Online'?'🌐':m==='Offline'?'📍':'🔀')+' '+m+'</span>';}
+
+/* ================= ROUTER ================= */
+function go(sc,p,push=true){if(push&&S.screen!==sc)S.hist.push({s:S.screen,p:S.param});S.screen=sc;S.param=p;render();el('screen').scrollTop=0;}
+function goTab(sc){S.hist=[];S.screen=sc;S.param=null;render();el('screen').scrollTop=0;}
+function back(){const h=S.hist.pop();if(h){S.screen=h.s;S.param=h.p;render();el('screen').scrollTop=0;}else goTab('home');}
+function render(){renderNav();const fn={home:renderHome,explore:renderExplore,venue:renderVenue,inst:renderInst,event:renderEvent,bookings:renderBookings,saved:renderSaved,notifs:renderNotifs,profile:renderProfile,dashboard:renderDash,requests:renderRequests,ownercal:renderOwnerCal}[S.screen]||renderHome;el('screen').innerHTML=fn();afterRender();}
+function afterRender(){updateDot();}
+function renderNav(){
+ const cust=[['home','home','Home'],['explore','search','Explore'],['bookings','ticket','Bookings'],['saved','heart','Saved'],['profile','user','Profile']];
+ const own=[['dashboard','grid','Dashboard'],['requests','inbox','Requests'],['ownercal','cal','Calendar'],['profile','user','Profile']];
+ const list=S.mode==='customer'?cust:own;
+ const map={home:'home',explore:'explore',bookings:'bookings',saved:'saved',profile:'profile',dashboard:'dashboard',requests:'requests',ownercal:'ownercal',venue:'explore',inst:'explore',event:'explore',notifs:'home'};
+ const act=map[S.screen]||'';
+ el('nav').innerHTML=list.map(n=>'<button class="navIt '+(act===n[0]?'on':'')+'" onclick="goTab(\''+n[0]+'\')"><span class="ni">'+I(n[1],21)+'</span>'+n[2]+'</button>').join('');
+}
+
+/* ================= HOME ================= */
+const CATS=[['halls','🏛️','Function Halls'],['classes','🎓','Classes'],['events','📅','Events'],['meetings','🤝','Meetings'],['confs','🎤','Conferences'],['parties','🎉','Parties'],['sports','🏆','Sports'],['shows','🎭','Shows']];
+function catTap(c){S.f.cat=c;S.q='';go('explore');}
+function setRadius(r){S.f.radius=r;renderHomeSections();}
+function renderHomeSections(){el('homeSecs').innerHTML=homeSecsHTML();document.querySelectorAll('.radRow .chip').forEach(c=>c.classList.toggle('on',+c.dataset.r===S.f.radius));}
+function evMini(e){
+ const dp=e.date===TODAY?'Today':e.date===TOMORROW?'Tomorrow':pretty(e.date).split(', ')[1]+' '+pretty(e.date).split(', ')[2];
+ return '<div class="evMini" onclick="go(\'event\',\''+e.id+'\')"><div class="em '+e.g+'">'+e.emoji+'<span class="dp">'+dp+'</span></div><div class="eb"><h4>'+e.title+'</h4><div class="em2">'+I('pin',11)+' '+e.km+' km · '+e.time+'</div><div class="pr">'+(e.price?'<b>'+inr(e.price)+'</b>':'<span class="freeTag">FREE ENTRY</span>')+'<span style="font-size:10.5px;font-weight:700;color:var(--mut)">'+e.left+' seats left</span></div></div></div>';
+}
+function vRow(v,availDate){
+ const st=availDate?dayStatus(v,availDate):null;
+ const tag=availDate?(st==='av'?'<span class="avail">✓ Open '+pretty(availDate).split(', ')[1]+' '+pretty(availDate).split(', ')[2]+'</span>':st==='pt'?'<span class="avail warn">Partially free</span>':'<span class="avail no">Booked</span>'):'<span class="avail">Next free: '+pretty(nextFree(v)).split(', ')[1]+' '+MON[7]+'</span>';
+ const fav=S.favs.has('venue:'+v.id)?'on':'';
+ return '<div class="rCard" onclick="go(\'venue\',\''+v.id+'\')"><button class="favBtn '+fav+'" onclick="toggleFav(event,\'venue\',\''+v.id+'\')">'+I('heart',15)+'</button><div class="rThumb '+v.g+'">'+v.emoji+'</div><div class="rBody"><div class="bb">'+badge('venue')+(v.featured?'<span class="badge b-feat">⭐ Featured</span>':'')+'</div><h3>'+v.name+'</h3><div class="rMeta">'+I('pin',11)+' '+v.area.split(',')[0]+' · '+v.km+' km &nbsp; '+stars(v.rating)+' <span style="color:var(--mut);font-weight:600">('+v.reviews+')</span></div><div class="rBot"><b>'+inr(v.price)+'<small> /day</small></b>'+tag+'</div></div></div>';
+}
+function iRow(t){
+ return '<div class="rCard" onclick="go(\'inst\',\''+t.id+'\')"><button class="favBtn '+(S.favs.has('inst:'+t.id)?'on':'')+'" onclick="toggleFav(event,\'inst\',\''+t.id+'\')">'+I('heart',15)+'</button><div class="rThumb '+t.g+'">'+t.emoji+'</div><div class="rBody"><div class="bb">'+badge('class')+'</div><h3>'+t.name+'</h3><div class="rMeta">'+I('pin',11)+' '+t.area.split(',')[0]+' · '+t.km+' km &nbsp; '+stars(t.rating)+'</div><div class="rBot"><b>'+t.courses.length+' courses<small> · from '+inr(Math.min(...t.courses.map(c=>c.fee)))+'/mo</small></b><span class="avail">Free demo</span></div></div></div>';
+}
+function homeSecsHTML(){
+ const r=S.f.radius;
+ const near=EVENTS.filter(e=>e.km<=r&&(e.date===TODAY||e.date===TOMORROW||e.date<='2026-08-09'));
+ const wk=VENUES.filter(v=>v.km<=r&&(dayStatus(v,'2026-08-08')!=='bk'&&dayStatus(v,'2026-08-08')!=='cl'||dayStatus(v,'2026-08-09')!=='bk'&&dayStatus(v,'2026-08-09')!=='cl')).slice(0,3);
+ const ins=INSTITUTES.filter(t=>t.km<=r).slice(0,3);
+ let h='<div class="secHead pad"><h2>⚡ Happening near you</h2><span onclick="catTap(\'events\')">See all</span></div>';
+ h+=near.length?'<div class="hScroll">'+near.map(evMini).join('')+'</div>':'<p class="pad" style="font-size:12.5px;color:var(--mut);font-weight:600">Nothing within '+r+' km — try widening your radius 👆</p>';
+ h+='<div class="secHead pad"><h2>🏛️ Halls free this weekend</h2><span onclick="catTap(\'halls\')">See all</span></div>';
+ h+=(wk.length?wk.map(v=>vRow(v)).join(''):'<p class="pad" style="font-size:12.5px;color:var(--mut);font-weight:600">No halls within '+r+' km.</p>');
+ h+='<div class="secHead pad"><h2>🎓 Popular institutes</h2><span onclick="catTap(\'classes\')">See all</span></div>';
+ h+=ins.map(iRow).join('')+'<div style="height:8px"></div>';
+ return h;
+}
+function renderHome(){
+ let h='<div class="homeTop"><button class="locBtn" onclick="openLocation()"><span class="lpin">'+I('pin',19)+'</span><span><small>Current location</small><b>'+S.city+' '+I('chev',13)+'</b></span></button><button class="iconBtn" onclick="go(\'notifs\')">'+I('bell',19)+'<i class="ndot"></i></button></div>';
+ h+='<div class="greet"><p>Good evening 👋</p><h1>What are you <em>looking for?</em></h1></div>';
+ h+='<button class="searchFake" onclick="go(\'explore\')">Search halls, classes, events…</button>';
+ h+='<div class="catGrid">'+CATS.map(c=>'<button class="catT" onclick="catTap(\''+c[0]+'\')"><div class="ce">'+c[1]+'</div><p>'+c[2]+'</p></button>').join('')+'</div>';
+ h+='<div class="radRow"><span class="rl">📍 Within</span>'+[2,5,10,25,99].map(r=>'<button class="chip '+(S.f.radius===r?'on':'')+'" data-r="'+r+'" onclick="setRadius('+r+')">'+(r===99?'Entire city':r+' km')+'</button>').join('')+'</div>';
+ h+='<div id="homeSecs">'+homeSecsHTML()+'</div>';
+ return h;
+}
+
+/* ================= EXPLORE ================= */
+const CATCHIPS=[['all','✨ All'],['halls','🏛️ Halls'],['classes','🎓 Classes'],['events','📅 Events'],['meetings','🤝 Meetings'],['confs','🎤 Conferences'],['parties','🎉 Parties'],['sports','🏆 Sports'],['shows','🎭 Shows']];
+function filterItems(){
+ const f=S.f,q=S.q.toLowerCase();let out=[];
+ const wantV=['all','halls'].includes(f.cat);
+ const wantC=['all','classes'].includes(f.cat);
+ const evCats={events:null,meetings:'Meeting',confs:'Conference',parties:'Party',sports:'Sports',shows:['Entertainment','Cultural','Exhibition','Workshop']};
+ if(wantV)VENUES.forEach(v=>{if(v.km>f.radius)return;if(v.rating<f.rating)return;if(q&&!(v.name+v.area).toLowerCase().includes(q))return;
+   if(f.date){const st=dayStatus(v,f.date);if(st!=='av'&&st!=='pt')return;}
+   if(f.mode==='Online')return;
+   out.push({kind:'venue',o:v});});
+ if(wantC)INSTITUTES.forEach(t=>{if(t.km>f.radius)return;if(t.rating<f.rating)return;if(q&&!(t.name+t.area+t.courses.map(c=>c.name).join(' ')).toLowerCase().includes(q))return;
+   if(f.mode!=='any'&&!t.courses.some(c=>c.mode===f.mode))return;
+   if(f.price==='Free')return;
+   if(f.seats&&!t.courses.some(c=>c.left>0))return;
+   out.push({kind:'inst',o:t});});
+ const catKey=evCats[f.cat];
+ if(f.cat==='all'||catKey!==undefined)EVENTS.forEach(e=>{if(e.km>f.radius)return;if(q&&!(e.title+e.venue+e.cat).toLowerCase().includes(q))return;
+   if(catKey){if(Array.isArray(catKey)?!catKey.includes(e.cat):e.cat!==catKey)return;}
+   if(f.date&&e.date!==f.date)return;
+   if(f.mode==='Online')return;
+   if(f.price==='Free'&&e.price>0)return;if(f.price==='Paid'&&!e.price)return;
+   if(f.seats&&e.left<=0)return;
+   out.push({kind:'event',o:e});});
+ return out.sort((a,b)=>a.o.km-b.o.km);
+}
+function resultCard(it){
+ if(it.kind==='venue')return vRow(it.o,S.f.date);
+ if(it.kind==='inst')return iRow(it.o);
+ const e=it.o;
+ return '<div class="rCard" onclick="go(\'event\',\''+e.id+'\')"><button class="favBtn '+(S.favs.has('event:'+e.id)?'on':'')+'" onclick="toggleFav(event,\'event\',\''+e.id+'\')">'+I('heart',15)+'</button><div class="rThumb '+e.g+'">'+e.emoji+'</div><div class="rBody"><div class="bb">'+badge('event')+'</div><h3>'+e.title+'</h3><div class="rMeta">'+I('cal',11)+' '+pretty(e.date)+' · '+e.time+'</div><div class="rMeta">'+I('pin',11)+' '+e.km+' km away</div><div class="rBot">'+(e.price?'<b>'+inr(e.price)+'<small> /person</small></b>':'<b style="color:var(--ok)">FREE</b>')+'<span class="avail '+(e.left<25?'warn':'')+'">'+e.left+' seats left</span></div></div></div>';
+}
+function activeFilterCount(){const f=S.f;let n=0;if(f.date)n++;if(f.mode!=='any')n++;if(f.price!=='any')n++;if(f.rating)n++;if(f.seats)n++;return n;}
+function renderResults(){const items=filterItems();el('exploreRes').innerHTML=items.length?items.map(resultCard).join(''):'<div class="empty"><div class="ee">🔭</div><h3>Nothing matches those filters</h3><p>Try widening the radius or clearing a filter.</p></div>';el('resCount').innerHTML='<b>'+items.length+'</b> results within '+(S.f.radius===99?'the entire city':S.f.radius+' km')+' of '+S.city;}
+function setChip(c){S.f.cat=c;document.querySelectorAll('.chipRow .chip').forEach(x=>x.classList.toggle('on',x.dataset.c===c));renderResults();}
+function renderExplore(){
+ let h='<div class="pgHead"><h1>Explore</h1><button class="iconBtn" onclick="go(\'notifs\')">'+I('bell',19)+'<i class="ndot"></i></button></div>';
+ h+='<div class="searchRow"><input id="q" placeholder="Search halls, classes, events…" value="'+S.q.replace(/"/g,'&quot;')+'" oninput="S.q=this.value;renderResults()"><button class="iconBtn filterBtn" onclick="openFilters()">'+I('filter',19)+(activeFilterCount()?'<span class="fc">'+activeFilterCount()+'</span>':'')+'</button></div>';
+ h+='<div class="chipRow">'+CATCHIPS.map(c=>'<button class="chip '+(S.f.cat===c[0]?'on':'')+'" data-c="'+c[0]+'" onclick="setChip(\''+c[0]+'\')">'+c[1]+'</button>').join('')+'</div>';
+ h+='<div class="resCount" id="resCount"></div><div id="exploreRes"></div>';
+ setTimeout(renderResults,0);
+ return h;
+}
+function openFilters(){
+ const f=S.f;
+ let h='<div class="shHead"><h2>Filters</h2><button class="iconBtn" onclick="closeModal()">'+I('x',17)+'</button></div>';
+ h+='<div class="fRow"><label>Available on date</label><input type="date" id="fDate" min="'+TODAY+'" max="2026-09-30" value="'+(f.date||'')+'"></div>';
+ h+='<div class="fRow"><label>Mode</label><div style="display:flex;gap:8px;flex-wrap:wrap">'+['any','Online','Offline','Hybrid'].map(m=>'<button class="chip fMode '+(f.mode===m?'on':'')+'" data-v="'+m+'">'+(m==='any'?'Any mode':m)+'</button>').join('')+'</div></div>';
+ h+='<div class="fRow"><label>Price</label><div style="display:flex;gap:8px">'+[['any','Any'],['Free','🆓 Free'],['Paid','💳 Paid']].map(p=>'<button class="chip fPrice '+(f.price===p[0]?'on':'')+'" data-v="'+p[0]+'">'+p[1]+'</button>').join('')+'</div></div>';
+ h+='<div class="fRow"><label>Distance</label><div style="display:flex;gap:8px;flex-wrap:wrap">'+[2,5,10,25,99].map(r=>'<button class="chip fRad '+(f.radius===r?'on':'')+'" data-v="'+r+'">'+(r===99?'Entire city':r+' km')+'</button>').join('')+'</div></div>';
+ h+='<div class="fRow"><label>Rating</label><div style="display:flex;gap:8px">'+[[0,'Any'],[4,'4★+'],[4.5,'4.5★+']].map(r=>'<button class="chip fRat '+(f.rating===r[0]?'on':'')+'" data-v="'+r[0]+'">'+r[1]+'</button>').join('')+'</div></div>';
+ h+='<div class="fRow"><label style="display:flex;align-items:center;gap:9px;text-transform:none;font-size:13px;color:var(--ink)"><input type="checkbox" id="fSeats" '+(f.seats?'checked':'')+' style="width:18px;height:18px;accent-color:var(--pri)"> Only show listings with seats available</label></div>';
+ h+='<div style="display:flex;gap:10px;margin-top:6px"><button class="btn ghost full" onclick="resetFilters()">Reset</button><button class="btn full" onclick="applyFilters()">Show results</button></div>';
+ openSheet(h);
+ document.querySelectorAll('.fMode,.fPrice,.fRad,.fRat').forEach(b=>b.onclick=()=>{b.parentElement.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));b.classList.add('on');});
+}
+function chipVal(cls){const b=document.querySelector(cls+'.on');return b?b.dataset.v:null;}
+function applyFilters(){S.f.date=el('fDate').value||null;S.f.mode=chipVal('.fMode')||'any';S.f.price=chipVal('.fPrice')||'any';S.f.radius=+chipVal('.fRad')||10;S.f.rating=+chipVal('.fRat')||0;S.f.seats=el('fSeats').checked;closeModal();render();toast('Filters applied ✓');}
+function resetFilters(){S.f={cat:S.f.cat,date:null,mode:'any',price:'any',radius:10,rating:0,seats:false};closeModal();render();}
+
+/* ================= VENUE DETAIL ================= */
+function calHTML(v,monthOffset,selDay,onpick,badgeFn){
+ const y=2026,m=8+monthOffset,first=new Date(y,m-1,1).getDay(),dim=new Date(y,m,0).getDate();
+ let cells='';for(let i=0;i<first;i++)cells+='<span></span>';
+ for(let d=1;d<=dim;d++){const s=ds(y,m,d),st=dayStatus(v,s);
+  const clickable=st==='av'||st==='pt';
+  const bn=badgeFn?badgeFn(s):'';
+  cells+='<button class="calC '+st+(selDay===s?' sel':'')+'" '+(clickable?'onclick="'+onpick+'(\''+s+'\')"':'disabled')+'>'+d+bn+'</button>';}
+ return '<div class="wkRow"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div><div class="calGrid">'+cells+'</div>';
+}
+function renderVenue(){
+ const v=venue(S.param);S.pick={ds:null,slot:null};S.calM=0;
+ let h='<div class="hero '+v.g+'">'+v.emoji+'<div class="hb"><button class="iconBtn" onclick="back()">'+I('back',19)+'</button><div style="display:flex;gap:9px"><button class="iconBtn" onclick="toast(\'Link copied — share '+v.name+' 🔗\')">'+I('share',18)+'</button><button class="iconBtn favBtn2" onclick="toggleFav(event,\'venue\',\''+v.id+'\',this)" style="color:'+(S.favs.has('venue:'+v.id)?'var(--bad)':'#b9b4d6')+'">'+I('heart',18)+'</button></div></div>';
+ h+='<div class="heroPills">'+(v.featured?'<span class="pillW">⭐ Featured listing</span>':'<span></span>')+'<span class="pillW">'+I('star',13)+' '+v.rating+' ('+v.reviews+')</span></div></div>';
+ h+='<div class="dBody"><h1>'+v.name+'</h1><div class="dSub">'+I('pin',13)+' '+v.area+' · '+v.km+' km away &nbsp;·&nbsp; <span class="mapLink" onclick="toast(\'Opening Google Maps… 🗺️\')">View on map</span></div>';
+ h+='<div class="statRow"><div class="statB"><b>'+v.cap+'</b><span>Guests</span></div><div class="statB"><b>'+inr(v.price)+'</b><span>Per day</span></div><div class="statB"><b>'+(v.rating)+'★</b><span>Rating</span></div><div class="statB"><b>20%</b><span>Advance</span></div></div>';
+ h+='<div class="secHead pad" style="margin-top:18px"><h2>Facilities</h2></div><div class="facRow">'+v.fac.map(f=>'<span class="fac">'+f+'</span>').join('')+'</div>';
+ h+='<p class="aboutTxt">'+v.about+'</p>';
+ h+='<div class="calCard"><div class="calHead"><b>Availability calendar</b><div class="calNav"><button id="calPrev" onclick="calShift(-1)" disabled>'+I('back',15)+'</button><button id="calNext" onclick="calShift(1)" style="transform:scaleX(-1)">'+I('back',15)+'</button></div></div><div id="calBox"></div><div class="legend"><span><i class="dot" style="background:#86efac"></i>Available</span><span><i class="dot" style="background:#fda4af"></i>Booked</span><span><i class="dot" style="background:#fcd34d"></i>Partially available</span><span><i class="dot" style="background:#d4d0e6"></i>Closed</span></div></div>';
+ h+='<div class="slotWrap" id="slotWrap"><p style="text-align:center;font-size:12.5px;color:var(--mut);font-weight:700;padding:8px 0 4px">👆 Pick a green or amber date to see time slots &amp; prices</p></div>';
+ h+='<div class="ctaBar"><div class="ctaPrice" id="ctaPrice"><small>Full day from</small><b>'+inr(v.price)+'</b></div><button class="btn" id="ctaBtn" disabled>Select date &amp; slot</button></div></div>';
+ setTimeout(()=>paintCal(v),0);
+ return h;
+}
+function paintCal(v){const box=el('calBox');if(!box)return;
+ const y=2026,m=8+S.calM;
+ box.innerHTML='<p style="text-align:center;font-size:12.5px;font-weight:800;color:var(--mut);margin-bottom:8px">'+MONF[m-1]+' '+y+'</p>'+calHTML(v,S.calM,S.pick.ds,'pickDay');
+ el('calPrev').disabled=S.calM===0;el('calNext').disabled=S.calM===2;}
+function calShift(d){S.calM=Math.min(2,Math.max(0,S.calM+d));paintCal(venue(S.param));}
+function pickDay(s){S.pick={ds:s,slot:null};const v=venue(S.param);paintCal(v);paintSlots(v);}
+function pickSlot(sk){S.pick.slot=sk;paintSlots(venue(S.param));}
+function paintSlots(v){
+ const w=el('slotWrap');if(!S.pick.ds){w.innerHTML='';return;}
+ const d=S.pick.ds,st=dayStatus(v,d);
+ let h='<h3 style="font-size:14px;font-weight:800;margin-bottom:10px">Slots for '+pretty(d)+(st==='pt'?' <span class="avail warn">Partially available</span>':'')+'</h3>';
+ Object.keys(SLOTS).forEach(k=>{const sl=SLOTS[k],taken=slotTaken(v,d,k),price=v.price*sl.mult;
+  h+='<div class="slotCard '+(taken?'dis':S.pick.slot===k?'sel':'')+'" '+(taken?'':'onclick="pickSlot(\''+k+'\')"')+'><div class="si" style="background:#f4f1ff">'+sl.ic+'</div><div class="sb2"><h4>'+sl.label+'</h4><p>'+sl.time+'</p></div>'+(taken?'<span class="bookedTag">Booked</span>':'<b>'+inr(price)+'</b>')+'</div>';});
+ w.innerHTML=h;
+ const btn=el('ctaBtn'),cp=el('ctaPrice');
+ if(S.pick.slot){const sl=SLOTS[S.pick.slot];btn.disabled=false;btn.textContent='Request Booking';btn.onclick=()=>openBooking();cp.innerHTML='<small>'+sl.label+' · '+pretty(d)+'</small><b>'+inr(v.price*sl.mult)+'</b>';}
+ else{btn.disabled=true;btn.textContent='Select date & slot';btn.onclick=null;}
+}
+
+/* ================= BOOKING FLOW ================= */
+let BK=null;
+function openBooking(){
+ const v=venue(S.param);
+ BK={v,ds:S.pick.ds,slot:S.pick.slot,step:1};
+ openSheet(bkHTML());
+}
+function bkHTML(){
+ const sl=SLOTS[BK.slot],total=BK.v.price*sl.mult,adv=total*0.2;
+ if(BK.step===1)return '<div class="shHead"><h2>Confirm your slot</h2><button class="iconBtn" onclick="closeModal()">'+I('x',17)+'</button></div><div class="steps"><i class="on"></i><i></i><i></i><i></i></div>'
+  +'<div class="sumBox"><div class="sr"><span>Venue</span><b>'+BK.v.name+'</b></div><div class="sr"><span>Date</span><b>'+pretty(BK.ds)+'</b></div><div class="sr"><span>Slot</span><b>'+sl.label+' · '+sl.time+'</b></div><div class="sr"><span>Hall charges</span><b>'+inr(total)+'</b></div><div class="sr"><span>Advance to block (20%)</span><b style="color:var(--warn)">'+inr(adv)+'</b></div><div class="sr tot"><span>Total payable</span><b>'+inr(total)+'</b></div></div>'
+  +'<p style="font-size:11px;color:var(--mut);font-weight:600;margin-bottom:14px">🔒 This slot is held for you for the next 10 minutes. The same date &amp; slot cannot be double-booked.</p>'
+  +'<button class="btn full" onclick="bkGo(2)">Continue</button>';
+ if(BK.step===2)return '<div class="shHead"><h2>Your details</h2><button class="iconBtn" onclick="closeModal()">'+I('x',17)+'</button></div><div class="steps"><i class="on"></i><i class="on"></i><i></i><i></i></div>'
+  +'<div class="f2"><div class="fRow"><label>Full name</label><input id="bkName" placeholder="e.g. Anil Kumar"></div><div class="fRow"><label>Phone</label><input id="bkPhone" placeholder="98XXXXXXXX" maxlength="10" inputmode="numeric"></div></div>'
+  +'<div class="f2"><div class="fRow"><label>Event type</label><select id="bkType"><option>Wedding</option><option>Reception</option><option>Engagement</option><option>Birthday</option><option>Corporate</option><option>Other</option></select></div><div class="fRow"><label>Guests</label><input id="bkGuests" placeholder="e.g. 300" inputmode="numeric"></div></div>'
+  +'<div class="fRow"><label>Note to owner (optional)</label><input id="bkNote" placeholder="Catering, décor, timings…"></div>'
+  +'<div style="display:flex;gap:10px"><button class="btn ghost full" onclick="bkGo(1)">Back</button><button class="btn full" onclick="bkValidate()">Proceed to pay</button></div>';
+ if(BK.step===3)return '<div class="shHead"><h2>Payment</h2><button class="iconBtn" onclick="closeModal()">'+I('x',17)+'</button></div><div class="steps"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>'
+  +'<div class="sumBox"><div class="sr"><span>Advance to block slot</span><b>'+inr(adv)+'</b></div><div class="sr"><span>Balance on event day</span><b>'+inr(total-adv)+'</b></div><div class="sr tot"><span>Pay now</span><b>'+inr(adv)+'</b></div></div>'
+  +'<label class="payOpt"><input type="radio" name="pay" checked><span class="pl">UPI — GPay / PhonePe / Paytm<small>Instant · powered by Razorpay</small></span>🟢</label>'
+  +'<label class="payOpt"><input type="radio" name="pay"><span class="pl">Credit / Debit Card<small>Visa, Mastercard, RuPay</small></span>💳</label>'
+  +'<label class="payOpt"><input type="radio" name="pay"><span class="pl">Request without advance<small>Owner approves within 2 hours</small></span>📩</label>'
+  +'<p style="font-size:11px;color:var(--mut);font-weight:600;margin:10px 0 14px">Free cancellation up to 7 days before the event. Advance refunded to source in 3–5 working days.</p>'
+  +'<div style="display:flex;gap:10px"><button class="btn ghost full" onclick="bkGo(2)">Back</button><button class="btn full" onclick="bkPay()">Pay '+inr(adv)+'</button></div>';
+ return '';
+}
+function bkGo(n){BK.step=n;el('modalRoot').querySelector('.sheet').innerHTML=bkHTML();}
+function bkValidate(){const n=el('bkName').value.trim(),p=el('bkPhone').value.trim();
+ if(n.length<3)return toast('Please enter your full name');
+ if(!/^\d{10}$/.test(p))return toast('Enter a valid 10-digit phone number');
+ BK.name=n;BK.phone=p;BK.type=el('bkType').value;BK.guests=el('bkGuests').value;BK.note=el('bkNote').value;bkGo(3);}
+function bkPay(){
+ el('modalRoot').querySelector('.sheet').innerHTML='<div class="procWrap"><div class="spin"></div><p>Processing secure payment…</p></div>';
+ setTimeout(()=>{
+  const sl=SLOTS[BK.slot],total=BK.v.price*sl.mult;
+  const arr=BK.v.bookedSlots[BK.ds]||(BK.v.bookedSlots[BK.ds]=[]);
+  arr.push(BK.slot);
+  const id='BMS-'+(100000+Math.floor(Math.random()*899999));
+  const b={id,kind:'venue',refId:BK.v.id,title:BK.v.name,meta:pretty(BK.ds)+' · '+sl.label+' ('+sl.time+')',date:BK.ds,slot:BK.slot,amount:total*0.2,total,status:'pending',mine:true,who:BK.name,etype:BK.type,guests:BK.guests};
+  S.bookings.unshift(b);
+  el('modalRoot').querySelector('.sheet').innerHTML='<div class="steps"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div>'+successHTML(b,'Booking request sent!','The owner has been notified and usually confirms within 2 hours.',true);
+  notify('📨','Booking request sent',BK.v.name+' · '+pretty(BK.ds)+' · '+sl.label+'. Awaiting owner confirmation.');
+  setTimeout(()=>{if(b.status==='pending'){b.status='confirmed';notify('✅','Booking confirmed!','Your slot at '+b.title+' for '+pretty(b.date)+' is confirmed. Booking ID '+b.id+'.');toast('✅ Booking confirmed by '+b.title);const c=el('st-'+b.id);if(c){c.className='stChip st-conf';c.textContent='Confirmed';}}},6000);
+ },1400);
+}
+function successHTML(b,title,sub,pend){
+ return '<div class="succWrap"><div class="succCk">'+I('check',36)+'</div><h2>'+title+'</h2><p>'+sub+'</p>'
+ +'<div class="tkt"><div class="th2" style="display:flex;justify-content:space-between;align-items:center"><div><h4>'+b.title+'</h4><p>'+b.meta+'</p></div><div class="qrBox">'+qr(b.id)+'</div></div><div class="tkDiv"></div><div class="trow"><div><div class="bid2">'+b.id+'</div><small style="font-size:10px;color:var(--mut);font-weight:700">Show this at entry</small></div><span class="stChip '+(pend?'st-pend':'st-conf')+'" id="st-'+b.id+'">'+(pend?'Pending approval':'Confirmed')+'</span></div></div>'
+ +'<div style="display:flex;gap:10px"><button class="btn ghost full" onclick="closeModal();goTab(\'bookings\')">View my bookings</button><button class="btn full" onclick="closeModal()">Done</button></div></div>';
+}
+
+/* ================= INSTITUTE DETAIL ================= */
+function renderInst(){
+ const t=inst(S.param);
+ let h='<div class="hero '+t.g+'">'+t.emoji+'<div class="hb"><button class="iconBtn" onclick="back()">'+I('back',19)+'</button><button class="iconBtn" onclick="toggleFav(event,\'inst\',\''+t.id+'\',this)" style="color:'+(S.favs.has('inst:'+t.id)?'var(--bad)':'#b9b4d6')+'">'+I('heart',18)+'</button></div><div class="heroPills"><span class="pillW">🎓 Verified institute</span><span class="pillW">'+I('star',13)+' '+t.rating+' ('+t.reviews+')</span></div></div>';
+ h+='<div class="dBody"><h1>'+t.name+'</h1><div class="dSub">'+I('pin',13)+' '+t.area+' · '+t.km+' km away &nbsp;·&nbsp; <span class="mapLink" onclick="toast(\'Opening Google Maps… 🗺️\')">View on map</span></div>';
+ h+='<div class="facRow" style="padding-top:12px"><span class="fac">🌐 Online</span><span class="fac">📍 Offline</span><span class="fac">🔀 Hybrid</span><span class="fac">🎯 Free demo classes</span><span class="fac">💼 Placement support</span></div>';
+ h+='<p class="aboutTxt">'+t.about+'</p>';
+ h+='<div class="secHead pad"><h2>Courses &amp; today’s schedule</h2><span>'+t.courses.length+' courses</span></div>';
+ t.courses.forEach(c=>{const fillPct=Math.round((c.total-c.left)/c.total*100);
+  h+='<div class="courseC"><div class="ct"><h4>'+c.name+'</h4>'+modeChip(c.mode)+'</div>'
+  +'<div class="cMeta"><span>'+I('clock',12)+' '+c.time+'</span><span>'+I('cal',12)+' '+c.days+'</span><span>'+I('user',12)+' '+c.inst+'</span></div>'
+  +'<div class="seatBar"><i style="width:'+fillPct+'%;background:'+(c.left<10?'linear-gradient(90deg,#fbbf24,#f59e0b)':'linear-gradient(90deg,#4ade80,#16a34a)')+'"></i></div><div class="seatTxt"><b>'+c.left+' seats left</b> of '+c.total+' · batch filling fast</div>'
+  +'<div class="cFoot"><div class="fee"><b>'+inr(c.fee)+'</b><small>/month</small></div><div class="cActs">'+(c.demo?'<button class="lnkBtn pri" onclick="bookDemo(\''+t.id+'\',\''+c.id+'\')">Free demo</button>':'')+'<button class="btn sm" onclick="openEnroll(\''+t.id+'\',\''+c.id+'\')">Enroll</button></div></div></div>';});
+ h+='<div style="height:10px"></div></div>';
+ return h;
+}
+function bookDemo(tid,cid){const c=inst(tid).courses.find(x=>x.id===cid);notify('🎯','Demo class booked','Free demo for '+c.name+' at '+inst(tid).name+' — tomorrow '+c.time+'.');toast('🎯 Demo booked for tomorrow '+c.time);}
+function openEnroll(tid,cid){
+ const t=inst(tid),c=t.courses.find(x=>x.id===cid);
+ openSheet('<div class="shHead"><h2>Enroll — '+c.name+'</h2><button class="iconBtn" onclick="closeModal()">'+I('x',17)+'</button></div>'
+ +'<div class="sumBox"><div class="sr"><span>Course</span><b>'+c.name+'</b></div><div class="sr"><span>Mode · Time</span><b>'+c.mode+' · '+c.time+'</b></div><div class="sr"><span>Days</span><b>'+c.days+'</b></div><div class="sr"><span>Instructor</span><b>'+c.inst+'</b></div><div class="sr tot"><span>First month fee</span><b>'+inr(c.fee)+'</b></div></div>'
+ +'<div class="f2"><div class="fRow"><label>Full name</label><input id="enName" placeholder="Your name"></div><div class="fRow"><label>Phone</label><input id="enPhone" placeholder="98XXXXXXXX" maxlength="10" inputmode="numeric"></div></div>'
+ +'<button class="btn full" onclick="doEnroll(\''+tid+'\',\''+cid+'\')">Pay &amp; enroll · '+inr(c.fee)+'</button>');
+}
+function doEnroll(tid,cid){
+ const n=el('enName').value.trim(),p=el('enPhone').value.trim();
+ if(n.length<3)return toast('Please enter your full name');
+ if(!/^\d{10}$/.test(p))return toast('Enter a valid 10-digit phone number');
+ const t=inst(tid),c=t.courses.find(x=>x.id===cid);
+ el('modalRoot').querySelector('.sheet').innerHTML='<div class="procWrap"><div class="spin"></div><p>Confirming your seat…</p></div>';
+ setTimeout(()=>{c.left=Math.max(0,c.left-1);
+  const b={id:'BMS-'+(100000+Math.floor(Math.random()*899999)),kind:'class',refId:tid,title:c.name+' @ '+t.name,meta:c.mode+' · '+c.time+' · '+c.days+' · starts Mon, 3 Aug',date:'2026-08-03',amount:c.fee,status:'confirmed',mine:true};
+  S.bookings.unshift(b);
+  el('modalRoot').querySelector('.sheet').innerHTML=successHTML(b,'You’re enrolled! 🎉','Seat secured in '+c.name+'. Batch details sent via SMS &amp; WhatsApp.',false);
+  notify('🎓','Enrollment confirmed',c.name+' at '+t.name+'. Classes start Mon, 3 Aug · '+c.time+'.');
+ },1300);
+}
+
+/* ================= EVENT DETAIL ================= */
+function renderEvent(){
+ const e=ev(S.param);
+ let h='<div class="hero '+e.g+'">'+e.emoji+'<div class="hb"><button class="iconBtn" onclick="back()">'+I('back',19)+'</button><button class="iconBtn" onclick="toggleFav(event,\'event\',\''+e.id+'\',this)" style="color:'+(S.favs.has('event:'+e.id)?'var(--bad)':'#b9b4d6')+'">'+I('heart',18)+'</button></div><div class="heroPills"><span class="pillW">'+e.cat+'</span><span class="pillW">'+(e.date===TODAY?'🔴 Today':e.date===TOMORROW?'🟠 Tomorrow':pretty(e.date))+'</span></div></div>';
+ h+='<div class="dBody"><h1>'+e.title+'</h1><div class="dSub">by '+e.org+' · '+(e.price?inr(e.price)+' entry':'Free entry')+'</div>';
+ h+='<div class="evRows">'
+ +'<div class="evRow"><div class="ei">'+I('cal',18)+'</div><div><small>Date</small><b>'+pretty(e.date)+'</b></div></div>'
+ +'<div class="evRow"><div class="ei">'+I('clock',18)+'</div><div><small>Time</small><b>'+e.time+'</b></div></div>'
+ +'<div class="evRow"><div class="ei">'+I('pin',18)+'</div><div style="flex:1"><small>Venue</small><b>'+e.venue+' · '+e.km+' km away</b></div><span class="mapLink" onclick="toast(\'Opening Google Maps… 🗺️\')">Map</span></div>'
+ +'<div class="evRow"><div class="ei">'+I('users',18)+'</div><div><small>Availability</small><b>'+seatsTxt(e)+'</b></div></div></div>';
+ h+='<div class="secHead pad"><h2>About this event</h2></div><p class="aboutTxt" style="padding-top:0">'+e.about+'</p>';
+ h+='<div class="ctaBar"><div class="ctaPrice"><small>'+(e.price?'Entry per person':'Entry')+'</small><b>'+(e.price?inr(e.price):'FREE')+'</b></div><button class="btn" onclick="openReg(\''+e.id+'\')" '+(e.left<=0?'disabled':'')+'>'+(e.left<=0?'Housefull':'Register now')+'</button></div></div>';
+ return h;
+}
+let RG=null;
+function openReg(id){const e=ev(id);RG={e,qty:1};
+ openSheet('<div class="shHead"><h2>Register — '+e.title+'</h2><button class="iconBtn" onclick="closeModal()">'+I('x',17)+'</button></div>'
+ +'<div class="sumBox"><div class="sr"><span>Date &amp; time</span><b>'+pretty(e.date)+' · '+e.time+'</b></div><div class="sr"><span>Venue</span><b>'+e.venue+'</b></div><div class="sr"><span>Seats left</span><b>'+e.left+'</b></div></div>'
+ +'<div class="fRow"><label>Participants</label><div class="qtyRow"><button onclick="regQty(-1)">−</button><b id="rgQty">1</b><button onclick="regQty(1)">+</button><span style="font-size:12px;color:var(--mut);font-weight:700">× '+(e.price?inr(e.price):'FREE')+'</span><b id="rgTot" style="margin-left:auto;font-size:16px">'+(e.price?inr(e.price):'FREE')+'</b></div></div>'
+ +'<div class="f2"><div class="fRow"><label>Full name</label><input id="rgName" placeholder="Your name"></div><div class="fRow"><label>Phone</label><input id="rgPhone" placeholder="98XXXXXXXX" maxlength="10" inputmode="numeric"></div></div>'
+ +'<button class="btn full" onclick="doReg()">'+(e.price?'Pay & register':'Confirm free registration')+'</button>');
+}
+function regQty(d){RG.qty=Math.min(10,Math.max(1,RG.qty+d));el('rgQty').textContent=RG.qty;el('rgTot').textContent=RG.e.price?inr(RG.e.price*RG.qty):'FREE';}
+function doReg(){
+ const n=el('rgName').value.trim(),p=el('rgPhone').value.trim();
+ if(n.length<3)return toast('Please enter your full name');
+ if(!/^\d{10}$/.test(p))return toast('Enter a valid 10-digit phone number');
+ const e=RG.e;
+ el('modalRoot').querySelector('.sheet').innerHTML='<div class="procWrap"><div class="spin"></div><p>'+(e.price?'Processing payment…':'Reserving your seats…')+'</p></div>';
+ setTimeout(()=>{e.left=Math.max(0,e.left-RG.qty);
+  const b={id:'BMS-'+(100000+Math.floor(Math.random()*899999)),kind:'event',refId:e.id,title:e.title,meta:pretty(e.date)+' · '+e.time+' · '+e.venue.split(',')[0],date:e.date,qty:RG.qty,amount:e.price*RG.qty,status:'confirmed',mine:true};
+  S.bookings.unshift(b);
+  el('modalRoot').querySelector('.sheet').innerHTML=successHTML(b,'Registration confirmed!','Your pass for '+RG.qty+' participant'+(RG.qty>1?'s':'')+' is ready. Show the QR at entry.',false);
+  notify('🎟️','You’re going!',e.title+' · '+pretty(e.date)+' · '+RG.qty+' pass'+(RG.qty>1?'es':'')+'.');
+  render();
+ },1300);
+}
+
+/* ================= BOOKINGS ================= */
+function tkCard(b){
+ const ic=b.kind==='venue'?'🏛️':b.kind==='class'?'🎓':'📅';
+ const st=b.status==='confirmed'?'<span class="stChip st-conf">Confirmed</span>':b.status==='pending'?'<span class="stChip st-pend">Pending</span>':'<span class="stChip st-canc">Cancelled</span>';
+ const up=b.date>=TODAY&&b.status!=='cancelled';
+ let acts='';
+ if(up)acts+='<button class="lnkBtn" onclick="toast(\'Opening Google Maps… 🗺️\')">Directions</button>';
+ acts+='<button class="lnkBtn pri" onclick="openTicket(\''+b.id+'\')">Pass</button>';
+ if(up&&b.kind==='venue')acts+='<button class="lnkBtn red" onclick="askCancel(\''+b.id+'\')">Cancel</button>';
+ if(!up&&b.status==='confirmed'&&!b.rated)acts+='<button class="lnkBtn pri" onclick="openRate(\''+b.id+'\')">★ Rate</button>';
+ return '<div class="tkCard"><div class="tkTop"><div class="tkIcon '+(b.kind==='venue'?'g1':b.kind==='class'?'g2':'g4')+'">'+ic+'</div><div style="flex:1"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><h4>'+b.title+'</h4>'+st+'</div><div class="tm">'+b.meta+'</div></div></div><div class="tkDiv"></div><div class="tkBot"><div><span class="bid">'+b.id+'</span><div style="font-size:12px;font-weight:800;margin-top:2px">'+(b.amount?inr(b.amount)+' paid':'Free entry')+(b.qty?' · '+b.qty+' passes':'')+'</div></div><div class="tkActs">'+acts+'</div></div></div>';
+}
+function openTicket(id){const b=S.bookings.find(x=>x.id===id);
+ openSheet(successHTML(b,b.status==='confirmed'?'Your booking pass':b.status==='pending'?'Awaiting confirmation':'Booking cancelled',b.status==='cancelled'?'This booking was cancelled. Refund (if any) processes in 3–5 days.':b.title+' · '+b.meta,b.status==='pending'));}
+function askCancel(id){
+ openSheet('<div class="shHead"><h2>Cancel booking?</h2><button class="iconBtn" onclick="closeModal()">'+I('x',17)+'</button></div>'
+ +'<p style="font-size:13px;color:var(--mut);font-weight:600;line-height:1.6;margin-bottom:14px">Free cancellation up to 7 days before the event date. Your advance will be refunded to the original payment method in 3–5 working days. The slot becomes available to others immediately.</p>'
+ +'<div style="display:flex;gap:10px"><button class="btn ghost full" onclick="closeModal()">Keep booking</button><button class="btn danger full" onclick="doCancel(\''+id+'\')">Yes, cancel</button></div>');
+}
+function doCancel(id){const b=S.bookings.find(x=>x.id===id);b.status='cancelled';
+ if(b.kind==='venue'&&b.mine){const v=venue(b.refId);const arr=v.bookedSlots[b.date]||[];const i=arr.indexOf(b.slot);if(i>-1)arr.splice(i,1);}
+ closeModal();notify('❌','Booking cancelled',b.title+' for '+pretty(b.date)+' was cancelled. Refund initiated.');toast('Booking cancelled · refund initiated');render();}
+function openRate(id){const b=S.bookings.find(x=>x.id===id);
+ openSheet('<div class="shHead"><h2>Rate your experience</h2><button class="iconBtn" onclick="closeModal()">'+I('x',17)+'</button></div>'
+ +'<p style="font-size:13px;font-weight:700;margin-bottom:10px">'+b.title+'</p><div style="display:flex;gap:8px;justify-content:center;margin:10px 0 18px" id="rateStars">'+[1,2,3,4,5].map(n=>'<button onclick="setRate('+n+')" data-n="'+n+'" style="background:none;border:none;font-size:34px;cursor:pointer;color:#d9d5ec" class="rstar">★</button>').join('')+'</div>'
+ +'<div class="fRow"><label>Review (optional)</label><input id="rateTxt" placeholder="How was the venue / event?"></div><button class="btn full" onclick="submitRate(\''+id+'\')">Submit review</button>');
+}
+let RATE=5;
+function setRate(n){RATE=n;document.querySelectorAll('.rstar').forEach(s=>s.style.color=+s.dataset.n<=n?'#f59e0b':'#d9d5ec');}
+function submitRate(id){const b=S.bookings.find(x=>x.id===id);b.rated=RATE;closeModal();toast('Thanks for your '+RATE+'★ review! 🙏');render();}
+function renderBookings(){
+ let h='<div class="pgHead"><h1>My Bookings</h1><button class="iconBtn" onclick="go(\'notifs\')">'+I('bell',19)+'<i class="ndot"></i></button></div>';
+ h+='<div class="segToggle"><button class="'+(S.btab==='list'?'on':'')+'" onclick="S.btab=\'list\';render()">List</button><button class="'+(S.btab==='cal'?'on':'')+'" onclick="S.btab=\'cal\';render()">Calendar</button></div>';
+ if(S.btab==='list'){
+  const up=S.bookings.filter(b=>b.date>=TODAY&&b.status!=='cancelled');
+  const rest=S.bookings.filter(b=>!(b.date>=TODAY&&b.status!=='cancelled'));
+  h+='<div class="secHead pad" style="margin-top:4px"><h2>Upcoming</h2><span>'+up.length+'</span></div>';
+  h+=up.length?up.map(tkCard).join(''):'<div class="empty"><div class="ee">🗓️</div><h3>No upcoming bookings</h3><p>Book a hall, class or event to see it here.</p></div>';
+  if(rest.length){h+='<div class="secHead pad"><h2>Past &amp; cancelled</h2></div>'+rest.map(tkCard).join('');}
+ }else{
+  h+='<div class="calCard"><div class="calHead"><b>August 2026</b></div>'+bkCalHTML()+'<div class="legend"><span><i class="dot" style="background:#8b5cf6"></i>Venue booking</span><span><i class="dot" style="background:#38bdf8"></i>Class</span><span><i class="dot" style="background:#34d399"></i>Event</span></div></div>';
+  const day=S.bookings.filter(b=>b.date===S.bSelDay);
+  h+='<div class="secHead pad"><h2>'+pretty(S.bSelDay)+'</h2><span>'+day.length+' booking'+(day.length===1?'':'s')+'</span></div>';
+  h+=day.length?day.map(tkCard).join(''):'<p class="pad" style="font-size:12.5px;color:var(--mut);font-weight:600">Nothing booked on this day.</p>';
+ }
+ return h;
+}
+function bkCalHTML(){
+ const first=new Date(2026,7,1).getDay(),dim=31;let cells='';for(let i=0;i<first;i++)cells+='<span></span>';
+ for(let d=1;d<=dim;d++){const s=ds(2026,8,d),past=s<TODAY;
+  const dots=S.bookings.filter(b=>b.date===s&&b.status!=='cancelled').map(b=>'<i class="dot" style="background:'+(b.kind==='venue'?'#8b5cf6':b.kind==='class'?'#38bdf8':'#34d399')+';width:6px;height:6px;border-radius:50%"></i>').join('');
+  cells+='<button class="calC '+(past?'past':'av')+(S.bSelDay===s?' sel':'')+'" onclick="S.bSelDay=\''+s+'\';render()">'+d+(dots?'<span style="position:absolute;bottom:3px;display:flex;gap:2px">'+dots+'</span>':'')+'</button>';}
+ return '<div class="wkRow"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div><div class="calGrid">'+cells+'</div>';
+}
+
+/* ================= SAVED / NOTIFS / PROFILE ================= */
+function toggleFav(e,kind,id,btn){e.stopPropagation();const k=kind+':'+id;
+ if(S.favs.has(k)){S.favs.delete(k);toast('Removed from favourites');}else{S.favs.add(k);toast('❤️ Saved to favourites');}
+ if(btn){btn.style.color=S.favs.has(k)?'var(--bad)':'#b9b4d6';}else{e.currentTarget.classList.toggle('on');}
+}
+function renderSaved(){
+ let h='<div class="pgHead"><h1>Saved</h1></div>';const items=[];
+ S.favs.forEach(k=>{const[kind,id]=k.split(':');if(kind==='venue')items.push(vRow(venue(id)));else if(kind==='inst')items.push(iRow(inst(id)));else items.push(resultCard({kind:'event',o:ev(id)}));});
+ h+=items.length?items.join(''):'<div class="empty"><div class="ee">💜</div><h3>No favourites yet</h3><p>Tap the heart on any hall, class or event to save it here.</p></div>';
+ return h;
+}
+function renderNotifs(){S.unread=0;
+ let h='<div class="pgHead"><button class="iconBtn" onclick="back()">'+I('back',18)+'</button><h1>Notifications</h1></div>';
+ h+=S.notifs.map(n=>'<div class="ntf"><div class="ni2">'+n.ic+'</div><div style="flex:1"><h4>'+n.t+'</h4><p>'+n.b+'</p><small>'+n.w+'</small></div></div>').join('');
+ return h;
+}
+function renderProfile(){
+ let h='<div class="pgHead"><h1>Profile</h1></div>';
+ h+='<div class="proHead"><div class="avatar">G</div><div><h2 style="font-size:17px;font-weight:800">Guest User</h2><p style="font-size:12px;color:var(--mut);font-weight:600">+91 98······10 · Ongole</p></div><button class="lnkBtn pri" style="margin-left:auto" onclick="toast(\'OTP login with mobile / Google / Apple in the full app 📲\')">Sign in</button></div>';
+ h+='<div class="menuC"><div class="mRow" onclick="goTab(\'bookings\')"><div class="mi">'+I('ticket',17)+'</div><span>My bookings</span><span class="mc">'+I('chev',16)+'</span></div><div class="mRow" onclick="goTab(\'saved\')"><div class="mi">'+I('heart',17)+'</div><span>Favourites</span><span class="mc">'+I('chev',16)+'</span></div><div class="mRow" onclick="toast(\'Razorpay / UPI payment methods 💳\')"><div class="mi">'+I('zap',17)+'</div><span>Payments &amp; refunds</span><span class="mc">'+I('chev',16)+'</span></div><div class="mRow" onclick="go(\'notifs\')"><div class="mi">'+I('bell',17)+'</div><span>Notifications</span><span class="mc">'+I('chev',16)+'</span></div></div>';
+ h+='<div class="menuC"><div class="mRow" onclick="toggleMode()" style="background:'+(S.mode==='owner'?'#f4f1ff':'#fff')+'"><div class="mi" style="background:var(--grad);color:#fff">'+I('grid',17)+'</div><span>'+(S.mode==='owner'?'Switch to Customer app':'Switch to Owner dashboard')+'</span><span class="badge b-venue">'+(S.mode==='owner'?'OWNER':'OWNER?')+'</span></div></div>';
+ h+='<div class="menuC"><div class="mRow" onclick="toast(\'Help centre coming soon 💬\')"><div class="mi">'+I('users',17)+'</div><span>Help &amp; support</span><span class="mc">'+I('chev',16)+'</span></div><div class="mRow" onclick="openAbout()"><div class="mi">'+I('zap',17)+'</div><span>About BookMySpace</span><span class="mc">'+I('chev',16)+'</span></div></div>';
+ h+='<p style="text-align:center;font-size:10.5px;color:#b6b1d4;font-weight:700;padding:8px 0 4px">BookMySpace v1.0 · Made for Ongole 💜</p>';
+ return h;
+}
+function toggleMode(){S.mode=S.mode==='customer'?'owner':'customer';S.hist=[];goTab(S.mode==='owner'?'dashboard':'home');toast(S.mode==='owner'?'🏛️ Welcome back, ABC Function Hall':'👋 Back to customer mode');}
+function openAbout(){openSheet('<div class="shHead"><h2>About BookMySpace</h2><button class="iconBtn" onclick="closeModal()">'+I('x',17)+'</button></div><p style="font-size:13px;line-height:1.8;color:var(--mut);font-weight:600">“Discover what is happening, what is available, and what can be booked around you.”</p><p style="font-size:13px;line-height:1.8;color:var(--mut);font-weight:600;margin-top:10px">One platform for function halls, institutes, classes, meetings, conferences, sports and local events — with live availability calendars, secure booking and instant confirmations.</p><div class="facRow" style="padding:14px 0 4px"><span class="fac">Flutter</span><span class="fac">Spring Boot</span><span class="fac">PostgreSQL</span><span class="fac">Razorpay</span><span class="fac">FCM</span><span class="fac">Google Maps</span></div>');}
+
+/* ================= OWNER MODE ================= */
+function myBookings(){return S.bookings.filter(b=>b.kind==='venue'&&b.refId==='abc-hall'&&b.mine);}
+function renderDash(){
+ const mine=myBookings(),pend=S.requests.filter(r=>r.status==='pending').length+mine.filter(b=>b.status==='pending').length;
+ let h='<div class="pgHead"><div style="flex:1"><small style="font-size:10.5px;font-weight:800;color:var(--mut);text-transform:uppercase;letter-spacing:.6px">Owner dashboard</small><h1>ABC Function Hall</h1></div><button class="iconBtn" onclick="go(\'notifs\')">'+I('bell',19)+'<i class="ndot"></i></button></div>';
+ h+='<div class="statGrid"><div class="oStat"><small>Revenue · Aug</small><b>₹1.84L</b><span class="up">▲ 12% vs Jul</span></div><div class="oStat"><small>Bookings</small><b>'+(12+mine.length)+'</b><span class="up">'+pend+' pending</span></div><div class="oStat"><small>Profile views</small><b>2,418</b><span class="up">▲ 8%</span></div><div class="oStat"><small>Occupancy</small><b>68%</b><span class="up">Aug month</span></div></div>';
+ h+='<div class="chart"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:13.5px;font-weight:800">Enquiries this week</b><span class="badge b-venue">Live</span></div><div class="bars">'+[40,65,30,80,55,90,60].map((v,i)=>'<div class="bar"><i class="'+(i===5?'':'dim')+'" style="height:'+v+'%"></i><span>'+['M','T','W','T','F','S','S'][i]+'</span></div>').join('')+'</div></div>';
+ h+='<div class="qAct"><button onclick="goTab(\'ownercal\')"><i>🗓️</i>Block dates</button><button onclick="openAnnounce()"><i>📢</i>Announcement</button><button onclick="toast(\'Listing editor: photos, pricing, facilities, Maps pin 🚀\')"><i>➕</i>New listing</button><button onclick="toast(\'Featured plans from ₹999/mo ⭐\')"><i>⭐</i>Promote</button></div>';
+ h+='<div class="secHead pad"><h2>Recent activity</h2><span onclick="goTab(\'requests\')">Requests ('+pend+')</span></div>';
+ h+='<div class="ntf"><div class="ni2">💰</div><div><h4>Advance received</h4><p>₹15,000 from Koteswara Rao · 6 Aug evening slot</p><small>3h ago</small></div></div>';
+ h+='<div class="ntf"><div class="ni2">⭐</div><div><h4>New 5★ review</h4><p>“Spacious hall, great sound system and very cooperative management.”</p><small>1d ago</small></div></div>';
+ mine.slice(0,2).forEach(b=>{h+='<div class="ntf"><div class="ni2">📨</div><div><h4>'+(b.status==='pending'?'New booking request':'Booking '+(b.status==='confirmed'?'confirmed':'cancelled'))+'</h4><p>'+(b.who||'Guest')+' · '+pretty(b.date)+' · '+(b.slot||'')+'</p><small>just now</small></div></div>';});
+ return h;
+}
+function renderRequests(){
+ const mine=myBookings();
+ let h='<div class="pgHead"><h1>Booking requests</h1></div>';
+ const pendR=S.requests.filter(r=>r.status==='pending');
+ const pendM=mine.filter(b=>b.status==='pending');
+ h+='<div class="secHead pad" style="margin-top:2px"><h2>Pending ('+(pendR.length+pendM.length)+')</h2></div>';
+ pendM.forEach(b=>{h+='<div class="reqC"><div class="rh"><div><h4>'+(b.who||'Guest User')+'</h4><div class="rm">'+pretty(b.date)+' · '+b.slot+' · '+(b.etype||'Event')+(b.guests?' · '+b.guests+' guests':'')+'</div></div><span class="stChip st-pend">'+inr(b.amount)+' adv.</span></div>'+(b.note?'<div class="note">“'+b.note+'”</div>':'')+'<div class="reqActs"><button class="btn ghost full sm" onclick="decideMine(\''+b.id+'\',false)">Reject</button><button class="btn full sm" onclick="decideMine(\''+b.id+'\',true)">Accept booking</button></div></div>';});
+ pendR.forEach(r=>{h+='<div class="reqC"><div class="rh"><div><h4>'+r.name+'</h4><div class="rm">'+pretty(r.date)+' · '+r.slot+'</div></div><span class="stChip st-pend">'+inr(r.amount)+' adv.</span></div><div class="note">“'+r.note+'”</div><div class="reqActs"><button class="btn ghost full sm" onclick="decideReq(\''+r.id+'\',false)">Reject</button><button class="btn full sm" onclick="decideReq(\''+r.id+'\',true)">Accept booking</button></div></div>';});
+ if(!pendR.length&&!pendM.length)h+='<div class="empty"><div class="ee">✅</div><h3>All caught up!</h3><p>New booking requests will appear here instantly.</p></div>';
+ const done=S.requests.filter(r=>r.status!=='pending');
+ if(done.length){h+='<div class="secHead pad"><h2>History</h2></div>'+done.map(r=>'<div class="reqC" style="opacity:.75"><div class="rh"><div><h4>'+r.name+'</h4><div class="rm">'+pretty(r.date)+' · '+r.slot+'</div></div><span class="stChip '+(r.status==='confirmed'?'st-conf':'st-canc')+'">'+r.status+'</span></div></div>').join('');}
+ return h;
+}
+function decideMine(id,ok){const b=S.bookings.find(x=>x.id===id);
+ if(ok){b.status='confirmed';notify('✅','Booking confirmed!','Great news — '+b.title+' accepted your booking for '+pretty(b.date)+'.');toast('✅ Booking accepted · customer notified');}
+ else{b.status='cancelled';const v=venue(b.refId);const arr=v.bookedSlots[b.date]||[];const i=arr.indexOf(b.slot);if(i>-1)arr.splice(i,1);notify('❌','Booking declined','Sorry — '+b.title+' couldn\'t host '+pretty(b.date)+'. Full advance refund initiated.');toast('Request rejected · slot freed');}
+ render();}
+function decideReq(id,ok){const r=S.requests.find(x=>x.id===id);r.status=ok?'confirmed':'rejected';toast(ok?'✅ Booking accepted':'Request rejected');render();}
+function renderOwnerCal(){
+ const v=venue('abc-hall');
+ let h='<div class="pgHead"><div style="flex:1"><small style="font-size:10.5px;font-weight:800;color:var(--mut);text-transform:uppercase;letter-spacing:.6px">Availability manager</small><h1>Block / open dates</h1></div></div>';
+ h+='<div class="calCard"><div class="calHead"><b>'+MONF[7+S.oCalM]+' 2026</b><div class="calNav"><button onclick="S.oCalM=Math.max(0,S.oCalM-1);render()" '+(S.oCalM===0?'disabled':'')+'>'+I('back',15)+'</button><button onclick="S.oCalM=Math.min(2,S.oCalM+1);render()" style="transform:scaleX(-1)" '+(S.oCalM===2?'disabled':'')+'>'+I('back',15)+'</button></div></div>';
+ h+=calHTML(v,S.oCalM,S.oSelDay,'oPick');
+ h+='<div class="legend"><span><i class="dot" style="background:#86efac"></i>Open</span><span><i class="dot" style="background:#fda4af"></i>Booked</span><span><i class="dot" style="background:#d4d0e6"></i>Blocked by you</span></div><p style="font-size:11px;color:var(--mut);font-weight:600;margin-top:10px">Tap any open date to block it (maintenance, private use). Booked dates are locked by customer bookings.</p></div>';
+ h+='<div class="secHead pad"><h2>Upcoming bookings</h2></div>';
+ const ups=Object.keys(v.bookedSlots).filter(d=>d>=TODAY).sort();
+ h+=ups.length?ups.map(d=>'<div class="evRow" style="margin:0 18px 8px"><div class="ei">'+I('cal',17)+'</div><div style="flex:1"><small>'+pretty(d)+'</small><b>'+(v.bookedSlots[d].map(s=>SLOTS[s]?SLOTS[s].label:s).join(' + ')||'Booked')+'</b></div><span class="stChip st-conf">Locked</span></div>').join(''):'<p class="pad" style="font-size:12.5px;color:var(--mut);font-weight:600">No bookings yet.</p>';
+ return h;
+}
+function oPick(d){const v=venue('abc-hall');S.oSelDay=d;
+ const closed=v.closed.includes(d);
+ openSheet('<div class="shHead"><h2>'+pretty(d)+'</h2><button class="iconBtn" onclick="closeModal()">'+I('x',17)+'</button></div>'
+ +'<p style="font-size:13px;color:var(--mut);font-weight:600;margin-bottom:14px">'+(closed?'This date is currently blocked by you. Unblock it to make it bookable again.':'Block this date for maintenance or private use. Customers will see it as “Closed” and cannot book it.')+'</p>'
+ +'<button class="btn full '+(closed?'':'danger')+'" onclick="toggleClosed(\''+d+'\')">'+(closed?'Unblock date':'Block this date')+'</button>');
+}
+function toggleClosed(d){const v=venue('abc-hall');const i=v.closed.indexOf(d);
+ if(i>-1){v.closed.splice(i,1);toast('Date unblocked — now bookable ✅');}else{v.closed.push(d);toast('Date blocked 🔒');}
+ closeModal();render();}
+function openAnnounce(){openSheet('<div class="shHead"><h2>Send announcement</h2><button class="iconBtn" onclick="closeModal()">'+I('x',17)+'</button></div><div class="fRow"><label>Message to followers &amp; past customers</label><input id="annTxt" placeholder="e.g. Aug 18–20 just opened up — book now!"></div><button class="btn full" onclick="sendAnnounce()">Broadcast 📣</button>');}
+function sendAnnounce(){const t=el('annTxt').value.trim();if(!t)return toast('Type a message first');notify('📢','ABC Function Hall',t);closeModal();toast('Announcement sent to 1,240 followers 📣');}
+
+/* ================= LOCATION / SHEETS ================= */
+function openLocation(){
+ const cities=['Ongole','Guntur','Nellore','Vijayawada','Hyderabad','Chennai'];
+ openSheet('<div class="shHead"><h2>Choose location</h2><button class="iconBtn" onclick="closeModal()">'+I('x',17)+'</button></div>'
+ +'<div class="evRow" style="cursor:pointer" onclick="closeModal();toast(\'📍 GPS detected: Ongole, Andhra Pradesh\')"><div class="ei">'+I('pin',18)+'</div><div><small>GPS</small><b>Use my current location</b></div></div>'
+ +'<div class="fRow" style="margin-top:12px"><label>Or search a city</label><input placeholder="Search city or area…"></div>'
+ +cities.map(c=>'<div class="mRow" style="padding:13px 4px;border-bottom:1px solid #f3f1fa" onclick="setCity(\''+c+'\')"><b style="flex:1;font-size:14px">'+c+'</b>'+(S.city===c?'<span class="badge b-venue">Current</span>':'')+'</div>').join(''));
+}
+function setCity(c){S.city=c;closeModal();toast('📍 Showing results near '+c);render();}
+function openSheet(html){el('modalRoot').classList.add('live');el('modalRoot').innerHTML='<div class="backdrop" onclick="closeModal()"></div><div class="sheet"><div class="grab"></div>'+html+'</div>';}
+function closeModal(){el('modalRoot').classList.remove('live');el('modalRoot').innerHTML='';}
+
+/* ================= BOOT ================= */
+renderNav();
+el('screen').innerHTML=renderHome();
+setTimeout(()=>{el('splash').classList.add('bye');setTimeout(()=>el('splash').remove(),600);},1500);
+</script>
+</body>
+</html>

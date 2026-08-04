@@ -116,10 +116,19 @@ final searchQueryProvider = StateProvider<VenueSearchQuery>((ref) {
   return const VenueSearchQuery();
 });
 
-/// Search results reacting to the current query.
+/// Search results reacting to the current query + home search area / radius.
 final searchResultsProvider = FutureProvider<List<Venue>>((ref) {
   final query = ref.watch(searchQueryProvider);
-  return ref.watch(venueRepositoryProvider).search(query);
+  final area = ref.watch(searchAreaProvider);
+  final radiusKm = ref.watch(searchRadiusKmProvider);
+
+  // Inject lat/lng/radius when the user has not overridden them in filters.
+  final effective = query.copyWith(
+    latitude: () => query.latitude ?? area.latitude,
+    longitude: () => query.longitude ?? area.longitude,
+    maxDistanceKm: () => query.maxDistanceKm ?? radiusKm,
+  );
+  return ref.watch(venueRepositoryProvider).search(effective);
 });
 
 /// Ids of venues favourited by the signed-in user.

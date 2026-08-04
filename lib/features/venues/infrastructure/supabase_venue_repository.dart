@@ -40,6 +40,7 @@ class SupabaseVenueRepository implements VenueRepository {
           .from('venues')
           .select(_venueSelect)
           .eq('is_active', true)
+          .order('is_featured', ascending: false)
           .order('rating_count', ascending: false)
           .order('avg_rating', ascending: false)
           .limit(limit);
@@ -75,6 +76,39 @@ class SupabaseVenueRepository implements VenueRepository {
   @override
   Future<List<Venue>> search(VenueSearchQuery query) async {
     try {
+      // Prefer nearby RPC when distance sort or radius search is requested.
+      if (query.latitude != null &&
+          query.longitude != null &&
+          (query.sortBy == VenueSortBy.distance ||
+              query.maxDistanceKm != null)) {
+        final nearby = await nearbyVenues(
+          latitude: query.latitude!,
+          longitude: query.longitude!,
+          maxDistanceKm: query.maxDistanceKm ?? 50,
+          limit: 50,
+        );
+        return nearby.where((v) {
+          if (query.query.trim().isNotEmpty &&
+              !v.name.toLowerCase().contains(query.query.toLowerCase()) &&
+              !v.city.toLowerCase().contains(query.query.toLowerCase())) {
+            return false;
+          }
+          if (query.categorySlug != null &&
+              v.category?.slug != query.categorySlug) {
+            return false;
+          }
+          if (query.minPrice != null &&
+              v.pricingBaseAmount < query.minPrice!) {
+            return false;
+          }
+          if (query.maxPrice != null &&
+              v.pricingBaseAmount > query.maxPrice!) {
+            return false;
+          }
+          return true;
+        }).toList();
+      }
+
       var builder = _client
           .from('venues')
           .select(_venueSelect)

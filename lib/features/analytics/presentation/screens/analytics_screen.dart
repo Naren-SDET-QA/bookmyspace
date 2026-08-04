@@ -27,7 +27,8 @@ class AnalyticsScreen extends ConsumerWidget {
             ? const EmptyState(
                 icon: Icons.analytics_rounded,
                 title: 'No analytics data',
-                message: 'Analytics events will appear here as you use the app.',
+                message:
+                    'Analytics events will appear here as you use the app.',
               )
             : ListView.builder(
                 padding: const EdgeInsets.all(16),

@@ -5,4 +5,6 @@ abstract interface class NotificationRepository {
   Future<void> markRead(String notificationId);
   Future<void> markAllRead();
   Future<int> unreadCount();
+  Future<NotificationPreferences> preferences();
+  Future<void> updatePreferences(NotificationPreferences preferences);
 }

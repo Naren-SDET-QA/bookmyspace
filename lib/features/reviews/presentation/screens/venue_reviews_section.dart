@@ -26,9 +26,9 @@ class VenueReviewsSection extends ConsumerWidget {
           children: [
             Text(
               l10n.reviews,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
             const Spacer(),
             if (myReview.valueOrNull == null)
@@ -77,7 +77,9 @@ class VenueReviewsSection extends ConsumerWidget {
                     final star = i + 1;
                     return IconButton(
                       icon: Icon(
-                        star <= rating ? Icons.star_rounded : Icons.star_outline_rounded,
+                        star <= rating
+                            ? Icons.star_rounded
+                            : Icons.star_outline_rounded,
                         color: AppTheme.accent,
                         size: 32,
                       ),
@@ -112,16 +114,18 @@ class VenueReviewsSection extends ConsumerWidget {
             ),
             FilledButton(
               onPressed: () async {
-                await ref.read(submitReviewProvider((
-                  venueId: venueId,
-                  rating: rating,
-                  title: titleController.text.trim().isEmpty
-                      ? null
-                      : titleController.text.trim(),
-                  body: bodyController.text.trim().isEmpty
-                      ? null
-                      : bodyController.text.trim(),
-                )).future);
+                await ref.read(
+                  submitReviewProvider((
+                    venueId: venueId,
+                    rating: rating,
+                    title: titleController.text.trim().isEmpty
+                        ? null
+                        : titleController.text.trim(),
+                    body: bodyController.text.trim().isEmpty
+                        ? null
+                        : bodyController.text.trim(),
+                  )).future,
+                );
                 if (context.mounted) Navigator.pop(context);
               },
               child: const Text('Submit'),
@@ -152,7 +156,9 @@ class _ReviewTile extends StatelessWidget {
               children: [
                 ...List.generate(5, (i) {
                   return Icon(
-                    i < review.rating ? Icons.star_rounded : Icons.star_outline_rounded,
+                    i < review.rating
+                        ? Icons.star_rounded
+                        : Icons.star_outline_rounded,
                     size: 16,
                     color: AppTheme.accent,
                   );
@@ -160,7 +166,10 @@ class _ReviewTile extends StatelessWidget {
                 const SizedBox(width: 8),
                 if (review.isVerified)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 1,
+                    ),
                     decoration: BoxDecoration(
                       color: AppTheme.brand.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
@@ -179,7 +188,9 @@ class _ReviewTile extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 review.title!,
-                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ],
             if (review.body != null && review.body!.isNotEmpty) ...[

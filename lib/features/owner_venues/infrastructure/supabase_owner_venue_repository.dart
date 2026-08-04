@@ -14,7 +14,10 @@ class SupabaseOwnerVenueRepository implements OwnerVenueRepository {
   Future<List<Venue>> myVenues() async {
     try {
       final rows = await _client.rpc<List<dynamic>>('get_owner_venues');
-      return rows.whereType<Map<String, dynamic>>().map(Venue.fromJson).toList();
+      return rows
+          .whereType<Map<String, dynamic>>()
+          .map(Venue.fromJson)
+          .toList();
     } catch (e) {
       throw mapError(e);
     }
@@ -80,7 +83,8 @@ class SupabaseOwnerVenueRepository implements OwnerVenueRepository {
           if (latitude != null) 'p_latitude': latitude,
           if (longitude != null) 'p_longitude': longitude,
           if (capacity != null) 'p_capacity': capacity,
-          if (pricingBaseAmount != null) 'p_pricing_base_amount': pricingBaseAmount,
+          if (pricingBaseAmount != null)
+            'p_pricing_base_amount': pricingBaseAmount,
           if (isActive != null) 'p_is_active': isActive,
         },
       );
@@ -93,7 +97,10 @@ class SupabaseOwnerVenueRepository implements OwnerVenueRepository {
   @override
   Future<void> deleteVenue(String venueId) async {
     try {
-      await _client.rpc<void>('delete_owner_venue', params: {'p_venue_id': venueId});
+      await _client.rpc<void>(
+        'delete_owner_venue',
+        params: {'p_venue_id': venueId},
+      );
     } catch (e) {
       throw mapError(e);
     }

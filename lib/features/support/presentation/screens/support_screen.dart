@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/validators/app_validators.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../domain/support_ticket.dart';
@@ -47,6 +48,7 @@ class SupportTicketsScreen extends ConsumerWidget {
   void _showCreateDialog(BuildContext context, WidgetRef ref) {
     final subjectController = TextEditingController();
     final descriptionController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
     var category = 'general';
     var priority = TicketPriority.medium;
 
@@ -56,19 +58,23 @@ class SupportTicketsScreen extends ConsumerWidget {
         builder: (context, setState) => AlertDialog(
           title: const Text('New Support Ticket'),
           content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: subjectController,
-                  decoration: const InputDecoration(labelText: 'Subject'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: descriptionController,
-                  decoration: const InputDecoration(labelText: 'Description'),
-                  maxLines: 3,
-                ),
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: subjectController,
+                    decoration: const InputDecoration(labelText: 'Subject'),
+                    validator: AppValidators.subject,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: descriptionController,
+                    decoration: const InputDecoration(labelText: 'Description'),
+                    maxLines: 3,
+                    validator: AppValidators.description,
+                  ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   initialValue: category,
@@ -82,14 +88,18 @@ class SupportTicketsScreen extends ConsumerWidget {
                 DropdownButtonFormField<TicketPriority>(
                   initialValue: priority,
                   items: TicketPriority.values
-                      .map((p) => DropdownMenuItem(value: p, child: Text(p.name)))
+                      .map(
+                        (p) => DropdownMenuItem(value: p, child: Text(p.name)),
+                      )
                       .toList(),
-                  onChanged: (v) => setState(() => priority = v ?? TicketPriority.medium),
+                  onChanged: (v) =>
+                      setState(() => priority = v ?? TicketPriority.medium),
                   decoration: const InputDecoration(labelText: 'Priority'),
                 ),
               ],
             ),
           ),
+        ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -97,7 +107,7 @@ class SupportTicketsScreen extends ConsumerWidget {
             ),
             FilledButton(
               onPressed: () async {
-                if (subjectController.text.trim().isEmpty) return;
+                if (!(formKey.currentState?.validate() ?? false)) return;
                 final ticketParams = (
                   subject: subjectController.text.trim(),
                   description: descriptionController.text.trim(),
@@ -143,7 +153,10 @@ class _TicketTile extends ConsumerWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: ticket.isResolved
                         ? AppTheme.brand.withValues(alpha: 0.12)
@@ -153,7 +166,9 @@ class _TicketTile extends ConsumerWidget {
                   child: Text(
                     ticket.isResolved ? 'Resolved' : ticket.status.dbValue,
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: ticket.isResolved ? AppTheme.brand : AppTheme.accent,
+                      color: ticket.isResolved
+                          ? AppTheme.brand
+                          : AppTheme.accent,
                       fontWeight: FontWeight.w700,
                     ),
                   ),

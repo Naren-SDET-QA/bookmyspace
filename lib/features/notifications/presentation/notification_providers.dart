@@ -18,6 +18,12 @@ final unreadNotificationsCountProvider = FutureProvider<int>((ref) {
   return ref.watch(notificationRepositoryProvider).unreadCount();
 });
 
+final notificationPreferencesProvider = FutureProvider<NotificationPreferences>(
+  (ref) {
+    return ref.watch(notificationRepositoryProvider).preferences();
+  },
+);
+
 final markNotificationReadProvider = FutureProvider.autoDispose
     .family<void, String>((ref, notificationId) async {
       final repo = ref.watch(notificationRepositoryProvider);

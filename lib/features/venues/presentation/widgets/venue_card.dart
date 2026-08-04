@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/prototype_visuals.dart';
 import '../../../../core/widgets/app_network_image.dart';
 import '../../domain/venue.dart';
 import '../venue_providers.dart';
@@ -22,10 +23,15 @@ class VenueCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
     final favorite = ref.watch(isFavoriteProvider(venue.id));
+    final emoji = PrototypeVisuals.emojiForCategorySlug(
+      venue.category?.slug,
+      icon: venue.category?.icon,
+    );
 
     if (compact) {
       return _CompactVenueCard(
         venue: venue,
+        emoji: emoji,
         favorite: favorite,
         onTap: () =>
             context.push(AppRoutes.venueDetails.replaceAll(':id', venue.id)),
@@ -48,21 +54,34 @@ class VenueCard extends ConsumerWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  AppNetworkImage(url: venue.coverImageUrl, fit: BoxFit.cover),
+                  if (venue.coverImageUrl.isNotEmpty)
+                    AppNetworkImage(url: venue.coverImageUrl, fit: BoxFit.cover)
+                  else
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: PrototypeVisuals.thumbGradientFor(venue.id),
+                      ),
+                      child: Center(
+                        child: Text(
+                          emoji,
+                          style: PrototypeVisuals.emojiStyle(fontSize: 52),
+                        ),
+                      ),
+                    ),
                   Positioned(
                     top: 8,
                     right: 8,
                     child: favorite.when(
-                      data: (isFav) => FavoriteButton(
+                      data: (isFav) => PrototypeFavButton(
                         isFavorite: isFav ?? false,
                         onPressed: () =>
                             ref.read(toggleFavoriteProvider(venue.id).future),
                       ),
-                      loading: () => const FavoriteButton(
+                      loading: () => const PrototypeFavButton(
                         isFavorite: false,
                         onPressed: null,
                       ),
-                      error: (_, _) => const FavoriteButton(
+                      error: (_, _) => const PrototypeFavButton(
                         isFavorite: false,
                         onPressed: null,
                       ),
@@ -87,8 +106,8 @@ class VenueCard extends ConsumerWidget {
                           vertical: 3,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.6),
-                          borderRadius: BorderRadius.circular(10),
+                          color: Colors.white.withValues(alpha: 0.93),
+                          borderRadius: BorderRadius.circular(11),
                         ),
                         child: RatingBadge(
                           rating: venue.avgRating,
@@ -106,18 +125,20 @@ class VenueCard extends ConsumerWidget {
                 children: [
                   Row(
                     children: [
-                      Expanded(
-                        child: Text(
-                          venue.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
+                      const PrototypeBadge.venue(),
+                      const Spacer(),
                       if (venue.isVerified) const VerifiedBadge(),
                     ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    venue.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.2,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Row(
@@ -137,6 +158,7 @@ class VenueCard extends ConsumerWidget {
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
@@ -158,12 +180,33 @@ class VenueCard extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    '${l10n.pricing} ${formatInr(venue.price)}',
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      color: AppTheme.brand,
-                      fontWeight: FontWeight.w700,
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: formatInr(venue.price),
+                          style: const TextStyle(
+                            color: AppTheme.brand,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 13.5,
+                          ),
+                        ),
+                        TextSpan(
+                          text: ' /day',
+                          style: TextStyle(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 10.5,
+                          ),
+                        ),
+                      ],
                     ),
+                  ),
+                  // Keep pricing a11y label available for screen readers.
+                  Semantics(
+                    label: '${l10n.pricing} ${formatInr(venue.price)}',
+                    excludeSemantics: true,
+                    child: const SizedBox.shrink(),
                   ),
                 ],
               ),
@@ -178,12 +221,14 @@ class VenueCard extends ConsumerWidget {
 class _CompactVenueCard extends StatelessWidget {
   const _CompactVenueCard({
     required this.venue,
+    required this.emoji,
     required this.favorite,
     required this.onTap,
     required this.onFavorite,
   });
 
   final Venue venue;
+  final String emoji;
   final AsyncValue<bool?> favorite;
   final VoidCallback onTap;
   final VoidCallback onFavorite;
@@ -191,129 +236,194 @@ class _CompactVenueCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
-      margin: EdgeInsets.zero,
-      clipBehavior: Clip.antiAlias,
-      child: Semantics(
-        label: '${venue.name}, ${venue.city}',
-        button: true,
-        child: InkWell(
-          onTap: onTap,
-          child: SizedBox(
-            height: 116,
-            child: Padding(
-              padding: const EdgeInsets.all(10),
-              child: Row(
+    final hasImage = venue.coverImageUrl.isNotEmpty;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        child: Semantics(
+          label: '${venue.name}, ${venue.city}',
+          button: true,
+          child: Ink(
+            decoration: PrototypeVisuals.cardDecoration(),
+            child: Stack(
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(15),
-                  child: SizedBox(
-                    width: 88,
-                    height: 96,
-                    child: AppNetworkImage(
-                      url: venue.coverImageUrl,
-                      fit: BoxFit.cover,
+                Padding(
+                  padding: const EdgeInsets.all(11),
+                  child: IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(15),
+                          child: SizedBox(
+                            width: 82,
+                            height: 88,
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    gradient: PrototypeVisuals.thumbGradientFor(
+                                      venue.id,
+                                    ),
+                                  ),
+                                ),
+                                if (hasImage)
+                                  AppNetworkImage(
+                                    url: venue.coverImageUrl,
+                                    fit: BoxFit.cover,
+                                  )
+                                else
+                                  Center(
+                                    child: Text(
+                                      emoji,
+                                      style: PrototypeVisuals.emojiStyle(
+                                        fontSize: 34,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 13),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Row(
+                                children: [
+                                  PrototypeBadge.venue(),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                venue.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 14.5,
+                                  letterSpacing: -0.2,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_on_outlined,
+                                    size: 13,
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Expanded(
+                                    child: Text(
+                                      [
+                                        if (venue.city.isNotEmpty) venue.city,
+                                        if (venue.distanceKm != null)
+                                          formatDistance(venue.distanceKm),
+                                      ].join(' · '),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        color:
+                                            theme.colorScheme.onSurfaceVariant,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 11.5,
+                                      ),
+                                    ),
+                                  ),
+                                  if (venue.avgRating > 0) ...[
+                                    const Icon(
+                                      Icons.star_rounded,
+                                      color: PrototypeVisuals.star,
+                                      size: 12,
+                                    ),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      venue.avgRating.toStringAsFixed(1),
+                                      style: const TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: PrototypeVisuals.starText,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              const SizedBox(height: 7),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text.rich(
+                                      TextSpan(
+                                        children: [
+                                          TextSpan(
+                                            text: formatInr(venue.price),
+                                            style: const TextStyle(
+                                              fontSize: 13.5,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                          TextSpan(
+                                            text: ' /day',
+                                            style: TextStyle(
+                                              fontSize: 10.5,
+                                              fontWeight: FontWeight.w600,
+                                              color: theme
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: PrototypeVisuals.availBg,
+                                      borderRadius: BorderRadius.circular(7),
+                                    ),
+                                    child: const Text(
+                                      'Available',
+                                      style: TextStyle(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppTheme.success,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 28),
+                      ],
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppTheme.brand.withValues(alpha: .10),
-                          borderRadius: BorderRadius.circular(7),
-                        ),
-                        child: const Text(
-                          'VENUE',
-                          style: TextStyle(
-                            color: AppTheme.brand,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: .5,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        venue.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.location_on_outlined,
-                            size: 13,
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 2),
-                          Expanded(
-                            child: Text(
-                              [
-                                if (venue.city.isNotEmpty) venue.city,
-                                if (venue.distanceKm != null)
-                                  formatDistance(venue.distanceKm),
-                              ].join(' · '),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ),
-                          if (venue.avgRating > 0) ...[
-                            const Icon(
-                              Icons.star_rounded,
-                              color: Color(0xFFF59E0B),
-                              size: 14,
-                            ),
-                            Text(
-                              venue.avgRating.toStringAsFixed(1),
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 7),
-                      Text(
-                        '${formatInr(venue.price)} / day',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                favorite.when(
-                  data: (value) => IconButton(
-                    onPressed: onFavorite,
-                    icon: Icon(
-                      value ?? false
-                          ? Icons.favorite_rounded
-                          : Icons.favorite_border_rounded,
-                      color: value ?? false
-                          ? const Color(0xFFE11D48)
-                          : theme.colorScheme.onSurfaceVariant,
+                Positioned(
+                  top: 9,
+                  right: 9,
+                  child: favorite.when(
+                    data: (value) => PrototypeFavButton(
+                      isFavorite: value ?? false,
+                      onPressed: onFavorite,
                     ),
+                    loading: () =>
+                        const PrototypeFavButton(isFavorite: false),
+                    error: (_, _) =>
+                        const PrototypeFavButton(isFavorite: false),
                   ),
-                  loading: () => const SizedBox(width: 40),
-                  error: (_, _) => const SizedBox(width: 40),
                 ),
               ],
             ),
@@ -335,17 +445,21 @@ class _LabelChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white.withValues(alpha: 0.93),
+        borderRadius: BorderRadius.circular(11),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: Colors.white),
+          Icon(icon, size: 13, color: AppTheme.ink),
           const SizedBox(width: 4),
           Text(
             label,
-            style: const TextStyle(color: Colors.white, fontSize: 12),
+            style: const TextStyle(
+              color: AppTheme.ink,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ],
       ),
