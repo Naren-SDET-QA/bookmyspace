@@ -88,7 +88,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(location.callCount, 1);
-    expect(find.text('Current location'), findsOneWidget);
+    expect(find.text('Current location'), findsNWidgets(2));
     expect(repo.lastNearbyLatitude, closeTo(16.3067, 0.0001));
     expect(repo.lastNearbyLongitude, closeTo(80.4365, 0.0001));
   });
