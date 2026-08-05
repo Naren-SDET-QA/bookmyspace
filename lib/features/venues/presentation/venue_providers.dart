@@ -173,3 +173,21 @@ final isFavoriteProvider = FutureProvider.autoDispose.family<bool?, String>((
   final ids = await ref.watch(favoriteIdsProvider.future);
   return ids.contains(venueId);
 });
+
+/// Venue ids the user recently opened (most recent first, capped at 8).
+///
+/// Kept in memory for the session; drives the Home "Recently viewed" strip.
+class RecentlyViewedNotifier extends Notifier<List<String>> {
+  @override
+  List<String> build() => const [];
+
+  void record(String venueId) {
+    if (venueId.isEmpty) return;
+    state = [venueId, ...state.where((id) => id != venueId)].take(8).toList();
+  }
+}
+
+final recentlyViewedIdsProvider =
+    NotifierProvider<RecentlyViewedNotifier, List<String>>(
+      RecentlyViewedNotifier.new,
+    );

@@ -28,6 +28,30 @@ abstract final class PrototypeVisuals {
   static const Color sheetGrab = Color(0xFFE3DFF2);
   static const Color menuRowBorder = Color(0xFFF3F1FA);
 
+  /// Prototype `#splash` gradient (`linear-gradient(160deg,#6d28d9,#4338ca 60%,#312e81)`).
+  static const LinearGradient splashGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF6D28D9), Color(0xFF4338CA), Color(0xFF312E81)],
+  );
+
+  /// Prototype `#splash .logo` — 88×88, radius 26, white 14% fill, white 30% border.
+  static const double splashLogoSize = 88;
+  static const double splashLogoRadius = 26;
+  static const Color splashLogoFill = Color(0x24FFFFFF);
+  static const Color splashLogoBorder = Color(0x4DFFFFFF);
+  static const Color splashSubtitle = Color(0xFFC9C2F5);
+
+  /// Prototype `.btn` — `box-shadow: 0 8px 20px rgba(108,61,244,.3)`.
+  static const BoxShadow ctaShadow = BoxShadow(
+    color: Color(0x4D6C3DF4),
+    blurRadius: 20,
+    offset: Offset(0, 8),
+  );
+
+  /// Prototype `.steps` — 4px pill track, active = brand.
+  static const Color stepsTrack = Color(0xFFECE9F6);
+
   /// Prototype `#nav` metrics.
   static const double navHeight = 88;
   static const double navIconPillWidth = 44;
