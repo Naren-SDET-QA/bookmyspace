@@ -9,8 +9,11 @@ import '../../../../core/errors/app_exceptions.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/prototype_controls.dart';
+import '../../../../core/theme/prototype_visuals.dart';
 import '../../domain/auth_user.dart';
 import '../auth_providers.dart';
+import '../widgets/otp_panel.dart';
 
 /// Authentication entry screen.
 ///
@@ -207,214 +210,428 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final socialAuthEnabled = AppConfig.environment != AppEnvironment.local;
 
     return Scaffold(
+      backgroundColor: AppTheme.surfaceLight,
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Icon(
-                    Icons.apartment_rounded,
-                    size: 72,
-                    color: AppTheme.brand,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.zero,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // ---- Brand gradient header (prototype `--grad`) ----
+              Container(
+                padding: const EdgeInsets.fromLTRB(24, 28, 24, 44),
+                decoration: const BoxDecoration(
+                  gradient: AppTheme.brandGradient,
+                  borderRadius: BorderRadius.vertical(
+                    bottom: Radius.circular(30),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    l10n.appName,
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    l10n.tagline,
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  if (AppConfig.developmentTestLoginEnabled) ...[
-                    const SizedBox(height: 20),
+                ),
+                child: Column(
+                  children: [
                     Container(
-                      padding: const EdgeInsets.all(12),
+                      width: 76,
+                      height: 76,
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.errorContainer,
-                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.white.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.35),
+                        ),
                       ),
-                      child: Text(
-                        'TEST MODE',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: theme.colorScheme.onErrorContainer,
-                          fontWeight: FontWeight.bold,
+                      child: const Center(
+                        child: Text(
+                          '📍',
+                          style: TextStyle(
+                            fontSize: 36,
+                            fontFamilyFallback: AppTheme.emojiFontFallbacks,
+                          ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    for (final role in AppAccessRole.values)
-                      if (AppConfig.developmentTestCredentials.containsKey(
-                        role.name,
-                      )) ...[
-                        OutlinedButton.icon(
+                    const SizedBox(height: 16),
+                    const Text(
+                      'BookMySpace',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      l10n.tagline,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Welcome back 👋',
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.5,
+                          color: AppTheme.ink,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Sign in to discover, book and celebrate.',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.muted,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 22),
+                      if (socialAuthEnabled) ...[
+                        _SocialButton(
+                          icon: Icons.g_mobiledata_rounded,
+                          label: l10n.continueWithGoogle,
                           onPressed: _busy
                               ? null
-                              : () => _developmentTestLogin(role),
-                          icon: const Icon(Icons.science_outlined),
-                          label: Text(
-                            '${role.name[0].toUpperCase()}${role.name.substring(1)} Test Login',
+                              : () => _socialSignIn(
+                                  ref.read(
+                                    authRepositoryProvider,
+                                  ).signInWithGoogle,
+                                ),
+                        ),
+                        const SizedBox(height: 12),
+                        _SocialButton(
+                          icon: Icons.apple_rounded,
+                          label: l10n.continueWithApple,
+                          onPressed: _busy
+                              ? null
+                              : () => _socialSignIn(
+                                  ref.read(
+                                    authRepositoryProvider,
+                                  ).signInWithApple,
+                                ),
+                        ),
+                        const SizedBox(height: 22),
+                        Row(
+                          children: [
+                            const Expanded(child: Divider()),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
+                              child: Text(
+                                'OR',
+                                style: theme.textTheme.labelLarge?.copyWith(
+                                  color: AppTheme.muted,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                            const Expanded(child: Divider()),
+                          ],
+                        ),
+                        const SizedBox(height: 22),
+                      ] else ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.errorContainer,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            'Google and Apple sign-in are unavailable in local mode. Use email OTP below.',
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onErrorContainer,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
+                        const SizedBox(height: 20),
+                      ],
+                      if (AppConfig.developmentTestLoginEnabled) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: PrototypeVisuals.badgeFeatBg,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: const Color(0xFFFFE3A8),
+                            ),
+                          ),
+                          child: Text(
+                            'TEST MODE',
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.labelLarge?.copyWith(
+                              color: const Color(0xFFB45309),
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        for (final role in AppAccessRole.values)
+                          if (AppConfig.developmentTestCredentials.containsKey(
+                            role.name,
+                          )) ...[
+                            OutlinedButton.icon(
+                              onPressed: _busy
+                                  ? null
+                                  : () => _developmentTestLogin(role),
+                              icon: const Icon(Icons.science_outlined),
+                              label: Text(
+                                '${role.name[0].toUpperCase()}${role.name.substring(1)} Test Login',
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                          ],
                         const SizedBox(height: 8),
                       ],
-                  ],
-                  const SizedBox(height: 40),
-                  FilledButton.icon(
-                    onPressed: _busy || !socialAuthEnabled
-                        ? null
-                        : () => _socialSignIn(
-                            ref.read(authRepositoryProvider).signInWithGoogle,
-                          ),
-                    icon: const Icon(Icons.g_mobiledata_rounded),
-                    label: Text(l10n.continueWithGoogle),
-                  ),
-                  const SizedBox(height: 16),
-                  OutlinedButton.icon(
-                    onPressed: _busy || !socialAuthEnabled
-                        ? null
-                        : () => _socialSignIn(
-                            ref.read(authRepositoryProvider).signInWithApple,
-                          ),
-                    icon: const Icon(Icons.apple_rounded),
-                    label: Text(l10n.continueWithApple),
-                  ),
-                  const SizedBox(height: 24),
-                  if (!socialAuthEnabled) ...[
-                    Text(
-                      'Google and Apple sign-in are unavailable in local mode. Use email OTP below.',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                      // ---- Contact channel toggle ----
+                      _ChannelToggle(
+                        channel: _channel,
+                        onChanged: _toggleChannel,
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                  Row(
-                    children: [
-                      const Expanded(child: Divider()),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Text('OR', style: theme.textTheme.labelLarge),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _contactController,
+                        enabled: !_busy && !_otpSent,
+                        keyboardType: isEmail
+                            ? TextInputType.emailAddress
+                            : TextInputType.phone,
+                        autocorrect: false,
+                        style: const TextStyle(
+                          color: AppTheme.ink,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        decoration: InputDecoration(
+                          labelText: isEmail ? l10n.email : l10n.phone,
+                          hintText: isEmail
+                              ? 'you@example.com'
+                              : '98XXXXXXXX',
+                          prefixIcon: Icon(
+                            isEmail
+                                ? Icons.mail_outline_rounded
+                                : Icons.phone_outlined,
+                            color: AppTheme.muted,
+                          ),
+                          filled: true,
+                          fillColor: AppTheme.card,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15),
+                            borderSide: const BorderSide(color: AppTheme.line),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15),
+                            borderSide: const BorderSide(color: AppTheme.line),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15),
+                            borderSide: const BorderSide(
+                              color: AppTheme.brand,
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                        validator: _validateContact,
                       ),
-                      const Expanded(child: Divider()),
+                      const SizedBox(height: 14),
+                      // ---- Send code ----
+                      PrototypeButton(
+                        label: _resendSeconds > 0
+                            ? 'Resend code in ${_resendSeconds}s'
+                            : _otpSent
+                            ? l10n.resendOtp
+                            : l10n.sendOtp,
+                        onPressed: _busy || _resendSeconds > 0
+                            ? null
+                            : _sendOtp,
+                        icon: Icons.sms_outlined,
+                      ),
+                      if (_otpSent) ...[
+                        const SizedBox(height: 16),
+                        OtpPanel(
+                          otpController: _otpController,
+                          otpFieldKey: _otpInputKey,
+                          verifyLabel: l10n.verifyOtp,
+                          onVerify: _verifyOtp,
+                          busy: _otpBusy,
+                        ),
+                      ],
+                      if (_error != null) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppTheme.danger.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            _error!,
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: AppTheme.danger,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'New here?',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: AppTheme.muted,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: _busy
+                                ? null
+                                : () => context.go(AppRoutes.signup),
+                            child: Text(
+                              l10n.signUp,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.brand,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          TextButton(
+                            onPressed: _busy
+                                ? null
+                                : () => context.go(AppRoutes.forgotPassword),
+                            child: const Text(
+                              'Forgot password?',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.brand,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 24),
-                  SegmentedButton<_OtpChannel>(
-                    segments: [
-                      ButtonSegment(
-                        value: _OtpChannel.email,
-                        label: Text(l10n.email),
-                      ),
-                      ButtonSegment(
-                        value: _OtpChannel.phone,
-                        label: Text(l10n.phone),
-                      ),
-                    ],
-                    selected: {_channel},
-                    onSelectionChanged: (s) => _toggleChannel(),
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _contactController,
-                    enabled: !_busy && !_otpSent,
-                    keyboardType: isEmail
-                        ? TextInputType.emailAddress
-                        : TextInputType.phone,
-                    autocorrect: false,
-                    decoration: InputDecoration(
-                      labelText: isEmail ? l10n.email : l10n.phone,
-                      prefixIcon: Icon(
-                        isEmail ? Icons.mail_outline : Icons.phone_outlined,
-                      ),
-                      border: const OutlineInputBorder(),
-                    ),
-                    validator: _validateContact,
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton.tonalIcon(
-                    onPressed: _busy || _resendSeconds > 0 ? null : _sendOtp,
-                    icon: _busy
-                        ? const SizedBox.square(
-                            dimension: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.sms_outlined),
-                    label: Text(
-                      _resendSeconds > 0
-                          ? 'Resend code in ${_resendSeconds}s'
-                          : _otpSent
-                          ? l10n.resendOtp
-                          : l10n.sendOtp,
-                    ),
-                  ),
-                  if (_otpSent) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      l10n.otpSent,
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      key: _otpInputKey,
-                      controller: _otpController,
-                      enabled: !_otpBusy,
-                      keyboardType: TextInputType.number,
-                      maxLength: 6,
-                      decoration: InputDecoration(
-                        labelText: l10n.otpPlaceholder,
-                        prefixIcon: const Icon(Icons.verified_outlined),
-                        border: const OutlineInputBorder(),
-                        counterText: '',
-                      ),
-                      validator: _validateOtp,
-                      onFieldSubmitted: (_) => _verifyOtp(),
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: _otpBusy ? null : _verifyOtp,
-                      child: _otpBusy
-                          ? const SizedBox.square(
-                              dimension: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Text(l10n.verifyOtp),
-                    ),
-                  ],
-                  if (_error != null) ...[
-                    const SizedBox(height: 16),
-                    Text(
-                      _error!,
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.error,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 24),
-                  TextButton(
-                    onPressed: _busy ? null : () => context.go(AppRoutes.shell),
-                    child: Text(l10n.back),
-                  ),
-                ],
+                ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ChannelToggle extends StatelessWidget {
+  const _ChannelToggle({required this.channel, required this.onChanged});
+
+  final _OtpChannel channel;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEAE7F5),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          _toggle(context, _OtpChannel.email, 'Email'),
+          _toggle(context, _OtpChannel.phone, 'Phone'),
+        ],
+      ),
+    );
+  }
+
+  Widget _toggle(BuildContext context, _OtpChannel value, String label) {
+    final selected = channel == value;
+    return Expanded(
+      child: GestureDetector(
+        onTap: onChanged,
+        child: AnimatedContainer(
+          duration: AppMotion.fast,
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selected ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(11),
+            boxShadow: selected
+                ? const [
+                    BoxShadow(
+                      color: Color(0x14000000),
+                      blurRadius: 8,
+                      offset: Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w800,
+              color: selected ? AppTheme.ink : AppTheme.muted,
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SocialButton extends StatelessWidget {
+  const _SocialButton({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onPressed != null;
+    return Material(
+      color: AppTheme.card,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(15),
+        side: const BorderSide(color: AppTheme.line),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: enabled ? onPressed : null,
+        child: Container(
+          height: 52,
+          alignment: Alignment.center,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 20, color: AppTheme.ink),
+              const SizedBox(width: 10),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.ink,
+                ),
+              ),
+            ],
           ),
         ),
       ),

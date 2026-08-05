@@ -7,8 +7,11 @@ import '../../../../core/location/device_location_service.dart';
 import '../../../../core/location/location_providers.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/prototype_controls.dart';
 import '../../../../core/theme/prototype_visuals.dart';
+import '../../../../core/widgets/animated_entrance.dart';
 import '../../../../core/widgets/app_bottom_sheet.dart';
+import '../../../../core/widgets/app_network_image.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/skeleton.dart';
@@ -199,9 +202,12 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 18),
+              const _HeroBanner(),
+              const SizedBox(height: 18),
               const _PrimaryCategories(),
               const SizedBox(height: 4),
               const _RadiusSelector(),
+              const _PopularCities(),
               const SizedBox(height: 12),
               _DynamicSection(
                 async: events,
@@ -245,6 +251,49 @@ class HomeScreen extends ConsumerWidget {
                   onRetry: () => ref.invalidate(popularVenuesProvider),
                 ),
               ),
+              const SizedBox(height: 24),
+              _DynamicSection(
+                async: popular,
+                title: '🔥 Trending now',
+                onViewAll: () => context.go(AppRoutes.search),
+                loading: const _LoadingCardRow(),
+                itemBuilder: (venues) => _HorizontalList(
+                  height: 186,
+                  items: venues
+                      .take(6)
+                      .map(
+                        (v) => SizedBox(
+                          width: 250,
+                          child: AnimatedEntrance(
+                            child: VenueCard(venue: v, compact: true),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+              _DynamicSection(
+                async: nearby,
+                title: '✨ Recommended for you',
+                onViewAll: null,
+                loading: const _LoadingCardRow(),
+                itemBuilder: (venues) => _HorizontalList(
+                  height: 186,
+                  items: venues
+                      .take(6)
+                      .map(
+                        (v) => SizedBox(
+                          width: 250,
+                          child: AnimatedEntrance(
+                            child: VenueCard(venue: v, compact: true),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+              _SpecialOffers(popular: popular),
+              _RecentlyViewed(),
               const SizedBox(height: 24),
               _SectionHeader(title: '📍 Nearby venues', onViewAll: null),
               const SizedBox(height: 12),
@@ -1022,6 +1071,401 @@ class _LoadingGrid extends StatelessWidget {
         SizedBox(width: 12),
         Expanded(child: SkeletonBox(height: 240, radius: 16)),
       ],
+    );
+  }
+}
+
+/// Prototype-style promo hero: gradient card with tagline and a search CTA.
+class _HeroBanner extends ConsumerWidget {
+  const _HeroBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final area = ref.watch(searchAreaProvider);
+    final city = area.cityLabel.split(',').first;
+    return AnimatedEntrance(
+      child: Material(
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        clipBehavior: Clip.antiAlias,
+        child: Ink(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF8B5CF6), Color(0xFF6C3DF4), Color(0xFF4F46E5)],
+            ),
+          ),
+          child: InkWell(
+            onTap: () => context.go(AppRoutes.search),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(18, 20, 16, 20),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(7),
+                          ),
+                          child: const Text(
+                            '⭐ FEATURED',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.6,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Discover spaces\nnear $city',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 21,
+                            fontWeight: FontWeight.w800,
+                            height: 1.15,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 7,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(11),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.explore_rounded,
+                                    size: 14,
+                                    color: AppTheme.brand,
+                                  ),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    'Explore now',
+                                    style: TextStyle(
+                                      color: AppTheme.brand,
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Text(
+                    '🏛️',
+                    style: TextStyle(
+                      fontSize: 58,
+                      fontFamilyFallback: AppTheme.emojiFontFallbacks,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Prototype `.radRow`-style horizontal city chips (short names only, so they
+/// never collide with the location picker sheet labels).
+class _PopularCities extends ConsumerWidget {
+  const _PopularCities();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final current = ref.watch(searchAreaProvider);
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: SizedBox(
+        height: 40,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          children: [
+            const Center(
+              child: Text(
+                '🌆 Popular',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.muted,
+                  fontFamilyFallback: AppTheme.emojiFontFallbacks,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            for (final entry in kSearchCities.entries) ...[
+              _CityChip(
+                label: entry.key,
+                selected: entry.value.cityLabel == current.cityLabel,
+                onTap: () {
+                  ref.read(searchAreaProvider.notifier).state = entry.value;
+                  ref.invalidate(nearbyVenuesProvider);
+                  final query = ref.read(searchQueryProvider);
+                  ref.read(searchQueryProvider.notifier).state = query.copyWith(
+                    city: () => entry.key,
+                    latitude: () => entry.value.latitude,
+                    longitude: () => entry.value.longitude,
+                  );
+                },
+              ),
+              const SizedBox(width: 8),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CityChip extends StatelessWidget {
+  const _CityChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected ? AppTheme.ink : AppTheme.card,
+      shape: StadiumBorder(
+        side: BorderSide(color: selected ? AppTheme.ink : AppTheme.line),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const StadiumBorder(),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: selected ? Colors.white : AppTheme.muted,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Horizontal strip of venues carrying an offer, when any exist.
+class _SpecialOffers extends StatelessWidget {
+  const _SpecialOffers({required this.popular});
+
+  final AsyncValue<List<Venue>> popular;
+
+  @override
+  Widget build(BuildContext context) {
+    final venues = popular.valueOrNull ?? const <Venue>[];
+    final offers = venues
+        .where(
+          (v) =>
+              (v.offerText.trim().isNotEmpty || v.offerPercent != null) &&
+              v.isActive,
+        )
+        .take(6)
+        .toList();
+    if (offers.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          PrototypeSectionHeader(title: '🏷️ Special offers', onViewAll: null),
+          const SizedBox(height: 12),
+          _HorizontalList(
+            height: 200,
+            items: offers
+                .map(
+                  (v) => SizedBox(
+                    width: 260,
+                    child: _OfferCard(venue: v),
+                  ),
+                )
+                .toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OfferCard extends StatelessWidget {
+  const _OfferCard({required this.venue});
+
+  final Venue venue;
+
+  @override
+  Widget build(BuildContext context) {
+    final discount =
+        venue.offerPercent != null
+        ? '${venue.offerPercent!.toStringAsFixed(0)}% OFF'
+        : 'OFFER';
+    return Material(
+      color: AppTheme.card,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: AppTheme.line),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => context.push(
+          AppRoutes.venueDetails.replaceAll(':id', venue.id),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              height: 96,
+              decoration: BoxDecoration(
+                gradient: PrototypeVisuals.thumbGradientFor(venue.id),
+              ),
+              child: Stack(
+                children: [
+                  if (venue.coverImageUrl.isNotEmpty)
+                    Positioned.fill(child: AppNetworkImage(url: venue.coverImageUrl)),
+                  Center(
+                    child: Text(
+                      PrototypeVisuals.emojiForCategorySlug(
+                        venue.category?.slug,
+                        icon: venue.category?.icon,
+                      ),
+                      style: PrototypeVisuals.emojiStyle(fontSize: 40),
+                    ),
+                  ),
+                  Positioned(
+                    left: 9,
+                    top: 9,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE11D48),
+                        borderRadius: BorderRadius.circular(7),
+                      ),
+                      child: Text(
+                        discount,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    venue.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.ink,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    venue.offerText.trim().isNotEmpty
+                        ? venue.offerText.trim()
+                        : 'Limited-time discount on this venue',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.muted,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Horizontal strip of recently-opened venues (in-memory, capped).
+class _RecentlyViewed extends ConsumerWidget {
+  const _RecentlyViewed();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ids = ref.watch(recentlyViewedIdsProvider);
+    if (ids.isEmpty) return const SizedBox.shrink();
+
+    final venues = <Venue>[];
+    for (final id in ids) {
+      final venue = ref.watch(venueDetailsProvider(id)).valueOrNull;
+      if (venue != null) venues.add(venue);
+      if (venues.length >= 6) break;
+    }
+    if (venues.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          PrototypeSectionHeader(title: '🕘 Recently viewed', onViewAll: null),
+          const SizedBox(height: 12),
+          _HorizontalList(
+            height: 186,
+            items: venues
+                .map(
+                  (v) => SizedBox(
+                    width: 250,
+                    child: AnimatedEntrance(
+                      child: VenueCard(venue: v, compact: true),
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -30,7 +30,7 @@ class BookMySpaceApp extends ConsumerWidget {
           initialLocation ??
           (isAuthCallbackUri(Uri.base)
               ? AppRoutes.authCallback
-              : AppRoutes.shell),
+              : AppRoutes.splash),
       currentUser: currentUser,
       authReady: authReady,
       accessRole: roleAsync.asData?.value ?? AppAccessRole.customer,

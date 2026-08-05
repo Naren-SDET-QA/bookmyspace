@@ -11,7 +11,9 @@ import '../../features/admin/presentation/screens/admin_dashboard_screen.dart';
 import '../../features/analytics/presentation/screens/analytics_screen.dart';
 import '../../features/auth/domain/auth_user.dart';
 import '../../features/auth/presentation/screens/auth_callback_screen.dart';
+import '../../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
+import '../../features/auth/presentation/screens/signup_screen.dart';
 import '../../features/booking/domain/booking.dart';
 import '../../features/booking/presentation/screens/booking_result_screen.dart';
 import '../../features/booking/presentation/screens/booking_screen.dart';
@@ -41,6 +43,7 @@ import '../../features/payments/presentation/screens/payment_screen.dart';
 import '../../features/payments/presentation/screens/receipt_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/registration/presentation/screens/registration_screens.dart';
+import '../../features/splash/presentation/screens/splash_screen.dart';
 import '../../features/saved/presentation/screens/saved_screen.dart';
 import '../../features/search/presentation/screens/search_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
@@ -55,6 +58,7 @@ import '../theme/prototype_visuals.dart';
 
 /// Route names used for navigation.
 abstract class AppRoutes {
+  static const splash = '/splash';
   static const onboarding = '/onboarding';
   static const shell = '/home';
   static const home = '/home';
@@ -64,6 +68,8 @@ abstract class AppRoutes {
   static const profile = '/profile';
   static const settings = '/settings';
   static const login = '/login';
+  static const signup = '/signup';
+  static const forgotPassword = '/forgot-password';
   static const authCallback = '/auth/callback';
   static const venueDetails = '/venues/:id';
   static const bookingFlow = '/venues/:id/book';
@@ -137,9 +143,13 @@ GoRouter createAppRouter({
       if (!authReady) return null;
       final location = state.matchedLocation;
       final isAuthEntry =
-          location == AppRoutes.onboarding || location == AppRoutes.login;
+          location == AppRoutes.onboarding ||
+          location == AppRoutes.login ||
+          location == AppRoutes.signup ||
+          location == AppRoutes.forgotPassword;
       final isAuthCallback = location == AppRoutes.authCallback;
-      final isPublic = isAuthEntry || isAuthCallback;
+      final isSplash = location == AppRoutes.splash;
+      final isPublic = isAuthEntry || isAuthCallback || isSplash;
       if (currentUser == null) {
         return isPublic ? null : AppRoutes.login;
       }
@@ -171,6 +181,10 @@ GoRouter createAppRouter({
     },
     routes: [
       GoRoute(
+        path: AppRoutes.splash,
+        builder: (context, state) => const SplashScreen(),
+      ),
+      GoRoute(
         path: AppRoutes.onboarding,
         builder: (context, state) => const OnboardingScreen(),
       ),
@@ -178,6 +192,16 @@ GoRouter createAppRouter({
         path: AppRoutes.login,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.signup,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const SignupScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.forgotPassword,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const ForgotPasswordScreen(),
       ),
       GoRoute(
         path: AppRoutes.authCallback,
