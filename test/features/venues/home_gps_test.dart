@@ -1,6 +1,6 @@
+import 'package:bookmyspace/core/localization/app_localizations.dart';
 import 'package:bookmyspace/core/location/device_location_service.dart';
 import 'package:bookmyspace/core/location/location_providers.dart';
-import 'package:bookmyspace/core/localization/app_localizations.dart';
 import 'package:bookmyspace/core/router/app_router.dart';
 import 'package:bookmyspace/features/auth/domain/auth_user.dart';
 import 'package:bookmyspace/features/auth/presentation/auth_providers.dart';

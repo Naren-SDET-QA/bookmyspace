@@ -114,7 +114,7 @@ class OsmVenueDiscoveryProvider implements VenueDiscoveryProvider {
 
     final elements = (data['elements'] as List<dynamic>? ?? const [])
 
-        .whereType<Map>()
+        .whereType<Map<String, dynamic>>()
 
         .map((e) => Map<String, dynamic>.from(e))
 

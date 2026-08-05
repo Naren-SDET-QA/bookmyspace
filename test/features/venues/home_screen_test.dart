@@ -2,6 +2,8 @@ import 'package:bookmyspace/core/localization/app_localizations.dart';
 import 'package:bookmyspace/core/router/app_router.dart';
 import 'package:bookmyspace/core/theme/app_theme.dart';
 import 'package:bookmyspace/core/theme/prototype_visuals.dart';
+import 'package:bookmyspace/core/widgets/app_bottom_sheet.dart';
+import 'package:bookmyspace/features/accommodations/presentation/screens/accommodation_list_screen.dart';
 import 'package:bookmyspace/features/admin/domain/content_models.dart';
 import 'package:bookmyspace/features/admin/presentation/content_providers.dart';
 import 'package:bookmyspace/features/auth/domain/auth_user.dart';
@@ -11,7 +13,6 @@ import 'package:bookmyspace/features/courses/presentation/screens/courses_list_s
 import 'package:bookmyspace/features/events/presentation/event_providers.dart';
 import 'package:bookmyspace/features/events/presentation/screens/events_list_screen.dart';
 import 'package:bookmyspace/features/meeting_rooms/presentation/screens/meeting_rooms_screen.dart';
-import 'package:bookmyspace/features/accommodations/presentation/screens/accommodation_list_screen.dart';
 import 'package:bookmyspace/features/search/presentation/screens/search_screen.dart';
 import 'package:bookmyspace/features/sports/presentation/screens/sports_screens.dart';
 import 'package:bookmyspace/features/venues/presentation/venue_providers.dart';
@@ -227,7 +228,12 @@ void main() {
     await tester.tap(find.text('Ongole, Andhra Pradesh'));
     await tester.pumpAndSettle();
     expect(find.text('Choose location'), findsOneWidget);
-    await tester.tap(find.text('Guntur'));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AppBottomSheetScrollBody),
+        matching: find.text('Guntur'),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Guntur, Andhra Pradesh'), findsOneWidget);

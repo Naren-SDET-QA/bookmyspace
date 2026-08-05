@@ -9,8 +9,8 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/prototype_controls.dart';
-import '../../domain/auth_user.dart';
 import '../auth_providers.dart';
+import '../widgets/channel_toggle.dart';
 import '../widgets/otp_panel.dart';
 
 /// Prototype-style signup. Reuses the OTP-based authentication flow —
@@ -208,9 +208,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   validator: _validateName,
                 ),
                 const SizedBox(height: 14),
-                _ChannelToggle(
-                  channel: _channel,
-                  onChanged: () {
+                ChannelToggle(
+                  channels: const ['Email', 'Phone'],
+                  selectedIndex: _channel == _SignupChannel.email ? 0 : 1,
+                  onChanged: (_) {
                     setState(() {
                       _channel = _channel == _SignupChannel.email
                           ? _SignupChannel.phone
@@ -324,61 +325,4 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   }
 }
 
-class _ChannelToggle extends StatelessWidget {
-  const _ChannelToggle({required this.channel, required this.onChanged});
 
-  final _SignupChannel channel;
-  final VoidCallback onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEAE7F5),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          _toggle(context, _SignupChannel.email, 'Email'),
-          _toggle(context, _SignupChannel.phone, 'Phone'),
-        ],
-      ),
-    );
-  }
-
-  Widget _toggle(BuildContext context, _SignupChannel value, String label) {
-    final selected = channel == value;
-    return Expanded(
-      child: GestureDetector(
-        onTap: onChanged,
-        child: AnimatedContainer(
-          duration: AppMotion.fast,
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: selected ? Colors.white : Colors.transparent,
-            borderRadius: BorderRadius.circular(11),
-            boxShadow: selected
-                ? const [
-                    BoxShadow(
-                      color: Color(0x14000000),
-                      blurRadius: 8,
-                      offset: Offset(0, 2),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w800,
-              color: selected ? AppTheme.ink : AppTheme.muted,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}

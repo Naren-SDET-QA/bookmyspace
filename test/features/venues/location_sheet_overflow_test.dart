@@ -49,7 +49,7 @@ void main() {
                   body: Center(
                     child: TextButton(
                       onPressed: () {
-                        final current = kDefaultSearchArea;
+                        const current = kDefaultSearchArea;
                         showAppBottomSheet<void>(
                           context: context,
                           maxHeightFactor: 0.78,

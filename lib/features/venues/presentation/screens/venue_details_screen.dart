@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/maps/domain/geo_point.dart';
@@ -13,23 +14,33 @@ import '../../../../core/theme/prototype_visuals.dart';
 import '../../../../core/widgets/animated_entrance.dart';
 import '../../../../core/widgets/app_network_image.dart';
 import '../../../../core/widgets/error_view.dart';
+import '../../../booking/domain/booking.dart';
+import '../../../booking/presentation/booking_providers.dart';
 import '../../../venue_import/presentation/claim_venue_sheet.dart';
 import '../../domain/venue.dart';
 import '../venue_providers.dart';
 import '../widgets/venue_badges.dart';
 
-/// Full venue details: hero gallery, stats, amenities, availability, map,
-/// similar spaces and a sticky booking bar.
-class VenueDetailsScreen extends ConsumerWidget {
+/// Full venue details: hero gallery, stats, amenities, availability calendar,
+/// map, similar spaces and a sticky booking bar.
+class VenueDetailsScreen extends ConsumerStatefulWidget {
   const VenueDetailsScreen({super.key, required this.venueId});
 
   final String venueId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final venueAsync = ref.watch(venueDetailsProvider(venueId));
+  ConsumerState<VenueDetailsScreen> createState() => _VenueDetailsScreenState();
+}
+
+class _VenueDetailsScreenState extends ConsumerState<VenueDetailsScreen> {
+  DateTime? _selectedDate;
+  SlotAvailability? _selectedSlot;
+
+  @override
+  Widget build(BuildContext context) {
+    final venueAsync = ref.watch(venueDetailsProvider(widget.venueId));
     // Record the venue in the Home "Recently viewed" strip (session-only).
-    ref.listen(venueDetailsProvider(venueId), (previous, next) {
+    ref.listen(venueDetailsProvider(widget.venueId), (previous, next) {
       final venue = next.valueOrNull;
       if (venue != null) {
         ref.read(recentlyViewedIdsProvider.notifier).record(venue.id);
@@ -42,12 +53,29 @@ class VenueDetailsScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
           message: e.toString(),
-          onRetry: () => ref.invalidate(venueDetailsProvider(venueId)),
+          onRetry: () => ref.invalidate(venueDetailsProvider(widget.venueId)),
         ),
-        data: (venue) => _VenueDetailsBody(venue: venue),
+        data: (venue) => _VenueDetailsBody(
+          venue: venue,
+          selectedDate: _selectedDate,
+          selectedSlot: _selectedSlot,
+          onDateSelected: (d) {
+            setState(() {
+              _selectedDate = d;
+              _selectedSlot = null;
+            });
+          },
+          onSlotSelected: (slot) => setState(() => _selectedSlot = slot),
+        ),
       ),
       bottomNavigationBar: venueAsync.maybeWhen(
-        data: (venue) => venue.isActive ? _BookingBar(venue: venue) : null,
+        data: (venue) => venue.isActive
+            ? _BookingBar(
+                venue: venue,
+                selectedDate: _selectedDate,
+                selectedSlot: _selectedSlot,
+              )
+            : null,
         orElse: () => null,
       ),
     );
@@ -55,9 +83,19 @@ class VenueDetailsScreen extends ConsumerWidget {
 }
 
 class _VenueDetailsBody extends ConsumerWidget {
-  const _VenueDetailsBody({required this.venue});
+  const _VenueDetailsBody({
+    required this.venue,
+    required this.selectedDate,
+    required this.selectedSlot,
+    required this.onDateSelected,
+    required this.onSlotSelected,
+  });
 
   final Venue venue;
+  final DateTime? selectedDate;
+  final SlotAvailability? selectedSlot;
+  final ValueChanged<DateTime> onDateSelected;
+  final ValueChanged<SlotAvailability> onSlotSelected;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -189,7 +227,7 @@ class _VenueDetailsBody extends ConsumerWidget {
           ),
         ),
         SliverToBoxAdapter(
-          child: Container(
+          child: DecoratedBox(
             decoration: const BoxDecoration(
               color: AppTheme.surfaceLight,
               borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
@@ -279,7 +317,7 @@ class _VenueDetailsBody extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(width: 9),
-                      Expanded(
+                      const Expanded(
                         child: PrototypeStatBox(
                           value: '20%',
                           label: 'Advance',
@@ -335,13 +373,19 @@ class _VenueDetailsBody extends ConsumerWidget {
                       ),
                     ),
                   ],
-                  // ---- Availability peek ----
+                  // ---- Availability calendar ----
                   const PrototypeSectionHeader(
                     title: 'Availability',
                     padding: EdgeInsets.only(top: 20),
                   ),
                   const SizedBox(height: 10),
-                  _AvailabilityCard(venue: venue),
+                  _AvailabilityCalendar(
+                    venue: venue,
+                    selectedDate: selectedDate,
+                    selectedSlot: selectedSlot,
+                    onDateSelected: onDateSelected,
+                    onSlotSelected: onSlotSelected,
+                  ),
                   // ---- Details ----
                   if (venue.operatingHours.isNotEmpty ||
                       venue.foodOptions.isNotEmpty ||
@@ -398,9 +442,9 @@ class _VenueDetailsBody extends ConsumerWidget {
                     ),
                   ],
                   // ---- Map ----
-                  const PrototypeSectionHeader(
+                  PrototypeSectionHeader(
                     title: l10n.address,
-                    padding: EdgeInsets.only(top: 20),
+                    padding: const EdgeInsets.only(top: 20),
                   ),
                   const SizedBox(height: 10),
                   _VenueMap(
@@ -528,62 +572,449 @@ class _HeroFavButton extends StatelessWidget {
   }
 }
 
-/// "Check availability" card — links into the booking flow which owns the
-/// live calendar + slot selection (kept here to avoid duplicated data work).
-class _AvailabilityCard extends StatelessWidget {
-  const _AvailabilityCard({required this.venue});
+/// Inline availability calendar (prototype `.calCard` + `.slotWrap`).
+///
+/// Shows the current/next months, marks past days as closed and lets the user
+/// pick a date to load live time slots from the booking backend. Slot
+/// selection enables the sticky "Request Booking" CTA.
+class _AvailabilityCalendar extends ConsumerStatefulWidget {
+  const _AvailabilityCalendar({
+    required this.venue,
+    required this.selectedDate,
+    required this.selectedSlot,
+    required this.onDateSelected,
+    required this.onSlotSelected,
+  });
 
   final Venue venue;
+  final DateTime? selectedDate;
+  final SlotAvailability? selectedSlot;
+  final ValueChanged<DateTime> onDateSelected;
+  final ValueChanged<SlotAvailability> onSlotSelected;
+
+  @override
+  ConsumerState<_AvailabilityCalendar> createState() =>
+      _AvailabilityCalendarState();
+}
+
+class _AvailabilityCalendarState extends ConsumerState<_AvailabilityCalendar> {
+  static const _weekdayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+  int _monthOffset = 0;
+
+  bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  void _shiftMonth(int delta) {
+    setState(() {
+      _monthOffset = (_monthOffset + delta).clamp(0, 2);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final venue = widget.venue;
+    final now = DateTime.now();
+    final month = DateTime(now.year, now.month + _monthOffset);
+    final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
+    // Dart: Monday = 1 … Sunday = 7; grid starts on Sunday.
+    final firstWeekday =
+        (DateTime(month.year, month.month, 1).weekday) % 7;
+
+    final selected = widget.selectedDate;
+
     return Material(
       color: AppTheme.card,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: const BorderSide(color: AppTheme.line),
       ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: () => context.push(
-          AppRoutes.bookingFlow.replaceAll(':id', venue.id),
-          extra: venue,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  DateFormat('MMMM yyyy').format(month),
+                  style: const TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.ink,
+                  ),
+                ),
+                Row(
+                  children: [
+                    _CalNavButton(
+                      icon: Icons.chevron_left_rounded,
+                      enabled: _monthOffset > 0,
+                      onTap: () => _shiftMonth(-1),
+                    ),
+                    const SizedBox(width: 6),
+                    _CalNavButton(
+                      icon: Icons.chevron_right_rounded,
+                      enabled: _monthOffset < 2,
+                      onTap: () => _shiftMonth(1),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            // Weekday header (prototype `.wkRow`).
+            Row(
+              children: [
+                for (final label in _weekdayLabels)
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 5),
+                      child: Text(
+                        label,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFFB0ABD0),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            // Day grid (prototype `.calGrid`).
+            GridView.count(
+              crossAxisCount: 7,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 4,
+              crossAxisSpacing: 4,
+              children: [
+                for (var i = 0; i < firstWeekday; i++) const SizedBox.shrink(),
+                for (var day = 1; day <= daysInMonth; day++)
+                  _buildDayCell(
+                    DateTime(month.year, month.month, day),
+                    now,
+                    selected,
+                  ),
+              ],
+            ),
+            // Legend (prototype `.legend`).
+            const SizedBox(height: 12),
+            const Padding(
+              padding: EdgeInsets.only(top: 12),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  border: Border(
+                    top: BorderSide(
+                      color: AppTheme.line,
+                      style: BorderStyle.solid,
+                    ),
+                  ),
+                ),
+                child: Padding(
+                  padding: EdgeInsets.only(top: 10),
+                  child: Wrap(
+                    spacing: 10,
+                    runSpacing: 6,
+                    children: [
+                      _LegendItem(color: Color(0xFF86EFAC), label: 'Available'),
+                      _LegendItem(color: Color(0xFFFDA4AF), label: 'Booked'),
+                      _LegendItem(color: Color(0xFFFCD34D), label: 'Partially available'),
+                      _LegendItem(color: Color(0xFFD4D0E6), label: 'Past / Closed'),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // Slots for the selected date (prototype `.slotWrap`).
+            if (selected != null) ...[
+              const SizedBox(height: 16),
+              _CalendarSlots(
+                venueId: venue.id,
+                date: selected,
+                selectedSlot: widget.selectedSlot,
+                onSlotSelected: widget.onSlotSelected,
+              ),
+            ] else
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 14),
+                child: Text(
+                  '👆 Pick a date to see time slots & prices',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: AppTheme.muted,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDayCell(DateTime date, DateTime now, DateTime? selected) {
+    final isPast = date.isBefore(DateTime(now.year, now.month, now.day));
+    final isSelected = selected != null && _sameDay(date, selected);
+
+    return GestureDetector(
+      onTap: isPast ? null : () => widget.onDateSelected(date),
+      child: AnimatedContainer(
+        duration: AppMotion.fast,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppTheme.brand
+              : (isPast
+                    ? const Color(0xFFF1F0F7)
+                    : const Color(0xFFE9FBEF)),
+          borderRadius: BorderRadius.circular(11),
+          border: Border.all(
+            color: isSelected
+                ? AppTheme.brand
+                : (isPast ? Colors.transparent : const Color(0xFF86EFAC)),
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Text(
+          '${date.day}',
+          style: TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w700,
+            color: isSelected
+                ? Colors.white
+                : (isPast
+                      ? const Color(0xFFA5A0C4)
+                      : const Color(0xFF15803D)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CalNavButton extends StatelessWidget {
+  const _CalNavButton({
+    required this.icon,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: enabled ? AppTheme.card : const Color(0xFFF6F5FB),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: const BorderSide(color: AppTheme.line),
+      ),
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        borderRadius: BorderRadius.circular(10),
+        child: SizedBox(
+          width: 30,
+          height: 30,
+          child: Icon(
+            icon,
+            size: 17,
+            color: enabled ? AppTheme.ink : const Color(0xFFCFCCDF),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LegendItem extends StatelessWidget {
+  const _LegendItem({required this.color, required this.label});
+
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 9,
+          height: 9,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+        const SizedBox(width: 5),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: AppTheme.muted,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Slot picker for the selected calendar date (prototype `.slotCard` list).
+class _CalendarSlots extends ConsumerWidget {
+  const _CalendarSlots({
+    required this.venueId,
+    required this.date,
+    required this.selectedSlot,
+    required this.onSlotSelected,
+  });
+
+  final String venueId;
+  final DateTime date;
+  final SlotAvailability? selectedSlot;
+  final ValueChanged<SlotAvailability> onSlotSelected;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final availability = ref.watch(
+      slotAvailabilityProvider(
+        SlotAvailabilityQuery(venueId: venueId, date: date),
+      ),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Slots for ${DateFormat('EEE, d MMM').format(date)}',
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+            color: AppTheme.ink,
+          ),
+        ),
+        const SizedBox(height: 10),
+        availability.when(
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(
+              child: SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2.5),
+              ),
+            ),
+          ),
+          error: (e, _) => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'Could not load slots — pull back and retry.',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.muted,
+              ),
+            ),
+          ),
+          data: (slots) {
+            if (slots.isEmpty) {
+              return Text(
+                l10n.noSlotsForDate,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.muted,
+                ),
+              );
+            }
+            return Column(
+              children: [
+                for (final slot in slots)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 9),
+                    child: _CalendarSlotTile(
+                      slot: slot,
+                      isSelected: selectedSlot?.slotId == slot.slotId,
+                      onTap: slot.isAvailable
+                          ? () => onSlotSelected(slot)
+                          : null,
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _CalendarSlotTile extends StatelessWidget {
+  const _CalendarSlotTile({
+    required this.slot,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final SlotAvailability slot;
+  final bool isSelected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = slot.isAvailable;
+    return Material(
+      color: isSelected ? const Color(0xFFFAF8FF) : AppTheme.card,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: isSelected ? AppTheme.brand : AppTheme.line,
+          width: isSelected ? 1.5 : 1.5,
+        ),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
           child: Row(
             children: [
               Container(
-                width: 44,
-                height: 44,
+                width: 42,
+                height: 42,
                 decoration: BoxDecoration(
                   color: PrototypeVisuals.softIconBg,
                   borderRadius: BorderRadius.circular(13),
                 ),
-                child: const Icon(
-                  Icons.event_available_rounded,
-                  color: AppTheme.brand,
-                  size: 21,
+                child: Center(
+                  child: Text(
+                    _slotEmoji(slot.label),
+                    style: PrototypeVisuals.emojiStyle(fontSize: 19),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Check live availability',
-                      style: TextStyle(
+                      slot.label,
+                      style: const TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.ink,
                       ),
                     ),
-                    SizedBox(height: 3),
+                    const SizedBox(height: 2),
                     Text(
-                      'Pick a date and see open time slots',
-                      style: TextStyle(
-                        fontSize: 11.5,
+                      '${slot.displayStart} – ${slot.displayEnd}',
+                      style: const TextStyle(
+                        fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.muted,
                       ),
@@ -591,16 +1022,58 @@ class _AvailabilityCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: AppTheme.brand,
-                size: 22,
-              ),
+              if (!enabled)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFDE8EE),
+                    borderRadius: BorderRadius.circular(7),
+                  ),
+                  child: Text(
+                    _reasonLabel(slot.reason),
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.danger,
+                    ),
+                  ),
+                )
+              else
+                Text(
+                  formatInr(slot.priceAmount),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.brand,
+                  ),
+                ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  String _slotEmoji(String label) => switch (label.toLowerCase()) {
+    'morning' => '🌅',
+    'evening' => '🌆',
+    'full day' || 'fullday' => '☀️',
+    'community hour' => '🤝',
+    _ => '⏰',
+  };
+
+  String _reasonLabel(String reason) {
+    return switch (reason) {
+      'booked' => 'Booked',
+      'held' => 'Unavailable',
+      'blocked' => 'Blocked',
+      'closed' => 'Closed',
+      'inactive' => 'Closed',
+      _ => 'Unavailable',
+    };
   }
 }
 
@@ -718,7 +1191,7 @@ class _SimilarSpaces extends ConsumerWidget {
 
 /// A compact, non-favourite card used only in "Similar spaces".
 class SimilarVenueCard extends StatelessWidget {
-  const SimilarVenueCard({required this.venue});
+  const SimilarVenueCard({super.key, required this.venue});
 
   final Venue venue;
 
@@ -831,9 +1304,9 @@ class SimilarVenueCard extends StatelessWidget {
                             color: AppTheme.brand,
                           ),
                         ),
-                        TextSpan(
+                        const TextSpan(
                           text: ' /day',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 10.5,
                             fontWeight: FontWeight.w600,
                             color: AppTheme.muted,
@@ -852,16 +1325,34 @@ class SimilarVenueCard extends StatelessWidget {
   }
 }
 
-/// Sticky prototype `.ctaBar` with price + Book button.
+/// Sticky prototype `.ctaBar` with price + Book / Request Booking button.
 class _BookingBar extends StatelessWidget {
-  const _BookingBar({required this.venue});
+  const _BookingBar({
+    required this.venue,
+    this.selectedDate,
+    this.selectedSlot,
+  });
 
   final Venue venue;
+  final DateTime? selectedDate;
+  final SlotAvailability? selectedSlot;
+
+  void _openBooking(BuildContext context) {
+    final dateParam = selectedDate == null
+        ? ''
+        : '?date=${DateFormat('yyyy-MM-dd').format(selectedDate!)}';
+    context.push(
+      AppRoutes.bookingFlow.replaceAll(':id', venue.id) + dateParam,
+      extra: venue,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Container(
+    final hasSlot = selectedSlot != null;
+    final label = hasSlot ? 'Request Booking' : '${l10n.bookNow} · ${formatInr(venue.price)}';
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: AppTheme.surfaceLight.withValues(alpha: 0.94),
         border: const Border(top: BorderSide(color: AppTheme.line)),
@@ -877,16 +1368,20 @@ class _BookingBar extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Full day from',
-                      style: TextStyle(
+                    Text(
+                      hasSlot
+                          ? '${selectedSlot!.label} · ${DateFormat('EEE, d MMM').format(selectedDate!)}'
+                          : 'Full day from',
+                      style: const TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.muted,
                       ),
                     ),
                     Text(
-                      formatInr(venue.price),
+                      hasSlot
+                          ? formatInr(selectedSlot!.priceAmount)
+                          : formatInr(venue.price),
                       style: const TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w800,
@@ -900,11 +1395,8 @@ class _BookingBar extends StatelessWidget {
               Expanded(
                 flex: 2,
                 child: PrototypeButton(
-                  label: '${l10n.bookNow} · ${formatInr(venue.price)}',
-                  onPressed: () => context.push(
-                    AppRoutes.bookingFlow.replaceAll(':id', venue.id),
-                    extra: venue,
-                  ),
+                  label: label,
+                  onPressed: () => _openBooking(context),
                   icon: Icons.event_available_rounded,
                 ),
               ),

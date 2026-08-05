@@ -216,20 +216,20 @@ const kImportCountries = <ImportCountryConfig>[
             name: 'Visakhapatnam',
             bbox: (17.40, 82.90, 18.10, 83.60),
           ),
-          const ImportDistrictConfig(name: 'East Godavari'),
-          const ImportDistrictConfig(name: 'West Godavari'),
-          const ImportDistrictConfig(name: 'Nellore'),
-          const ImportDistrictConfig(name: 'Chittoor'),
-          const ImportDistrictConfig(name: 'Anantapur'),
-          const ImportDistrictConfig(name: 'Kurnool'),
-          const ImportDistrictConfig(name: 'Kadapa'),
-          const ImportDistrictConfig(name: 'Srikakulam'),
-          const ImportDistrictConfig(name: 'Vizianagaram'),
+          ImportDistrictConfig(name: 'East Godavari'),
+          ImportDistrictConfig(name: 'West Godavari'),
+          ImportDistrictConfig(name: 'Nellore'),
+          ImportDistrictConfig(name: 'Chittoor'),
+          ImportDistrictConfig(name: 'Anantapur'),
+          ImportDistrictConfig(name: 'Kurnool'),
+          ImportDistrictConfig(name: 'Kadapa'),
+          ImportDistrictConfig(name: 'Srikakulam'),
+          ImportDistrictConfig(name: 'Vizianagaram'),
         ],
       ),
       ImportStateConfig(
         name: 'Telangana',
-        districts: const [
+        districts: [
           ImportDistrictConfig(name: kEntireState),
           ImportDistrictConfig(name: 'Hyderabad'),
           ImportDistrictConfig(name: 'Rangareddy'),
@@ -239,7 +239,7 @@ const kImportCountries = <ImportCountryConfig>[
       ),
       ImportStateConfig(
         name: 'Tamil Nadu',
-        districts: const [
+        districts: [
           ImportDistrictConfig(name: kEntireState),
           ImportDistrictConfig(name: 'Chennai'),
           ImportDistrictConfig(name: 'Coimbatore'),
@@ -248,7 +248,7 @@ const kImportCountries = <ImportCountryConfig>[
       ),
       ImportStateConfig(
         name: 'Karnataka',
-        districts: const [
+        districts: [
           ImportDistrictConfig(name: kEntireState),
           ImportDistrictConfig(name: 'Bengaluru Urban'),
           ImportDistrictConfig(name: 'Mysuru'),
@@ -256,7 +256,7 @@ const kImportCountries = <ImportCountryConfig>[
       ),
       ImportStateConfig(
         name: 'Maharashtra',
-        districts: const [
+        districts: [
           ImportDistrictConfig(name: kEntireState),
           ImportDistrictConfig(name: 'Mumbai'),
           ImportDistrictConfig(name: 'Pune'),
@@ -265,7 +265,7 @@ const kImportCountries = <ImportCountryConfig>[
       ),
       ImportStateConfig(
         name: 'Kerala',
-        districts: const [
+        districts: [
           ImportDistrictConfig(name: kEntireState),
           ImportDistrictConfig(name: 'Ernakulam'),
           ImportDistrictConfig(name: 'Thiruvananthapuram'),
@@ -273,7 +273,7 @@ const kImportCountries = <ImportCountryConfig>[
       ),
       ImportStateConfig(
         name: 'Delhi',
-        districts: const [
+        districts: [
           ImportDistrictConfig(name: kEntireState),
         ],
       ),

@@ -224,9 +224,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 const SizedBox(height: 20),
                 TextButton(
                   onPressed: _busy ? null : () => context.go(AppRoutes.login),
-                  child: Text(
+                  child: const Text(
                     'Back to login',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w800,
                       color: AppTheme.brand,
                     ),

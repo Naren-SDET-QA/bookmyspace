@@ -39,7 +39,7 @@ final venueDiscoveryPipelineProvider = Provider<VenueDiscoveryPipeline>((ref) {
 
 /// Places enrichment — optional; noop until key configured in provider.
 final venueEnrichmentServiceProvider = Provider<VenueEnrichmentService>((ref) {
-  return VenueEnrichmentService(const NoopVenueEnrichmentProvider());
+  return const VenueEnrichmentService(NoopVenueEnrichmentProvider());
 });
 
 /// Active categories only (fetchable).

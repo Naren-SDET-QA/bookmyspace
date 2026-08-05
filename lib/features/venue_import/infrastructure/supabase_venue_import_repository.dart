@@ -32,7 +32,7 @@ class SupabaseVenueImportRepository implements VenueImportRepository {
     required bool isActive,
   }) async {
     try {
-      final row = await _client.rpc(
+      final row = await _client.rpc<Map<String, dynamic>>(
         'admin_set_venue_import_category_active',
         params: {
           'p_category_slug': categorySlug,
@@ -56,7 +56,7 @@ class SupabaseVenueImportRepository implements VenueImportRepository {
     String? district,
   }) async {
     try {
-      final row = await _client.rpc(
+      final row = await _client.rpc<Map<String, dynamic>>(
         'admin_create_venue_import_job',
         params: {
           'p_country': country,
@@ -142,7 +142,7 @@ class SupabaseVenueImportRepository implements VenueImportRepository {
     String? notes,
   }) async {
     try {
-      final row = await _client.rpc(
+      final row = await _client.rpc<Map<String, dynamic>>(
         'admin_review_staging_venue',
         params: {
           'p_staging_id': stagingId,
@@ -171,13 +171,13 @@ class SupabaseVenueImportRepository implements VenueImportRepository {
     try {
       final payload = <String, dynamic>{
         'name': name.trim(),
-        if (addressLine1 != null) 'address_line1': addressLine1,
-        if (city != null) 'city': city,
-        if (state != null) 'state': state,
-        if (phone != null) 'phone': phone,
-        if (website != null) 'website': website,
-        if (latitude != null) 'latitude': latitude,
-        if (longitude != null) 'longitude': longitude,
+        'address_line1': ?addressLine1,
+        'city': ?city,
+        'state': ?state,
+        'phone': ?phone,
+        'website': ?website,
+        'latitude': ?latitude,
+        'longitude': ?longitude,
         'updated_at': DateTime.now().toUtc().toIso8601String(),
       };
       final rows = await _client
@@ -203,7 +203,7 @@ class SupabaseVenueImportRepository implements VenueImportRepository {
     required Map<String, dynamic> enrichment,
   }) async {
     try {
-      final row = await _client.rpc(
+      final row = await _client.rpc<Map<String, dynamic>>(
         'admin_enrich_staging_venue',
         params: {
           'p_staging_id': stagingId,
@@ -219,7 +219,7 @@ class SupabaseVenueImportRepository implements VenueImportRepository {
   @override
   Future<String> publishStaging(String stagingId) async {
     try {
-      final row = await _client.rpc(
+      final row = await _client.rpc<Map<String, dynamic>>(
         'admin_publish_staged_venue',
         params: {'p_staging_id': stagingId},
       );
@@ -236,7 +236,7 @@ class SupabaseVenueImportRepository implements VenueImportRepository {
     Map<String, dynamic>? evidence,
   }) async {
     try {
-      final row = await _client.rpc(
+      final row = await _client.rpc<Map<String, dynamic>>(
         'submit_venue_claim',
         params: {
           'p_venue_id': venueId,
@@ -252,8 +252,8 @@ class SupabaseVenueImportRepository implements VenueImportRepository {
   @override
   Future<List<VenueClaim>> listPendingClaims() async {
     try {
-      final rows = await _client.rpc('admin_list_pending_venue_claims');
-      final list = rows as List<dynamic>;
+      final rows = await _client.rpc<List<dynamic>>('admin_list_pending_venue_claims');
+      final list = rows;
       return list
           .map((e) => VenueClaim.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList();
@@ -269,7 +269,7 @@ class SupabaseVenueImportRepository implements VenueImportRepository {
     String? notes,
   }) async {
     try {
-      final row = await _client.rpc(
+      final row = await _client.rpc<Map<String, dynamic>>(
         'admin_review_venue_claim',
         params: {
           'p_claim_id': claimId,

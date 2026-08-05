@@ -1,13 +1,12 @@
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:bookmyspace/features/venue_import/domain/venue_discovery.dart';
 import 'package:bookmyspace/features/venue_import/domain/venue_discovery_pipeline.dart';
 import 'package:bookmyspace/features/venue_import/domain/venue_import_normalizer.dart';
 import 'package:bookmyspace/features/venue_import/infrastructure/noop_venue_discovery_provider.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('VenueDiscoveryPipeline validation', () {
-    final pipeline = VenueDiscoveryPipeline(const NoopVenueDiscoveryProvider());
+    const pipeline = VenueDiscoveryPipeline(NoopVenueDiscoveryProvider());
 
     test('requires country, state, category slug', () {
       expect(
@@ -69,7 +68,7 @@ void main() {
   });
 
   group('normalize + dedupe', () {
-    final pipeline = VenueDiscoveryPipeline(const NoopVenueDiscoveryProvider());
+    const pipeline = VenueDiscoveryPipeline(NoopVenueDiscoveryProvider());
     const query = VenueDiscoveryQuery(
       country: 'India',
       state: 'Andhra Pradesh',
@@ -157,7 +156,7 @@ void main() {
 
   group('pipeline run dry-run', () {
     test('noop provider returns empty unique set', () async {
-      final pipeline = VenueDiscoveryPipeline(const NoopVenueDiscoveryProvider());
+      const pipeline = VenueDiscoveryPipeline(NoopVenueDiscoveryProvider());
       final result = await pipeline.run(
         const VenueDiscoveryQuery(
           country: 'India',

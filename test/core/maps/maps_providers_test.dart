@@ -1,6 +1,3 @@
-import 'package:dio/dio.dart';
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:bookmyspace/core/config/app_config.dart';
 import 'package:bookmyspace/core/maps/domain/geo_math.dart';
 import 'package:bookmyspace/core/maps/domain/geo_point.dart';
@@ -8,6 +5,8 @@ import 'package:bookmyspace/core/maps/infrastructure/google_places_geocoder.dart
 import 'package:bookmyspace/core/maps/infrastructure/nominatim_geocoder.dart';
 import 'package:bookmyspace/core/maps/infrastructure/osm_raster_tiles.dart';
 import 'package:bookmyspace/core/maps/infrastructure/osrm_router.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 class _RecordingAdapter implements HttpClientAdapter {
   _RecordingAdapter(this.handler);

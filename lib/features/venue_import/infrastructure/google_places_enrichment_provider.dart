@@ -85,7 +85,7 @@ class GooglePlacesEnrichmentProvider implements VenueEnrichmentProvider {
     );
 
     final places = (response.data?['places'] as List<dynamic>? ?? const [])
-        .whereType<Map>()
+        .whereType<Map<String, dynamic>>()
         .map((e) => Map<String, dynamic>.from(e))
         .toList();
 
@@ -189,7 +189,7 @@ class GooglePlacesEnrichmentProvider implements VenueEnrichmentProvider {
     final imageRefs = <Map<String, dynamic>>[];
     if (request.existingImageCount == 0) {
       final photos = (place['photos'] as List<dynamic>? ?? const [])
-          .whereType<Map>()
+          .whereType<Map<String, dynamic>>()
           .take(3);
       for (final photo in photos) {
         final name = '${photo['name'] ?? ''}';

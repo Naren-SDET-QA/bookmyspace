@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../auth/presentation/auth_providers.dart';
+import '../../booking/presentation/booking_providers.dart';
 import '../domain/venue.dart';
 import '../domain/venue_repository.dart';
 import '../infrastructure/demo_venue_repository.dart';
@@ -117,7 +118,7 @@ final searchQueryProvider = StateProvider<VenueSearchQuery>((ref) {
 });
 
 /// Search results reacting to the current query + home search area / radius.
-final searchResultsProvider = FutureProvider<List<Venue>>((ref) {
+final searchResultsProvider = FutureProvider<List<Venue>>((ref) async {
   final query = ref.watch(searchQueryProvider);
   final area = ref.watch(searchAreaProvider);
   final radiusKm = ref.watch(searchRadiusKmProvider);
@@ -128,7 +129,51 @@ final searchResultsProvider = FutureProvider<List<Venue>>((ref) {
     longitude: () => query.longitude ?? area.longitude,
     maxDistanceKm: () => query.maxDistanceKm ?? radiusKm,
   );
-  return ref.watch(venueRepositoryProvider).search(effective);
+  final results = await ref.watch(venueRepositoryProvider).search(effective);
+
+  // Rating, capacity, amenities and date-availability are applied client-side
+  // because the repo query already covers text/category/price/distance.
+  var filtered = results;
+  if (query.minRating != null) {
+    filtered = filtered
+        .where((v) => v.avgRating >= query.minRating!)
+        .toList();
+  }
+  if (query.minCapacity != null) {
+    filtered = filtered
+        .where((v) => v.capacity >= query.minCapacity!)
+        .toList();
+  }
+  if (query.amenities.isNotEmpty) {
+    filtered = filtered.where((v) {
+      // List responses may not hydrate facilities; keep those we can't verify.
+      if (v.facilities.isEmpty) return true;
+      final names = v.facilities
+          .map((f) => f.facility.toLowerCase())
+          .toSet();
+      return query.amenities
+          .every((a) => names.contains(a.toLowerCase()));
+    }).toList();
+  }
+  if (query.availableOn != null && filtered.isNotEmpty) {
+    final bookingRepo = ref.read(bookingRepositoryProvider);
+    final candidates = await Future.wait(
+      filtered.map((v) async {
+        try {
+          final slots = await bookingRepo.availableTimeSlots(
+            venueId: v.id,
+            date: query.availableOn!,
+          );
+          return slots.any((s) => s.isAvailable) ? v : null;
+        } catch (_) {
+          // Can't verify availability (offline/demo) — keep the venue.
+          return v;
+        }
+      }),
+    );
+    filtered = candidates.whereType<Venue>().toList();
+  }
+  return filtered;
 });
 
 /// Ids of venues favourited by the signed-in user.
