@@ -65,6 +65,8 @@ void main() {
 
     // Navigate from home to a venue, then to the booking flow.
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Sunrise Function Hall').first);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Sunrise Function Hall').first);
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('Book now'));
@@ -81,6 +83,8 @@ void main() {
     final bookingRepo = MockBookingRepository();
     await tester.pumpWidget(_app(bookingRepo));
 
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Sunrise Function Hall').first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Sunrise Function Hall').first);
     await tester.pumpAndSettle();
@@ -124,6 +128,8 @@ void main() {
     await tester.pumpWidget(_app(bookingRepo));
 
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Sunrise Function Hall').first);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Sunrise Function Hall').first);
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('Book now'));
@@ -149,6 +155,8 @@ void main() {
       ..createdStatus = BookingStatus.requested;
     await tester.pumpWidget(_app(bookingRepo));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Sunrise Function Hall').first);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Sunrise Function Hall').first);
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('Book now'));
@@ -171,6 +179,8 @@ void main() {
     final bookingRepo = MockBookingRepository()..failAcquire = true;
     await tester.pumpWidget(_app(bookingRepo));
 
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Sunrise Function Hall').first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Sunrise Function Hall').first);
     await tester.pumpAndSettle();

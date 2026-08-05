@@ -698,11 +698,13 @@ class _PrimaryCategories extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final remote = ref.watch(homepageContentConfigProvider);
-    final tiles = remote.maybeWhen(
-      data: (cfg) => cfg.categoryTiles.isNotEmpty
-          ? cfg.categoryTiles
-          : _fallbackTiles(),
-      orElse: _fallbackTiles,
+    final tiles = _withCoreTiles(
+      remote.maybeWhen(
+        data: (cfg) => cfg.categoryTiles.isNotEmpty
+            ? cfg.categoryTiles
+            : _fallbackTiles(),
+        orElse: _fallbackTiles,
+      ),
     );
 
     return GridView.builder(
@@ -744,6 +746,35 @@ class _PrimaryCategories extends ConsumerWidget {
             routeTarget: c.key,
           ),
       ];
+
+  /// Guarantees PG / Co-Living and Hotels / Rooms / Stays always appear on
+  /// Home, appended when the remote/admin tile config does not define them.
+  static List<HomeCategoryTile> _withCoreTiles(List<HomeCategoryTile> tiles) {
+    if (tiles.any((t) => t.tileKey == 'pg') &&
+        tiles.any((t) => t.tileKey == 'stays')) {
+      return tiles;
+    }
+    final result = List<HomeCategoryTile>.of(tiles);
+    if (!tiles.any((t) => t.tileKey == 'pg')) {
+      result.add(const HomeCategoryTile(
+        id: 'pg',
+        tileKey: 'pg',
+        label: 'PG / Co-Living',
+        emoji: '🏠',
+        routeTarget: 'pg',
+      ));
+    }
+    if (!tiles.any((t) => t.tileKey == 'stays')) {
+      result.add(const HomeCategoryTile(
+        id: 'stays',
+        tileKey: 'stays',
+        label: 'Hotels / Rooms / Stays',
+        emoji: '🛏️',
+        routeTarget: 'stays',
+      ));
+    }
+    return result;
+  }
 }
 
 void _openPrimaryCategory(BuildContext context, String categoryOrRoute) {

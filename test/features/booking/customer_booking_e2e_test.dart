@@ -3,7 +3,6 @@ import 'package:bookmyspace/core/router/app_router.dart';
 import 'package:bookmyspace/features/auth/domain/auth_user.dart';
 import 'package:bookmyspace/features/auth/presentation/auth_providers.dart';
 import 'package:bookmyspace/features/booking/presentation/booking_providers.dart';
-import 'package:bookmyspace/features/booking/presentation/screens/booking_result_screen.dart';
 import 'package:bookmyspace/features/courses/presentation/course_providers.dart';
 import 'package:bookmyspace/features/events/presentation/event_providers.dart';
 import 'package:bookmyspace/features/payments/domain/checkout_service.dart';
@@ -66,6 +65,8 @@ void main() {
       ),
     );
 
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Sunrise Function Hall').first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Sunrise Function Hall').first);
     await tester.pumpAndSettle();

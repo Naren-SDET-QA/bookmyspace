@@ -11,6 +11,7 @@ import 'package:bookmyspace/features/courses/presentation/screens/courses_list_s
 import 'package:bookmyspace/features/events/presentation/event_providers.dart';
 import 'package:bookmyspace/features/events/presentation/screens/events_list_screen.dart';
 import 'package:bookmyspace/features/meeting_rooms/presentation/screens/meeting_rooms_screen.dart';
+import 'package:bookmyspace/features/accommodations/presentation/screens/accommodation_list_screen.dart';
 import 'package:bookmyspace/features/search/presentation/screens/search_screen.dart';
 import 'package:bookmyspace/features/sports/presentation/screens/sports_screens.dart';
 import 'package:bookmyspace/features/venues/presentation/venue_providers.dart';
@@ -192,11 +193,16 @@ void main() {
     ('events', EventsListScreen),
     ('meeting_room', MeetingRoomsScreen),
     ('sports_ground', SportsVenuesScreen),
+    ('pg', AccommodationListScreen),
+    ('stays', AccommodationListScreen),
   ]) {
     testWidgets('${route.$1} category opens its listing', (tester) async {
       final repo = MockVenueRepository();
       await openMobileHome(tester, repo);
 
+      await tester.ensureVisible(
+        find.byKey(ValueKey('home-category-${route.$1}')),
+      );
       await tester.tap(find.byKey(ValueKey('home-category-${route.$1}')));
       await tester.pumpAndSettle();
 
@@ -318,7 +324,11 @@ void main() {
     expect(find.text('🏛️'), findsWidgets);
     expect(find.text('🎓'), findsWidgets);
     expect(find.text('📅'), findsWidgets);
-    expect(find.byType(PrototypeCategoryTile), findsNWidgets(3));
+    // Remote tiles win, but PG / Co-Living and Hotels / Rooms / Stays are
+    // always appended so those categories stay reachable from Home.
+    expect(find.byType(PrototypeCategoryTile), findsNWidgets(5));
+    expect(find.text('PG / Co-Living'), findsOneWidget);
+    expect(find.text('Hotels / Rooms / Stays'), findsOneWidget);
 
     // Brand violet must be the theme primary (prototype #6c3df4).
     final builtContext = tester.element(find.byType(PrototypeCategoryTile).first);
