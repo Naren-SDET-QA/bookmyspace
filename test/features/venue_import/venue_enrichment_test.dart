@@ -1,12 +1,11 @@
-import 'package:dio/dio.dart';
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:bookmyspace/features/venue_import/domain/venue_discovery.dart';
 import 'package:bookmyspace/features/venue_import/domain/venue_enrichment.dart';
 import 'package:bookmyspace/features/venue_import/domain/venue_enrichment_provider.dart';
 import 'package:bookmyspace/features/venue_import/domain/venue_enrichment_service.dart';
 import 'package:bookmyspace/features/venue_import/domain/venue_import_models.dart';
 import 'package:bookmyspace/features/venue_import/infrastructure/google_places_enrichment_provider.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 class _MemoryEnrichmentProvider implements VenueEnrichmentProvider {
   _MemoryEnrichmentProvider(this.patch);
@@ -82,7 +81,9 @@ void main() {
       expect(merged.ratings['avg'], 4.2);
       expect(merged.status, VenueImportStagingStatus.pendingReview);
       expect(
-        merged.enrichmentProvenance['google_places']['place_id'],
+        Map<String, dynamic>.from(
+          merged.enrichmentProvenance['google_places'] as Map,
+        )['place_id'],
         'ChIJabc123',
       );
     });
@@ -205,7 +206,9 @@ void main() {
       expect(patch.imageRefs, isNotEmpty);
       expect(patch.ratings['avg'], 4.5);
       expect(
-        patch.provenance[VenueDiscoverySources.googlePlaces]['place_id'],
+        Map<String, dynamic>.from(
+          patch.provenance[VenueDiscoverySources.googlePlaces] as Map,
+        )['place_id'],
         'places/ChIJtest',
       );
     });
@@ -219,7 +222,7 @@ void main() {
               Response(
                 requestOptions: options,
                 statusCode: 200,
-                data: {'places': []},
+                data: <String, dynamic>{'places': const <dynamic>[]},
               ),
             );
           },

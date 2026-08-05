@@ -1,4 +1,5 @@
 /// Normalization and deduplication utilities for venue import data.
+library;
 
 /// Normalizes phone numbers to E.164 when possible (India +91 default).
 String? normalizeVenuePhone(String? phone) {

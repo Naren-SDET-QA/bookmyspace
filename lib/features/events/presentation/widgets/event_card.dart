@@ -147,9 +147,9 @@ class EventCard extends StatelessWidget {
                               color: PrototypeVisuals.freeTagBg,
                               borderRadius: BorderRadius.circular(7),
                             ),
-                            child: Text(
+                            child: const Text(
                               'FREE ENTRY',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w800,
                                 color: AppTheme.success,

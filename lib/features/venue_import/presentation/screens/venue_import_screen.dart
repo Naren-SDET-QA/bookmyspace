@@ -277,7 +277,7 @@ class VenueImportReviewScreen extends ConsumerWidget {
           return ListView(
             padding: const EdgeInsets.all(AppTheme.pagePadding),
             children: [
-              _InfoCard(
+              const _InfoCard(
                 emoji: '⏳',
                 title: 'Job ready — awaiting staged rows',
                 body:
@@ -376,7 +376,7 @@ Future<void> _openPreviewEditor(
   final cityCtrl = TextEditingController(text: row.city);
   final phoneCtrl = TextEditingController(text: row.phone);
   final websiteCtrl = TextEditingController(text: row.website);
-  final review = const VenueStagingReviewService();
+  const review = VenueStagingReviewService();
 
   await showAppBottomSheet<void>(
     context: context,

@@ -115,9 +115,8 @@ class _HomepageTab extends ConsumerWidget {
         return ReorderableListView.builder(
           padding: const EdgeInsets.all(16),
           itemCount: items.length,
-          onReorder: (oldIndex, newIndex) async {
+          onReorderItem: (oldIndex, newIndex) async {
             final next = [...items];
-            if (newIndex > oldIndex) newIndex -= 1;
             final moved = next.removeAt(oldIndex);
             next.insert(newIndex, moved);
             try {
@@ -1137,7 +1136,7 @@ class _PreviewTab extends ConsumerWidget {
               itemCount: data.categoryTiles.length,
               itemBuilder: (context, index) {
                 final item = data.categoryTiles[index];
-                return Container(
+                return DecoratedBox(
                   decoration: BoxDecoration(
                     color: AppTheme.card,
                     border: Border.all(color: AppTheme.line),

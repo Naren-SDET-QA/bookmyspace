@@ -13,6 +13,7 @@ import '../../../../core/theme/prototype_controls.dart';
 import '../../../../core/theme/prototype_visuals.dart';
 import '../../domain/auth_user.dart';
 import '../auth_providers.dart';
+import '../widgets/channel_toggle.dart';
 import '../widgets/otp_panel.dart';
 
 /// Authentication entry screen.
@@ -193,12 +194,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
     final ok = RegExp(r'^\+?[0-9]{10,15}$').hasMatch(v);
     return ok ? null : l10n.errorInvalidPhone;
-  }
-
-  String? _validateOtp(String? value) {
-    final v = value?.trim() ?? '';
-    if (v.isEmpty) return l10n.errorRequired;
-    return RegExp(r'^\d{6}$').hasMatch(v) ? null : l10n.errorRequired;
   }
 
   AppLocalizations get l10n => AppLocalizations.of(context);
@@ -395,9 +390,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const SizedBox(height: 8),
                       ],
                       // ---- Contact channel toggle ----
-                      _ChannelToggle(
-                        channel: _channel,
-                        onChanged: _toggleChannel,
+                      ChannelToggle(
+                        channels: const ['Email', 'Phone'],
+                        selectedIndex: _channel == _OtpChannel.email ? 0 : 1,
+                        onChanged: (_) => _toggleChannel(),
                       ),
                       const SizedBox(height: 14),
                       TextFormField(
@@ -526,65 +522,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ChannelToggle extends StatelessWidget {
-  const _ChannelToggle({required this.channel, required this.onChanged});
-
-  final _OtpChannel channel;
-  final VoidCallback onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEAE7F5),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          _toggle(context, _OtpChannel.email, 'Email'),
-          _toggle(context, _OtpChannel.phone, 'Phone'),
-        ],
-      ),
-    );
-  }
-
-  Widget _toggle(BuildContext context, _OtpChannel value, String label) {
-    final selected = channel == value;
-    return Expanded(
-      child: GestureDetector(
-        onTap: onChanged,
-        child: AnimatedContainer(
-          duration: AppMotion.fast,
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: selected ? Colors.white : Colors.transparent,
-            borderRadius: BorderRadius.circular(11),
-            boxShadow: selected
-                ? const [
-                    BoxShadow(
-                      color: Color(0x14000000),
-                      blurRadius: 8,
-                      offset: Offset(0, 2),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w800,
-              color: selected ? AppTheme.ink : AppTheme.muted,
-            ),
           ),
         ),
       ),

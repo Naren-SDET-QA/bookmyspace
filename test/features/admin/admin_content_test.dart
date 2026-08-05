@@ -120,8 +120,8 @@ void main() {
       ProviderScope(
         overrides: [
           homepageContentConfigProvider.overrideWith(
-            (ref) async => HomepageContentConfig(
-              categoryTiles: const [
+            (ref) async => const HomepageContentConfig(
+              categoryTiles: [
                 HomeCategoryTile(
                   id: '1',
                   tileKey: 'function_hall',
@@ -130,7 +130,7 @@ void main() {
                   routeTarget: 'search:function_hall',
                 ),
               ],
-              sections: const [
+              sections: [
                 HomepageSection(
                   id: '1',
                   sectionKey: 'popular',
@@ -138,12 +138,12 @@ void main() {
                   emoji: '🏛️',
                 ),
               ],
-              homeBanner: const {
+              homeBanner: {
                 'title': 'Book spaces',
                 'subtitle': 'Near you',
                 'is_visible': true,
               },
-              featuredOffer: const {
+              featuredOffer: {
                 'title': 'Featured',
                 'body': 'From ₹999',
                 'is_visible': true,

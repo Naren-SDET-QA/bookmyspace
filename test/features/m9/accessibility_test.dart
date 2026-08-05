@@ -1,6 +1,5 @@
 import 'package:bookmyspace/core/localization/app_localizations.dart';
 import 'package:bookmyspace/core/widgets/accessibility.dart';
-import 'package:bookmyspace/features/venues/domain/venue.dart';
 import 'package:bookmyspace/features/venues/presentation/venue_providers.dart';
 import 'package:bookmyspace/features/venues/presentation/widgets/venue_card.dart';
 import 'package:flutter/material.dart';

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/location/device_location_service.dart';
 import '../../../../core/location/location_providers.dart';
 import '../../../../core/router/app_router.dart';
@@ -32,7 +31,6 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final popular = ref.watch(popularVenuesProvider);
     final nearby = ref.watch(nearbyVenuesProvider);
@@ -218,7 +216,10 @@ class HomeScreen extends ConsumerWidget {
                   height: 198,
                   items: items
                       .map(
-                        (e) => SizedBox(width: 208, child: EventCard(event: e)),
+                        (e) => SizedBox(
+                          width: 208,
+                          child: AnimatedEntrance(child: EventCard(event: e)),
+                        ),
                       )
                       .toList(),
                 ),
@@ -232,8 +233,10 @@ class HomeScreen extends ConsumerWidget {
                   height: 220,
                   items: items
                       .map(
-                        (c) =>
-                            SizedBox(width: 240, child: CourseCard(course: c)),
+                        (c) => SizedBox(
+                          width: 240,
+                          child: AnimatedEntrance(child: CourseCard(course: c)),
+                        ),
                       )
                       .toList(),
                 ),
@@ -258,12 +261,12 @@ class HomeScreen extends ConsumerWidget {
                 onViewAll: () => context.go(AppRoutes.search),
                 loading: const _LoadingCardRow(),
                 itemBuilder: (venues) => _HorizontalList(
-                  height: 186,
+                  height: 200,
                   items: venues
                       .take(6)
                       .map(
                         (v) => SizedBox(
-                          width: 250,
+                          width: 320,
                           child: AnimatedEntrance(
                             child: VenueCard(venue: v, compact: true),
                           ),
@@ -278,12 +281,12 @@ class HomeScreen extends ConsumerWidget {
                 onViewAll: null,
                 loading: const _LoadingCardRow(),
                 itemBuilder: (venues) => _HorizontalList(
-                  height: 186,
+                  height: 200,
                   items: venues
                       .take(6)
                       .map(
                         (v) => SizedBox(
-                          width: 250,
+                          width: 320,
                           child: AnimatedEntrance(
                             child: VenueCard(venue: v, compact: true),
                           ),
@@ -293,9 +296,9 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ),
               _SpecialOffers(popular: popular),
-              _RecentlyViewed(),
+              const _RecentlyViewed(),
               const SizedBox(height: 24),
-              _SectionHeader(title: '📍 Nearby venues', onViewAll: null),
+              const _SectionHeader(title: '📍 Nearby venues', onViewAll: null),
               const SizedBox(height: 12),
               nearby.when(
                 data: (venues) => venues.isEmpty
@@ -891,7 +894,7 @@ class _RadiusSelector extends ConsumerWidget {
         child: ListView(
           scrollDirection: Axis.horizontal,
           children: [
-            Center(
+            const Center(
               child: Text(
                 '📍 Within',
                 style: TextStyle(
@@ -1218,7 +1221,7 @@ class _PopularCities extends ConsumerWidget {
             const SizedBox(width: 8),
             for (final entry in kSearchCities.entries) ...[
               _CityChip(
-                label: entry.key,
+                label: '📍 ${entry.key}',
                 selected: entry.value.cityLabel == current.cityLabel,
                 onTap: () {
                   ref.read(searchAreaProvider.notifier).state = entry.value;
@@ -1301,7 +1304,7 @@ class _SpecialOffers extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          PrototypeSectionHeader(title: '🏷️ Special offers', onViewAll: null),
+          const PrototypeSectionHeader(title: '🏷️ Special offers', onViewAll: null),
           const SizedBox(height: 12),
           _HorizontalList(
             height: 200,
@@ -1449,14 +1452,14 @@ class _RecentlyViewed extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          PrototypeSectionHeader(title: '🕘 Recently viewed', onViewAll: null),
+          const PrototypeSectionHeader(title: '🕘 Recently viewed', onViewAll: null),
           const SizedBox(height: 12),
           _HorizontalList(
-            height: 186,
-            items: venues
+          height: 200,
+          items: venues
                 .map(
                   (v) => SizedBox(
-                    width: 250,
+                    width: 320,
                     child: AnimatedEntrance(
                       child: VenueCard(venue: v, compact: true),
                     ),

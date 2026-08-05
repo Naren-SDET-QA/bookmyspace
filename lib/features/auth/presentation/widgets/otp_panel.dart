@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/prototype_controls.dart';
+import '../../../../core/theme/prototype_visuals.dart';
 
 /// Prototype-style OTP entry: verified icon, 6-digit field, cooldown resend.
 class OtpPanel extends StatefulWidget {
@@ -15,6 +16,7 @@ class OtpPanel extends StatefulWidget {
     required this.verifyLabel,
     required this.onVerify,
     this.onResend,
+    this.validator,
     this.busy = false,
   });
 
@@ -23,6 +25,7 @@ class OtpPanel extends StatefulWidget {
   final String verifyLabel;
   final Future<void> Function() onVerify;
   final Future<void> Function()? onResend;
+  final FormFieldValidator<String>? validator;
   final bool busy;
 
   @override
@@ -101,6 +104,7 @@ class _OtpPanelState extends State<OtpPanel> {
           key: widget.otpFieldKey,
           controller: widget.otpController,
           enabled: !widget.busy,
+          validator: widget.validator,
           keyboardType: TextInputType.number,
           maxLength: 6,
           style: const TextStyle(

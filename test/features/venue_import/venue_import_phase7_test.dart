@@ -1,10 +1,9 @@
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:bookmyspace/features/venue_import/domain/venue_discovery.dart';
 import 'package:bookmyspace/features/venue_import/domain/venue_discovery_pipeline.dart';
 import 'package:bookmyspace/features/venue_import/domain/venue_import_geo_config.dart';
 import 'package:bookmyspace/features/venue_import/infrastructure/noop_venue_discovery_provider.dart';
 import 'package:bookmyspace/features/venue_import/infrastructure/osm_venue_discovery_provider.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Phase 7 geo + category config', () {

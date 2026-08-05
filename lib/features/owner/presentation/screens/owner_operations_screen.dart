@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/validators/app_validators.dart';
-import '../../../auth/presentation/auth_providers.dart';
 import '../../../owner_venues/presentation/providers/owner_venue_providers.dart';
 import '../../infrastructure/owner_operations_repository.dart';
 import '../owner_providers.dart';

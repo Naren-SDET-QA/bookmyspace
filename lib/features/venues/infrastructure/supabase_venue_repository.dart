@@ -17,7 +17,8 @@ class SupabaseVenueRepository implements VenueRepository {
   static const String _venueSelect = '''
     *,
     venue_categories (id, slug, name, icon),
-    venue_images (id, url, thumbnail_url, alt_text, is_cover, sort_order)
+    venue_images (id, url, thumbnail_url, alt_text, is_cover, sort_order),
+    venue_facilities (facility, is_available)
   ''';
 
   @override

@@ -21,9 +21,9 @@ class _FakeGeocoder implements GeocodingProvider {
     int limit = 5,
   }) async =>
       [
-        GeocodedPlace(
+        const GeocodedPlace(
           displayName: 'Fake Ongole',
-          point: const GeoPoint(15.5057, 80.0495),
+          point: GeoPoint(15.5057, 80.0495),
         ),
       ];
 }

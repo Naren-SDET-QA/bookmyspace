@@ -1,5 +1,5 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:bookmyspace/core/network/retry.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('withRetry', () {
@@ -46,7 +46,7 @@ void main() {
         () => withRetry(
           () async {
             attempts++;
-            throw FormatException('Non-retryable');
+            throw const FormatException('Non-retryable');
           },
           config: const RetryConfig(
             maxRetries: 3,

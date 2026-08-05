@@ -75,17 +75,16 @@ class SupabaseOwnerVenueRepository implements OwnerVenueRepository {
         'update_owner_venue',
         params: {
           'p_venue_id': venueId,
-          if (name != null) 'p_name': name,
-          if (categoryId != null) 'p_category_id': categoryId,
-          if (description != null) 'p_description': description,
-          if (city != null) 'p_city': city,
-          if (state != null) 'p_state': state,
-          if (latitude != null) 'p_latitude': latitude,
-          if (longitude != null) 'p_longitude': longitude,
-          if (capacity != null) 'p_capacity': capacity,
-          if (pricingBaseAmount != null)
-            'p_pricing_base_amount': pricingBaseAmount,
-          if (isActive != null) 'p_is_active': isActive,
+          'p_name': ?name,
+          'p_category_id': ?categoryId,
+          'p_description': ?description,
+          'p_city': ?city,
+          'p_state': ?state,
+          'p_latitude': ?latitude,
+          'p_longitude': ?longitude,
+          'p_capacity': ?capacity,
+          'p_pricing_base_amount': ?pricingBaseAmount,
+          'p_is_active': ?isActive,
         },
       );
       return Venue.fromJson(data);

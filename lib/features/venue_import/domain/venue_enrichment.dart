@@ -1,4 +1,5 @@
 /// Phase 6: enrichment contracts for staged OSM venues (Google Places supplement).
+library;
 
 import 'venue_import_models.dart';
 

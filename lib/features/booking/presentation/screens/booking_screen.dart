@@ -14,6 +14,7 @@ import '../../../../core/widgets/animated_entrance.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../venues/domain/venue.dart';
+import '../../../venues/presentation/widgets/venue_badges.dart';
 import '../../domain/booking.dart';
 import '../booking_providers.dart';
 
@@ -23,9 +24,12 @@ import '../booking_providers.dart';
 /// `create-booking-hold` Edge Function) when the user confirms, then a
 /// `pending` booking row is created and the payment flow is entered.
 class BookingScreen extends ConsumerStatefulWidget {
-  const BookingScreen({super.key, required this.venue});
+  const BookingScreen({super.key, required this.venue, this.initialDate});
 
   final Venue venue;
+
+  /// Preselected booking date (from the venue detail calendar).
+  final DateTime? initialDate;
 
   @override
   ConsumerState<BookingScreen> createState() => _BookingScreenState();
@@ -47,7 +51,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedDate = DateTime.now();
+    _selectedDate = widget.initialDate ?? DateTime.now();
   }
 
   @override
@@ -61,7 +65,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
     final percent = _demoPromo[code];
     setState(() {
       _promoMessage = percent != null
-          ? 'Promo applied — ${percent}% off'
+          ? 'Promo applied — $percent% off'
           : (code.isEmpty ? null : 'Invalid promo code');
     });
   }
@@ -102,9 +106,9 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                         total: 4,
                       ),
                       const SizedBox(height: 8),
-                      Row(
+                      const Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: const [
+                        children: [
                           Text(
                             '📅 Date',
                             style: TextStyle(
@@ -203,7 +207,9 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
     final taxRate = widget.venue.taxRate;
     final amount = slot.priceAmount;
     final tax = (amount * taxRate / 100).roundToDouble();
+    final promoCut = (amount * _promoPercent / 100).roundToDouble();
     final total = amount + tax;
+    final payable = total - promoCut;
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -234,14 +240,14 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
             _SummaryRow(label: l10n.taxRate, value: formatInr(tax)),
             if (_promoPercent > 0)
               _SummaryRow(
-                label: 'Promo (${_promoPercent}%)',
+                label: 'Promo ($_promoPercent%)',
                 value: '−${formatInr(amount * _promoPercent / 100)}',
                 emphasize: true,
               ),
             const Divider(height: 24),
             _SummaryRow(
               label: l10n.total,
-              value: formatInr(total),
+              value: formatInr(payable),
               emphasize: true,
             ),
           ],
@@ -793,7 +799,7 @@ class _ConfirmBar extends StatelessWidget {
     final promoCut = (slot.priceAmount * promoPercent / 100).roundToDouble();
     final payable = total - promoCut;
 
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: AppTheme.surfaceLight.withValues(alpha: 0.96),
         border: const Border(top: BorderSide(color: AppTheme.line)),

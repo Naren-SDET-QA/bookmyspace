@@ -314,6 +314,10 @@ class VenueSearchQuery {
     this.latitude,
     this.longitude,
     this.maxDistanceKm,
+    this.minRating,
+    this.minCapacity,
+    this.amenities = const [],
+    this.availableOn,
   });
 
   final String query;
@@ -326,12 +330,28 @@ class VenueSearchQuery {
   final double? longitude;
   final double? maxDistanceKm;
 
+  /// Minimum average rating (e.g. 4.0, 4.5) applied after the repo query.
+  final double? minRating;
+
+  /// Minimum guest capacity (seats available) applied after the repo query.
+  final int? minCapacity;
+
+  /// Required facilities; applied after the repo query.
+  final List<String> amenities;
+
+  /// Only show venues with an available slot on this date (best-effort).
+  final DateTime? availableOn;
+
   bool get hasFilters =>
       query.isNotEmpty ||
       categorySlug != null ||
       city != null ||
       minPrice != null ||
-      maxPrice != null;
+      maxPrice != null ||
+      minRating != null ||
+      minCapacity != null ||
+      amenities.isNotEmpty ||
+      availableOn != null;
 
   VenueSearchQuery copyWith({
     String? query,
@@ -343,6 +363,10 @@ class VenueSearchQuery {
     double? Function()? latitude,
     double? Function()? longitude,
     double? Function()? maxDistanceKm,
+    double? Function()? minRating,
+    int? Function()? minCapacity,
+    List<String>? amenities,
+    DateTime? Function()? availableOn,
   }) {
     return VenueSearchQuery(
       query: query ?? this.query,
@@ -356,6 +380,10 @@ class VenueSearchQuery {
       maxDistanceKm: maxDistanceKm != null
           ? maxDistanceKm()
           : this.maxDistanceKm,
+      minRating: minRating != null ? minRating() : this.minRating,
+      minCapacity: minCapacity != null ? minCapacity() : this.minCapacity,
+      amenities: amenities ?? this.amenities,
+      availableOn: availableOn != null ? availableOn() : this.availableOn,
     );
   }
 }

@@ -1,4 +1,5 @@
 /// Phase 3 venue discovery contracts — no bulk import / no live fetch required.
+library;
 
 /// Supported discovery source codes (aligned with `venue_sources.code`).
 abstract final class VenueDiscoverySources {

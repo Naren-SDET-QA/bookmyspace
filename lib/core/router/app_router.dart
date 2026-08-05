@@ -43,10 +43,10 @@ import '../../features/payments/presentation/screens/payment_screen.dart';
 import '../../features/payments/presentation/screens/receipt_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/registration/presentation/screens/registration_screens.dart';
-import '../../features/splash/presentation/screens/splash_screen.dart';
 import '../../features/saved/presentation/screens/saved_screen.dart';
 import '../../features/search/presentation/screens/search_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
+import '../../features/splash/presentation/screens/splash_screen.dart';
 import '../../features/sports/presentation/screens/sports_screens.dart';
 import '../../features/support/presentation/screens/support_screen.dart';
 import '../../features/venue_import/presentation/screens/admin_venue_claims_screen.dart';
@@ -227,6 +227,10 @@ GoRouter createAppRouter({
         builder: (context, state) {
           final extra = state.extra;
           final venue = extra is Venue ? extra : null;
+          final dateParam = state.uri.queryParameters['date'];
+          final initialDate = dateParam == null
+              ? null
+              : DateTime.tryParse(dateParam);
           if (venue == null) {
             // Bookmark/refresh navigation without a venue object — fall back
             // to the details screen which can re-fetch the venue.
@@ -234,7 +238,7 @@ GoRouter createAppRouter({
               venueId: state.pathParameters['id'] ?? '',
             );
           }
-          return BookingScreen(venue: venue);
+          return BookingScreen(venue: venue, initialDate: initialDate);
         },
       ),
       GoRoute(

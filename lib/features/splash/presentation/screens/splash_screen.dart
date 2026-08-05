@@ -134,7 +134,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Text(
+                  const Text(
                     'Discover · Book · Celebrate',
                     style: TextStyle(
                       color: PrototypeVisuals.splashSubtitle,

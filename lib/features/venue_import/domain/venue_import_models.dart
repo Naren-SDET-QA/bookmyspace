@@ -1,4 +1,5 @@
 /// Domain models for the configurable venue import engine.
+library;
 
 class VenueImportCategoryMapping {
   const VenueImportCategoryMapping({
