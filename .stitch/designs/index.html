@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>BookMySpace - Home</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-container": "#645efb",
+                        "primary": "#5313dc",
+                        "surface-container-low": "#f6f2ff",
+                        "on-error-container": "#93000a",
+                        "on-secondary-fixed": "#0f0069",
+                        "error": "#ba1a1a",
+                        "on-tertiary": "#ffffff",
+                        "on-tertiary-fixed": "#1a1b21",
+                        "surface-container-high": "#e9e5ff",
+                        "primary-fixed-dim": "#ccbeff",
+                        "on-surface": "#181445",
+                        "on-secondary-container": "#fffbff",
+                        "on-primary": "#ffffff",
+                        "surface-dim": "#dad6ff",
+                        "primary-fixed": "#e7deff",
+                        "on-secondary": "#ffffff",
+                        "background": "#fcf8ff",
+                        "outline": "#797487",
+                        "on-surface-variant": "#484456",
+                        "on-primary-container": "#e8dfff",
+                        "secondary-fixed-dim": "#c3c0ff",
+                        "on-error": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "secondary-fixed": "#e2dfff",
+                        "primary-container": "#6c3df4",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-container": "#e5e3ec",
+                        "inverse-primary": "#ccbeff",
+                        "surface-container": "#efebff",
+                        "secondary": "#4b41e1",
+                        "tertiary-container": "#65656c",
+                        "on-secondary-fixed-variant": "#3323cc",
+                        "outline-variant": "#cac3d9",
+                        "tertiary": "#4d4d54",
+                        "surface": "#fcf8ff",
+                        "on-primary-fixed": "#1e0060",
+                        "surface-container-highest": "#e3dfff",
+                        "surface-tint": "#6533ed",
+                        "on-primary-fixed-variant": "#4c00d3",
+                        "tertiary-fixed-dim": "#c7c5ce",
+                        "on-background": "#181445",
+                        "surface-bright": "#fcf8ff",
+                        "inverse-on-surface": "#f3eeff",
+                        "inverse-surface": "#2d2a5b",
+                        "surface-variant": "#e3dfff",
+                        "tertiary-fixed": "#e3e1ea",
+                        "on-tertiary-fixed-variant": "#46464d",
+                        "success-bg": "#d1fae5",
+                        "success-text": "#065f46",
+                        "warning-bg": "#fef3c7",
+                        "warning-text": "#92400e"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px",
+                        "card": "20px",
+                        "btn": "15px"
+                    },
+                    "spacing": {
+                        "container-max": "1280px",
+                        "margin-desktop": "64px",
+                        "base": "8px",
+                        "margin-mobile": "20px",
+                        "gutter": "24px"
+                    },
+                    "fontFamily": {
+                        "body-base": ["Plus Jakarta Sans"],
+                        "display-lg": ["Plus Jakarta Sans"],
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "label-caps": ["Plus Jakarta Sans"],
+                        "display-lg-mobile": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "body-base": ["16px", { "lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.04em", "fontWeight": "800" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "display-lg-mobile": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.04em", "fontWeight": "800" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: #f4f2fb; }
+        .gradient-text {
+            background: linear-gradient(135deg, #5313dc, #4b41e1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-base text-on-background pb-[100px] antialiased">
+<!-- Top App Bar -->
+<header class="flex justify-between items-center w-full px-margin-mobile pt-4 pb-2 z-50 bg-surface/80 dark:bg-surface-dim/80 backdrop-blur-xl docked full-width top-0 sticky">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]" style="font-variation-settings: 'FILL' 1;">location_on</span>
+<span class="font-headline-md text-headline-md text-primary font-bold text-lg leading-tight">Bengaluru, KA <span class="text-sm">▾</span></span>
+</div>
+<button class="w-10 h-10 rounded-full bg-white flex items-center justify-center border border-[#e9e6f5] shadow-sm relative hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined text-on-surface-variant">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+</header>
+<main class="px-margin-mobile pt-6 space-y-8">
+<!-- Header & Search -->
+<section class="space-y-4">
+<div>
+<p class="text-sm text-on-surface-variant font-medium">Good evening, Alex ⚡</p>
+<h1 class="font-display-lg-mobile text-display-lg-mobile mt-1">What are you <span class="gradient-text">planning</span> today?</h1>
+</div>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full h-14 pl-12 pr-4 rounded-btn border border-[#e9e6f5] bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all text-on-surface placeholder:text-outline-variant font-body-base text-body-base" placeholder="Search spaces, events, fitness..." type="text"/>
+</div>
+</section>
+<!-- Categories -->
+<section>
+<div class="grid grid-cols-4 gap-4">
+<div class="flex flex-col items-center gap-2 cursor-pointer group">
+<div class="w-[60px] h-[60px] bg-white rounded-2xl flex items-center justify-center border border-[#e9e6f5] shadow-sm group-hover:border-primary/30 group-hover:shadow-md transition-all">
+<span class="material-symbols-outlined text-primary text-[28px]" style="font-variation-settings: 'FILL' 1;">festival</span>
+</div>
+<span class="font-label-caps text-label-caps text-on-surface">Venues</span>
+</div>
+<div class="flex flex-col items-center gap-2 cursor-pointer group">
+<div class="w-[60px] h-[60px] bg-white rounded-2xl flex items-center justify-center border border-[#e9e6f5] shadow-sm group-hover:border-primary/30 group-hover:shadow-md transition-all">
+<span class="material-symbols-outlined text-primary text-[28px]" style="font-variation-settings: 'FILL' 1;">sports_soccer</span>
+</div>
+<span class="font-label-caps text-label-caps text-on-surface">Sports</span>
+</div>
+<div class="flex flex-col items-center gap-2 cursor-pointer group">
+<div class="w-[60px] h-[60px] bg-white rounded-2xl flex items-center justify-center border border-[#e9e6f5] shadow-sm group-hover:border-primary/30 group-hover:shadow-md transition-all">
+<span class="material-symbols-outlined text-primary text-[28px]" style="font-variation-settings: 'FILL' 1;">work</span>
+</div>
+<span class="font-label-caps text-label-caps text-on-surface">Work</span>
+</div>
+<div class="flex flex-col items-center gap-2 cursor-pointer group">
+<div class="w-[60px] h-[60px] bg-white rounded-2xl flex items-center justify-center border border-[#e9e6f5] shadow-sm group-hover:border-primary/30 group-hover:shadow-md transition-all">
+<span class="material-symbols-outlined text-primary text-[28px]" style="font-variation-settings: 'FILL' 1;">menu_book</span>
+</div>
+<span class="font-label-caps text-label-caps text-on-surface">Classes</span>
+</div>
+<div class="flex flex-col items-center gap-2 cursor-pointer group">
+<div class="w-[60px] h-[60px] bg-white rounded-2xl flex items-center justify-center border border-[#e9e6f5] shadow-sm group-hover:border-primary/30 group-hover:shadow-md transition-all">
+<span class="material-symbols-outlined text-primary text-[28px]" style="font-variation-settings: 'FILL' 1;">celebration</span>
+</div>
+<span class="font-label-caps text-label-caps text-on-surface">Parties</span>
+</div>
+<div class="flex flex-col items-center gap-2 cursor-pointer group">
+<div class="w-[60px] h-[60px] bg-white rounded-2xl flex items-center justify-center border border-[#e9e6f5] shadow-sm group-hover:border-primary/30 group-hover:shadow-md transition-all">
+<span class="material-symbols-outlined text-primary text-[28px]" style="font-variation-settings: 'FILL' 1;">event</span>
+</div>
+<span class="font-label-caps text-label-caps text-on-surface">Events</span>
+</div>
+<div class="flex flex-col items-center gap-2 cursor-pointer group">
+<div class="w-[60px] h-[60px] bg-white rounded-2xl flex items-center justify-center border border-[#e9e6f5] shadow-sm group-hover:border-primary/30 group-hover:shadow-md transition-all">
+<span class="material-symbols-outlined text-primary text-[28px]" style="font-variation-settings: 'FILL' 1;">mic</span>
+</div>
+<span class="font-label-caps text-label-caps text-on-surface">Studios</span>
+</div>
+<div class="flex flex-col items-center gap-2 cursor-pointer group">
+<div class="w-[60px] h-[60px] bg-white rounded-2xl flex items-center justify-center border border-[#e9e6f5] shadow-sm group-hover:border-primary/30 group-hover:shadow-md transition-all">
+<span class="material-symbols-outlined text-primary text-[28px]" style="font-variation-settings: 'FILL' 1;">bed</span>
+</div>
+<span class="font-label-caps text-label-caps text-on-surface">Stays</span>
+</div>
+</div>
+</section>
+<!-- Featured Near You -->
+<section>
+<div class="flex justify-between items-end mb-4">
+<h2 class="font-headline-md text-headline-md text-on-surface text-[20px]">Featured Near You</h2>
+<a class="text-sm font-semibold text-primary hover:opacity-80 transition-opacity" href="#">See all</a>
+</div>
+<div class="flex gap-4 overflow-x-auto hide-scrollbar pb-4 -mx-margin-mobile px-margin-mobile snap-x">
+<!-- Featured Card 1 -->
+<div class="min-w-[280px] bg-white rounded-card border border-[#e9e6f5] overflow-hidden snap-center flex-shrink-0 cursor-pointer group">
+<div class="h-40 relative">
+<img class="w-full h-full object-cover" data-alt="A vibrant, high-energy nightclub scene with professional lighting, lasers, and a large crowd dancing. The aesthetic is modern, electric, and dynamic, fitting a premium event listing on a light-mode UI. Colors are rich purples, deep blacks, and bright neon accents." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD0PNv4Gw-vAD0-605RQZe-hNCN6cHPQyX8rmPU9xGwokHlI2F0oxwgU3jJFqJrKnEuyfE9wpJsQHPoVI4rinGVRyUbYRmfqh-U996I9NsYM0fjY8f71yl2nssreL1jpjyuFOLE0Af5qHYEhbhQ6h8Ft37HQss22gtrY3dlzrVN1EtkCuWIM14wfjk7IkWRL6tQYQzNe2fpQ5bkFUyQvmO_NJ2rtb80XVVH7bmh86Qm467x97MY2wbWqW-CNsP6rJXW8-57sn-XfBI"/>
+<div class="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
+<span class="material-symbols-outlined text-[14px] text-amber-500" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-xs font-bold text-on-surface">4.9</span>
+</div>
+</div>
+<div class="p-4">
+<div class="flex justify-between items-start mb-1">
+<span class="text-xs font-semibold text-primary uppercase tracking-wider">DJ / Party</span>
+<span class="font-semibold text-on-surface">$25</span>
+</div>
+<h3 class="font-bold text-on-surface text-lg leading-tight group-hover:text-primary transition-colors">Sunburn Club Night</h3>
+</div>
+</div>
+<!-- Featured Card 2 -->
+<div class="min-w-[280px] bg-white rounded-card border border-[#e9e6f5] overflow-hidden snap-center flex-shrink-0 cursor-pointer group">
+<div class="h-40 relative">
+<img class="w-full h-full object-cover" data-alt="A serene outdoor yoga session at sunrise. The lighting is soft, warm, and golden. The environment is a clean, modern rooftop or park space. The aesthetic is calm, aspirational, and high-end, fitting a wellness class listing on a sophisticated light-mode app." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB3P-HqweBLWtdBe3XRA6fPxM3DhGAWdQm1VLt-9b0kM6vC0MxToSL-vLnW3o0614WOoDn8CjbileE-POsBfGzzZ5-V0JqrOmVD3KfNGzPHU_0VYIqqwACzkcFPDyXcb2bB3Y7KI3iQxpgz51qq6XrTjDgZwqVOogWWprtr7JM5dNAmMxQkII0B9nKGiUAfXTbswEHouBc-3PxX7HJLjGcYc1JrSXScngMs1C6JwzqlgqTaSj_mxMpi3_cbCeVdb7orq8KK6I2cchA"/>
+<div class="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
+<span class="material-symbols-outlined text-[14px] text-amber-500" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-xs font-bold text-on-surface">4.8</span>
+</div>
+</div>
+<div class="p-4">
+<div class="flex justify-between items-start mb-1">
+<span class="text-xs font-semibold text-primary uppercase tracking-wider">Class</span>
+<span class="font-semibold text-on-surface">Free</span>
+</div>
+<h3 class="font-bold text-on-surface text-lg leading-tight group-hover:text-primary transition-colors">Sunrise Yoga</h3>
+</div>
+</div>
+<!-- Featured Card 3 -->
+<div class="min-w-[280px] bg-white rounded-card border border-[#e9e6f5] overflow-hidden snap-center flex-shrink-0 cursor-pointer group">
+<div class="h-40 relative">
+<img class="w-full h-full object-cover" data-alt="A modern, high-tech conference room or sleek event space filled with professionals networking. The lighting is bright and clean, emphasizing a premium corporate or startup environment. The aesthetic is polished, contemporary, and aligns with a light-mode booking platform." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAfsZq6yQkAxi8dLIo_0lx_1myqqE40KCS82l4JL9cjoYVH3_ziFWbkT1PQ9FuHDQih8LAqA761CtButggYga6HzkKbnaLWJsauDSxtavfe4oI3S8hxbcnlwU3EaCtDoaSOwoEROGIMBdSg6zU6dmBtZx3Nf5XIEHSvbkFyRciEtwTpXepSydnCMTNu8pQdBl2PCUaGQdcWEldakQ-tjF3bUr9pxP3xszDkzcPb3LIex0TQKuQ9adaQGKqOcbIPM8ynYVGp4aQDqdg"/>
+<div class="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
+<span class="material-symbols-outlined text-[14px] text-amber-500" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-xs font-bold text-on-surface">4.7</span>
+</div>
+</div>
+<div class="p-4">
+<div class="flex justify-between items-start mb-1">
+<span class="text-xs font-semibold text-primary uppercase tracking-wider">Event</span>
+<span class="font-semibold text-on-surface">$10</span>
+</div>
+<h3 class="font-bold text-on-surface text-lg leading-tight group-hover:text-primary transition-colors">Tech Founder Meetup</h3>
+</div>
+</div>
+</div>
+</section>
+<!-- Filters & List -->
+<section>
+<div class="flex gap-2 overflow-x-auto hide-scrollbar pb-4 -mx-margin-mobile px-margin-mobile">
+<button class="px-5 py-2 rounded-full bg-primary text-white font-semibold text-sm whitespace-nowrap shadow-md shadow-primary/20">All (12)</button>
+<button class="px-5 py-2 rounded-full bg-white border border-[#e9e6f5] text-on-surface-variant font-semibold text-sm whitespace-nowrap hover:border-primary/30 transition-colors">Venues (5)</button>
+<button class="px-5 py-2 rounded-full bg-white border border-[#e9e6f5] text-on-surface-variant font-semibold text-sm whitespace-nowrap hover:border-primary/30 transition-colors">Sports (3)</button>
+<button class="px-5 py-2 rounded-full bg-white border border-[#e9e6f5] text-on-surface-variant font-semibold text-sm whitespace-nowrap hover:border-primary/30 transition-colors">Studios (4)</button>
+</div>
+<div class="space-y-4">
+<!-- List Item 1 -->
+<div class="bg-white rounded-card border border-[#e9e6f5] p-3 flex gap-4 cursor-pointer group hover:shadow-md transition-shadow">
+<div class="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="A luxurious rooftop lounge with modern outdoor furniture, fairy lights, and a stunning city skyline view at dusk. The aesthetic is premium, airy, and inviting, fitting a high-end venue booking app in light mode." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAoc1-Zy1IzoPRS6JboLVMc5v-RnnMp0sxZl1ZyahRgXxmZkFwJyLL-JMFegRNxkOPhkq3PmznV5ZoEH3i35Wj_jEOxpkk9gWF99Y3yPbl97a2H5jeYG03Kg8tCfk4wqwQkKVoXcOYQXPf77HHg8jkYtDbz7y4fMejvFQ7UzzIXS_DVvlevQfyILiQVTVo1VPe5Sev7El6Pr52XJFHcTK2XXbn3X3UJgwPxCwerGvz8CqZ2toV_D3cNiqiBBXKSzE_nlXeZ85NOpWc"/>
+</div>
+<div class="flex-1 flex flex-col justify-between py-1">
+<div>
+<div class="flex justify-between items-start">
+<span class="text-[10px] font-bold text-primary uppercase tracking-wider bg-surface-container-low px-2 py-0.5 rounded-full">Venue</span>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-amber-500" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-xs font-bold text-on-surface">4.9 <span class="text-outline font-normal">(128)</span></span>
+</div>
+</div>
+<h3 class="font-bold text-on-surface text-[15px] mt-1 leading-tight group-hover:text-primary transition-colors">Skyline Rooftop Lounge</h3>
+</div>
+<div class="flex justify-between items-end mt-2">
+<span class="text-xs font-medium text-success-text bg-success-bg px-2 py-1 rounded-full">Available Today</span>
+<span class="font-bold text-on-surface">$85<span class="text-xs text-on-surface-variant font-normal">/hr</span></span>
+</div>
+</div>
+</div>
+<!-- List Item 2 -->
+<div class="bg-white rounded-card border border-[#e9e6f5] p-3 flex gap-4 cursor-pointer group hover:shadow-md transition-shadow">
+<div class="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="A pristine indoor artificial turf sports arena, brightly lit with modern LED fixtures. The space is clean, energetic, and professional. The aesthetic is sporty and premium, aligning with a sophisticated light-mode booking interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBRkUTr85dTQWI1OfJFSBYE6CU_xqz4CajgG7LDgYLZO9a1kFTr2AtrF9FCbdZ3CC1l4I3YWlnKmugEy2W2gFmxwS3Gb3Hrk4Eh8lPIM9d5Xva9YjKiSNIfSsGT_jT1hSuA7aCQEWCBShkHXAgpsKHyIrE4eTcvdNnJTpLU3ZzfYMv5s9RJX5pzdAcCNVQaTcXe3Zc2s4ZDgZRzS27pcp29zirCgXlLb3tkH9eorMDIXtrbBHzFw6USTWLTKrvvE5niGKwe3qwqafs"/>
+</div>
+<div class="flex-1 flex flex-col justify-between py-1">
+<div>
+<div class="flex justify-between items-start">
+<span class="text-[10px] font-bold text-primary uppercase tracking-wider bg-surface-container-low px-2 py-0.5 rounded-full">Sports</span>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-amber-500" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-xs font-bold text-on-surface">4.8 <span class="text-outline font-normal">(94)</span></span>
+</div>
+</div>
+<h3 class="font-bold text-on-surface text-[15px] mt-1 leading-tight group-hover:text-primary transition-colors">Pro Turf Arena - Indiranagar</h3>
+</div>
+<div class="flex justify-between items-end mt-2">
+<span class="text-xs font-medium text-warning-text bg-warning-bg px-2 py-1 rounded-full">Few Slots Left</span>
+<span class="font-bold text-on-surface">$40<span class="text-xs text-on-surface-variant font-normal">/hr</span></span>
+</div>
+</div>
+</div>
+<!-- List Item 3 -->
+<div class="bg-white rounded-card border border-[#e9e6f5] p-3 flex gap-4 cursor-pointer group hover:shadow-md transition-shadow">
+<div class="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="A highly professional creative podcast and photography studio setup. Features professional microphones, acoustic panels, softbox lighting, and a clean white infinity wall. The space is bright, modern, and inspiring, fitting a premium creative workspace platform." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBplpo4LG1kC1Tkote8crpdVhaqCMTMsEF5aAkyk_pqn2YLHinPq0dKSx5dvWdlbQZK8vBQpYmsV3MPVek1-6yhN9P4BnGYX7k8p2fNDajsHm2GzOMhwtr9de8sV2AXMud3QgwboJ4_F3SkruwyCYBpyDq3M9DQa36kQfDeYUA7X6iGBeepSY2d32mQ34GmF8Nao1OmubQ1MJ0MGySlVcCmUWAt37QPSXeTGiKIycYQuNHvAaMnVL2ibi8P2p9jXOVCVYEGV180zMs"/>
+</div>
+<div class="flex-1 flex flex-col justify-between py-1">
+<div>
+<div class="flex justify-between items-start">
+<span class="text-[10px] font-bold text-primary uppercase tracking-wider bg-surface-container-low px-2 py-0.5 rounded-full">Studio</span>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-amber-500" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-xs font-bold text-on-surface">4.95 <span class="text-outline font-normal">(56)</span></span>
+</div>
+</div>
+<h3 class="font-bold text-on-surface text-[15px] mt-1 leading-tight group-hover:text-primary transition-colors">Creative Podcast &amp; Photo Studio</h3>
+</div>
+<div class="flex justify-between items-end mt-2">
+<span class="text-xs font-medium text-success-text bg-success-bg px-2 py-1 rounded-full">Available Today</span>
+<span class="font-bold text-on-surface">$60<span class="text-xs text-on-surface-variant font-normal">/hr</span></span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] z-50 flex justify-around items-center py-3 px-4 bg-white/80 dark:bg-surface-container-highest/80 backdrop-blur-md border border-outline-variant/30 dark:border-outline/20 shadow-lg shadow-primary/10 rounded-full">
+<!-- Home (Active) -->
+<a class="flex flex-col items-center justify-center text-primary dark:text-primary-fixed-dim bg-primary-container/20 rounded-full p-2 scale-90 transition-transform duration-150 w-16" href="index.html">
+<span class="material-symbols-outlined text-[24px] mb-1" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-label-caps text-label-caps text-[10px]">Home</span>
+</a>
+<!-- Explore -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant p-2 hover:bg-surface-container-high/50 dark:hover:bg-surface-container-highest/50 rounded-full w-16 transition-colors" href="explore.html">
+<span class="material-symbols-outlined text-[24px] mb-1">search</span>
+<span class="font-label-caps text-label-caps text-[10px]">Explore</span>
+</a>
+<!-- Bookings -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant p-2 hover:bg-surface-container-high/50 dark:hover:bg-surface-container-highest/50 rounded-full w-16 transition-colors" href="bookings.html">
+<span class="material-symbols-outlined text-[24px] mb-1">event_available</span>
+<span class="font-label-caps text-label-caps text-[10px]">Bookings</span>
+</a>
+<!-- Host -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant p-2 hover:bg-surface-container-high/50 dark:hover:bg-surface-container-highest/50 rounded-full w-16 transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px] mb-1">add_circle</span>
+<span class="font-label-caps text-label-caps text-[10px]">Host</span>
+</a>
+<!-- Profile -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant p-2 hover:bg-surface-container-high/50 dark:hover:bg-surface-container-highest/50 rounded-full w-16 transition-colors" href="profile.html">
+<span class="material-symbols-outlined text-[24px] mb-1">person</span>
+<span class="font-label-caps text-label-caps text-[10px]">Profile</span>
+</a>
+</nav>
+</body></html>

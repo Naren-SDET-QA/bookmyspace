@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Explore Spaces - BookMySpace</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-high": "#e9e5ff",
+                        "on-tertiary-fixed": "#1a1b21",
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-on-surface": "#f3eeff",
+                        "primary-container": "#6c3df4",
+                        "on-primary-fixed-variant": "#4c00d3",
+                        "surface-variant": "#e3dfff",
+                        "on-tertiary-container": "#e5e3ec",
+                        "on-tertiary": "#ffffff",
+                        "on-surface": "#181445",
+                        "on-primary": "#ffffff",
+                        "on-error": "#ffffff",
+                        "tertiary-fixed": "#e3e1ea",
+                        "inverse-primary": "#ccbeff",
+                        "surface-container-low": "#f6f2ff",
+                        "tertiary": "#4d4d54",
+                        "outline": "#797487",
+                        "surface-container-highest": "#e3dfff",
+                        "surface-dim": "#dad6ff",
+                        "on-secondary-container": "#fffbff",
+                        "background": "#fcf8ff",
+                        "primary-fixed": "#e7deff",
+                        "outline-variant": "#cac3d9",
+                        "primary-fixed-dim": "#ccbeff",
+                        "surface-container": "#efebff",
+                        "secondary-fixed": "#e2dfff",
+                        "primary": "#5313dc",
+                        "surface-bright": "#fcf8ff",
+                        "surface": "#fcf8ff",
+                        "on-secondary": "#ffffff",
+                        "on-background": "#181445",
+                        "secondary-fixed-dim": "#c3c0ff",
+                        "inverse-surface": "#2d2a5b",
+                        "tertiary-fixed-dim": "#c7c5ce",
+                        "on-secondary-fixed": "#0f0069",
+                        "secondary": "#4b41e1",
+                        "on-secondary-fixed-variant": "#3323cc",
+                        "on-error-container": "#93000a",
+                        "error": "#ba1a1a",
+                        "on-primary-container": "#e8dfff",
+                        "surface-tint": "#6533ed",
+                        "on-tertiary-fixed-variant": "#46464d",
+                        "on-surface-variant": "#484456",
+                        "tertiary-container": "#65656c",
+                        "on-primary-fixed": "#1e0060",
+                        "secondary-container": "#645efb",
+                        "error-container": "#ffdad6"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px",
+                        "card": "20px"
+                    },
+                    "spacing": {
+                        "gutter": "16px",
+                        "margin-mobile": "16px",
+                        "container-max": "390px",
+                        "base": "8px"
+                    },
+                    "fontFamily": {
+                        "display-lg-mobile": ["Plus Jakarta Sans"],
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "label-caps": ["Plus Jakarta Sans"],
+                        "display-lg": ["Plus Jakarta Sans"],
+                        "body-base": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "display-lg-mobile": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.04em", "fontWeight": "800" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.04em", "fontWeight": "800" }],
+                        "body-base": ["16px", { "lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #f4f2fb;
+            -webkit-font-smoothing: antialiased;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .bg-primary-gradient {
+            background: linear-gradient(135deg, #6c3df4, #4f46e5);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-base text-on-background min-h-screen relative pb-[100px] overflow-x-hidden">
+<!-- Header & Search Fixed Area -->
+<div class="sticky top-0 z-40 bg-surface/90 backdrop-blur-xl px-margin-mobile pt-6 pb-4 shadow-[0px_4px_20px_rgba(30,27,75,0.04)]">
+<!-- Header -->
+<div class="flex justify-between items-center mb-6">
+<h1 class="font-headline-md text-headline-md text-primary">Explore Spaces</h1>
+<button class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-primary">map</span>
+</button>
+</div>
+<!-- Search Bar -->
+<div class="flex gap-3">
+<div class="relative flex-1">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full h-12 pl-11 pr-4 bg-surface-container-lowest border border-[#e9e6f5] rounded-[15px] focus:outline-none focus:ring-2 focus:ring-primary/50 text-body-base text-on-surface shadow-sm font-medium" placeholder="Search spaces..." type="text" value="Rooftop Lounge"/>
+</div>
+<button class="relative w-12 h-12 flex items-center justify-center bg-surface-container-lowest border border-[#e9e6f5] rounded-[15px] shadow-sm hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-primary">tune</span>
+<span class="absolute -top-1 -right-1 w-5 h-5 bg-error text-on-error font-label-caps text-[10px] flex items-center justify-center rounded-full border-2 border-surface">2</span>
+</button>
+</div>
+</div>
+<!-- Main Content Canvas -->
+<main class="px-margin-mobile pt-4 pb-20">
+<!-- Filter Chips -->
+<div class="flex gap-2 overflow-x-auto hide-scrollbar -mx-margin-mobile px-margin-mobile pb-4">
+<button class="flex items-center gap-1.5 px-4 py-2 bg-primary-container text-on-primary rounded-[15px] shadow-[0_4px_12px_rgba(108,61,244,0.2)] font-medium text-sm whitespace-nowrap transition-transform active:scale-95">
+                All (18)
+            </button>
+<button class="flex items-center gap-1.5 px-4 py-2 bg-surface-container-lowest border border-[#e9e6f5] text-on-surface rounded-[15px] font-medium text-sm whitespace-nowrap hover:bg-surface-container-low transition-colors">
+                Under $50
+            </button>
+<button class="flex items-center gap-1.5 px-4 py-2 bg-surface-container-lowest border border-[#e9e6f5] text-on-surface rounded-[15px] font-medium text-sm whitespace-nowrap hover:bg-surface-container-low transition-colors">
+                Rating 4.5+ <span class="text-[12px]">⭐</span>
+</button>
+<button class="flex items-center gap-1.5 px-4 py-2 bg-surface-container-lowest border border-[#e9e6f5] text-on-surface rounded-[15px] font-medium text-sm whitespace-nowrap hover:bg-surface-container-low transition-colors">
+                Instant Book <span class="text-[12px]">⚡</span>
+</button>
+<button class="flex items-center gap-1.5 px-4 py-2 bg-surface-container-lowest border border-[#e9e6f5] text-on-surface rounded-[15px] font-medium text-sm whitespace-nowrap hover:bg-surface-container-low transition-colors">
+                Has Parking <span class="text-[12px]">🅿️</span>
+</button>
+</div>
+<!-- Summary -->
+<div class="flex justify-between items-center py-4 text-sm">
+<span class="text-on-surface-variant font-medium">Showing 18 spaces in <span class="text-primary font-bold">Bengaluru</span></span>
+<button class="flex items-center gap-1 text-primary font-medium hover:text-primary-container transition-colors">
+                Popularity <span class="material-symbols-outlined text-[18px]">arrow_drop_down</span>
+</button>
+</div>
+<!-- Results List -->
+<div class="flex flex-col gap-5 mt-2">
+<!-- Card 1 -->
+<div class="bg-surface-container-lowest rounded-card border border-[#e9e6f5] overflow-hidden shadow-[0px_4px_20px_rgba(30,27,75,0.04)] group">
+<div class="relative h-48 w-full overflow-hidden">
+<div class="bg-cover bg-center w-full h-full group-hover:scale-105 transition-transform duration-500" data-alt="Skyline Rooftop Lounge" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBjRNuhPL4J09h9eOIy24-NwDHUWHCTtNKzdizDw0RybcTohJ3itzjfGKEX4ubkUScA6yEfiNuugSoH4v737uTaeZLsILavDVKg3efs0MG7fHxUWTuBDGjiEz83eHHHKGOdaFy-NQOaS_7xUIN0btjegWwM-Ov3DGq7bzHSe3Rd-aZvF1F_z09SB-Cyri6tch1-jafea1TUIqoe-RdG4c-H-VGif7iHq0W4zrj5xz86qK67iBes07tl2Uh-ZljQFE8JQA-rt47kQKg')"></div>
+<div class="absolute top-3 left-3 flex gap-2">
+<span class="px-2.5 py-1 bg-surface-container-lowest/90 backdrop-blur-md rounded-full font-label-caps text-label-caps text-primary shadow-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">local_bar</span> Venue
+                        </span>
+</div>
+<button class="absolute top-3 right-3 w-8 h-8 bg-surface-container-lowest/90 backdrop-blur-md rounded-full flex items-center justify-center text-outline hover:text-error transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[20px]">favorite_border</span>
+</button>
+</div>
+<div class="p-4">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-bold text-lg text-on-surface truncate pr-2">Skyline Rooftop Lounge</h3>
+<div class="flex items-center gap-1 text-sm font-medium bg-surface-container-low px-1.5 py-0.5 rounded-lg">
+<span class="material-symbols-outlined text-[16px] text-primary" style="font-variation-settings: 'FILL' 1;">star</span> 4.9 <span class="text-outline text-xs font-normal">(128)</span>
+</div>
+</div>
+<p class="text-on-surface-variant text-sm mb-3 flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-outline">location_on</span> 1.2 km away
+                    </p>
+<div class="flex justify-between items-center pt-3 border-t border-[#e9e6f5]/50">
+<div class="font-bold text-lg text-primary">$85<span class="text-sm font-normal text-on-surface-variant">/hr</span></div>
+<span class="px-3 py-1 bg-[#e6f4ea] text-[#137333] rounded-full text-xs font-bold tracking-wide">Available Today</span>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-surface-container-lowest rounded-card border border-[#e9e6f5] overflow-hidden shadow-[0px_4px_20px_rgba(30,27,75,0.04)] group">
+<div class="relative h-48 w-full overflow-hidden">
+<div class="bg-cover bg-center w-full h-full group-hover:scale-105 transition-transform duration-500" data-alt="Grand Banquet Hall" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA0i0r1qPTsst54wD9qquBm-tYNEE1Je4ufYqF4svzUNopPHmDGooTtUoPAY_z98a7AktMWrR_eBfuHmKKm3A5OoqyiCTgo4QTRILRFS4yUukVgd3_gKbTAu-Z4MFoj1CG4Qxq1Kq5r4w3VJTfDFloF_pFV9kS2TbbXtooTRnjGdU_7cxLiqsLwH1d1j1BaWxgseIIraoZZr9r5Z-KRP0jboGCI7ErM80hQ0_mB79uzQicX1rN54nYxLi1hLk6CwDCurxHtTYMKS_U')"></div>
+<div class="absolute top-3 left-3 flex gap-2">
+<span class="px-2.5 py-1 bg-surface-container-lowest/90 backdrop-blur-md rounded-full font-label-caps text-label-caps text-primary shadow-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">celebration</span> Venue
+                        </span>
+</div>
+<button class="absolute top-3 right-3 w-8 h-8 bg-surface-container-lowest/90 backdrop-blur-md rounded-full flex items-center justify-center text-outline hover:text-error transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[20px]">favorite_border</span>
+</button>
+</div>
+<div class="p-4">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-bold text-lg text-on-surface truncate pr-2">Grand Banquet Hall</h3>
+<div class="flex items-center gap-1 text-sm font-medium bg-surface-container-low px-1.5 py-0.5 rounded-lg">
+<span class="material-symbols-outlined text-[16px] text-primary" style="font-variation-settings: 'FILL' 1;">star</span> 4.7 <span class="text-outline text-xs font-normal">(82)</span>
+</div>
+</div>
+<p class="text-on-surface-variant text-sm mb-3 flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-outline">location_on</span> 3.5 km away
+                    </p>
+<div class="flex justify-between items-center pt-3 border-t border-[#e9e6f5]/50">
+<div class="font-bold text-lg text-primary">$120<span class="text-sm font-normal text-on-surface-variant">/hr</span></div>
+<span class="px-3 py-1 bg-[#e6f4ea] text-[#137333] rounded-full text-xs font-bold tracking-wide">Available Today</span>
+</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="bg-surface-container-lowest rounded-card border border-[#e9e6f5] overflow-hidden shadow-[0px_4px_20px_rgba(30,27,75,0.04)] group">
+<div class="relative h-48 w-full overflow-hidden">
+<div class="bg-cover bg-center w-full h-full group-hover:scale-105 transition-transform duration-500" data-alt="Sunset Terrace Garden" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCN7HDkn5xj-ERhsxGCAqHrfc8PGxlQKsfRhM-HsNgWvpSXRVMBPg2X8spckeNH8iNHjvE-p7X8_JX7M1qkey6P5N8xo7LG4Gx2oh1z8Iby1xImaAdOS8O0opZYqslUFn36Lm5yv215Qj5sxFcyD9_zV3V2mH718dFW23EBR2XgDPTOT--qHodHZft16P3CHH-fhme7XWg9xVgJzlVlBKGMm6sFF8OaDKa2_sh6-gKrsrGB7PLenQyklEMfgZBs7gex6j4IDBJHlBg')"></div>
+<div class="absolute top-3 left-3 flex gap-2">
+<span class="px-2.5 py-1 bg-surface-container-lowest/90 backdrop-blur-md rounded-full font-label-caps text-label-caps text-primary shadow-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">deck</span> Venue
+                        </span>
+</div>
+<button class="absolute top-3 right-3 w-8 h-8 bg-surface-container-lowest/90 backdrop-blur-md rounded-full flex items-center justify-center text-error transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">favorite</span>
+</button>
+</div>
+<div class="p-4">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-bold text-lg text-on-surface truncate pr-2">Sunset Terrace Garden</h3>
+<div class="flex items-center gap-1 text-sm font-medium bg-surface-container-low px-1.5 py-0.5 rounded-lg">
+<span class="material-symbols-outlined text-[16px] text-primary" style="font-variation-settings: 'FILL' 1;">star</span> 4.85 <span class="text-outline text-xs font-normal">(64)</span>
+</div>
+</div>
+<p class="text-on-surface-variant text-sm mb-3 flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-outline">location_on</span> 2.1 km away
+                    </p>
+<div class="flex justify-between items-center pt-3 border-t border-[#e9e6f5]/50">
+<div class="font-bold text-lg text-primary">$70<span class="text-sm font-normal text-on-surface-variant">/hr</span></div>
+<span class="px-3 py-1 bg-[#fef7e0] text-[#b06000] rounded-full text-xs font-bold tracking-wide">Few Slots Left</span>
+</div>
+</div>
+</div>
+<!-- Card 4 -->
+<div class="bg-surface-container-lowest rounded-card border border-[#e9e6f5] overflow-hidden shadow-[0px_4px_20px_rgba(30,27,75,0.04)] group">
+<div class="relative h-48 w-full overflow-hidden">
+<div class="bg-cover bg-center w-full h-full group-hover:scale-105 transition-transform duration-500" data-alt="Penthouse Co-working Space" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuD6lw2UD0cgs55a1N8ybIpl4ykk4NcuUrc-kDFNUS-EJGH7tHSaaSYklu-yQyZd4-t_WAhNGIuu1WGWHu797XMGsjcjq3UCYaQu8W5u4w7KBsRw22x7Ch1czrGH_uRKnj1vSZFEUel1kEN0VXuwh67_vbo79roalIk2T9WRgU5Ivr-IRTb5Hcf7_eTorUVuHp8OfdDWKZMP1K8tMj-oxMCnPqhWFa7qweLPnqRVZz0RwSeOP6pP2Xf91qm3TxeG0Gqo6CpQ4_haXN4')"></div>
+<div class="absolute top-3 left-3 flex gap-2">
+<span class="px-2.5 py-1 bg-surface-container-lowest/90 backdrop-blur-md rounded-full font-label-caps text-label-caps text-primary shadow-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">work</span> Work
+                        </span>
+</div>
+<button class="absolute top-3 right-3 w-8 h-8 bg-surface-container-lowest/90 backdrop-blur-md rounded-full flex items-center justify-center text-outline hover:text-error transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[20px]">favorite_border</span>
+</button>
+</div>
+<div class="p-4">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-bold text-lg text-on-surface truncate pr-2">Penthouse Co-working Space</h3>
+<div class="flex items-center gap-1 text-sm font-medium bg-surface-container-low px-1.5 py-0.5 rounded-lg">
+<span class="material-symbols-outlined text-[16px] text-primary" style="font-variation-settings: 'FILL' 1;">star</span> 4.6 <span class="text-outline text-xs font-normal">(45)</span>
+</div>
+</div>
+<p class="text-on-surface-variant text-sm mb-3 flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-outline">location_on</span> 0.8 km away
+                    </p>
+<div class="flex justify-between items-center pt-3 border-t border-[#e9e6f5]/50">
+<div class="font-bold text-lg text-primary">$35<span class="text-sm font-normal text-on-surface-variant">/hr</span></div>
+<span class="px-3 py-1 bg-[#e6f4ea] text-[#137333] rounded-full text-xs font-bold tracking-wide">Available Today</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation Bar (Shared Component) -->
+<nav class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] rounded-full border border-outline-variant/30 bg-white/80 backdrop-blur-md shadow-lg shadow-primary/10 z-50 flex justify-around items-center py-3 px-4">
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:bg-surface-container-high/50 rounded-full" href="index.html">
+<span class="material-symbols-outlined text-[24px]">home</span>
+<span class="font-label-caps text-label-caps text-[10px]">Home</span>
+</a>
+<!-- Active State: Explore -->
+<a class="flex flex-col items-center justify-center text-primary bg-primary-container/20 rounded-full p-2 scale-90 transition-transform duration-150" href="explore.html">
+<span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">search</span>
+<span class="font-label-caps text-label-caps text-[10px]">Explore</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:bg-surface-container-high/50 rounded-full" href="bookings.html">
+<span class="material-symbols-outlined text-[24px]">event_available</span>
+<span class="font-label-caps text-label-caps text-[10px]">Bookings</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:bg-surface-container-high/50 rounded-full" href="#">
+<span class="material-symbols-outlined text-[24px]">add_circle</span>
+<span class="font-label-caps text-label-caps text-[10px]">Host</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:bg-surface-container-high/50 rounded-full" href="profile.html">
+<span class="material-symbols-outlined text-[24px]">person</span>
+<span class="font-label-caps text-label-caps text-[10px]">Profile</span>
+</a>
+</nav>
+</body></html>

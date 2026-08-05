@@ -1,0 +1,35 @@
+{
+  "name": "projects/1908510973160517619",
+  "projectId": "1908510973160517619",
+  "title": "BookMySpace Mobile App",
+  "visibility": "PRIVATE",
+  "createTime": "2026-08-04T16:31:41.360316Z",
+  "updateTime": "2026-08-04T16:37:33.000000Z",
+  "projectType": "PROJECT_DESIGN",
+  "origin": "STITCH",
+  "deviceType": "MOBILE",
+  "designTheme": {
+    "colorMode": "LIGHT",
+    "font": "PLUS_JAKARTA_SANS",
+    "customColor": "#6c3df4"
+  },
+  "screens": {
+    "index": {
+      "id": "7e6fb15bf08c445d9a5bde4cff97fb6a",
+      "sourceScreen": "projects/1908510973160517619/screens/7e6fb15bf08c445d9a5bde4cff97fb6a",
+      "width": 780,
+      "height": 2818,
+      "title": "BookMySpace Home"
+    },
+    "explore": {
+      "id": "fa27ff708cf8478e928963291c9a508b",
+      "sourceScreen": "projects/1908510973160517619/screens/fa27ff708cf8478e928963291c9a508b",
+      "width": 780,
+      "height": 3692,
+      "title": "Explore Spaces"
+    }
+  },
+  "metadata": {
+    "userRole": "OWNER"
+  }
+}

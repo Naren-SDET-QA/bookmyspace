@@ -25,3 +25,7 @@ key.properties
 .idea/
 *.iml
 .vscode/
+bookmyspace_BACKUP_20260805/
+supabase/.temp/
+.tmp/
+.temp/

@@ -1,0 +1,22 @@
+@echo off
+cd /d "C:\Users\windows\Desktop\apple\bookmyspace"
+
+powershell -NoExit -ExecutionPolicy Bypass -Command ^
+"$ak=Read-Host 'Supabase publishable key' -AsSecureString; ^
+$cp=Read-Host 'Customer password' -AsSecureString; ^
+$op=Read-Host 'Owner password' -AsSecureString; ^
+$ap=Read-Host 'Admin password' -AsSecureString; ^
+$key=[Net.NetworkCredential]::new('',$ak).Password; ^
+$c=[Net.NetworkCredential]::new('',$cp).Password; ^
+$o=[Net.NetworkCredential]::new('',$op).Password; ^
+$a=[Net.NetworkCredential]::new('',$ap).Password; ^
+& 'C:\flutter\bin\flutter.bat' run -d chrome ^
+--dart-define=APP_ENV=development ^
+--dart-define=SUPABASE_URL=https://ehxuygrsyaknhhsaihhx.supabase.co ^
+--dart-define=\"SUPABASE_ANON_KEY=$key\" ^
+--dart-define=DEV_CUSTOMER_EMAIL=tnarendra612@gmail.com ^
+--dart-define=\"DEV_CUSTOMER_PASSWORD=$c\" ^
+--dart-define=DEV_OWNER_EMAIL=narenqe2@gmail.com ^
+--dart-define=\"DEV_OWNER_PASSWORD=$o\" ^
+--dart-define=DEV_ADMIN_EMAIL=tnarendra2025@gmail.com ^
+--dart-define=\"DEV_ADMIN_PASSWORD=$a\""
