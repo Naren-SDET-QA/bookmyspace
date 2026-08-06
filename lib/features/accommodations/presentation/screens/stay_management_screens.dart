@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../payments/presentation/payment_providers.dart';
 
 final _myStaysProvider = FutureProvider<List<Map<String, dynamic>>>(
   (ref) async =>
@@ -58,23 +61,139 @@ class MyStayBookingsScreen extends ConsumerWidget {
                   padding: const EdgeInsets.all(AppTheme.pagePadding),
                   itemCount: items.length,
                   itemBuilder: (_, i) {
-                    final item = items[i],
+                    final booking = items[i],
                         property = Map<String, dynamic>.from(
-                          item['accommodation_properties'] as Map? ?? const {},
-                        );
+                          booking['accommodation_properties'] as Map? ??
+                              const {},
+                        ),
+                        status = booking['status'] as String? ?? '',
+                        cancellable = const {
+                          'requested',
+                          'payment_pending',
+                          'confirmed',
+                        }.contains(status);
                     return Card(
                       child: ListTile(
                         title: Text(property['name']?.toString() ?? 'Stay'),
                         subtitle: Text(
-                          '${item['check_in']} - ${item['check_out']}\n${item['status']} - ${item['payment_status']}',
+                          '${booking['booking_ref']}\n${booking['check_in']} → ${booking['check_out']}\n${status.toUpperCase()} • ${booking['payment_status']}',
                         ),
-                        trailing: Text('${item['currency']} ${item['total']}'),
+                        trailing: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text('${booking['currency']} ${booking['total']}'),
+                            if (status == 'confirmed' ||
+                                status == 'completed')
+                              TextButton.icon(
+                                onPressed: () => _openReceipt(
+                                  context,
+                                  ref,
+                                  Map<String, dynamic>.from(booking),
+                                ),
+                                icon: const Icon(Icons.receipt_long_rounded),
+                                label: const Text('Receipt'),
+                              ),
+                            if (cancellable)
+                              TextButton.icon(
+                                onPressed: () => _cancelStay(
+                                  context,
+                                  ref,
+                                  Map<String, dynamic>.from(booking),
+                                ),
+                                icon: const Icon(Icons.cancel_outlined),
+                                label: const Text('Cancel'),
+                              ),
+                          ],
+                        ),
                       ),
                     );
                   },
                 ),
         ),
   );
+}
+
+Future<void> _cancelStay(
+  BuildContext context,
+  WidgetRef ref,
+  Map<String, dynamic> booking,
+) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (c) => AlertDialog(
+      title: const Text('Cancel this stay?'),
+      content: Text(
+        '${booking['booking_ref']} will be cancelled. '
+        'Any payment already made will be refunded per policy.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(c, false),
+          child: const Text('Keep'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(c, true),
+          child: const Text('Cancel stay'),
+        ),
+      ],
+    ),
+  );
+  if (ok != true || !context.mounted) return;
+  try {
+    await Supabase.instance.client.rpc<void>(
+      'update_stay_booking_status',
+      params: {
+        'p_booking_id': booking['id'],
+        'p_status': 'cancelled',
+      },
+    );
+    ref.invalidate(_myStaysProvider);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Stay cancelled.')),
+      );
+    }
+  } catch (error) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$error')));
+    }
+  }
+}
+
+Future<void> _openReceipt(
+  BuildContext context,
+  WidgetRef ref,
+  Map<String, dynamic> booking,
+) async {
+  try {
+    final referenceId = await ref
+        .read(paymentRepositoryProvider)
+        .referenceForReservation('stays', booking['id'] as String);
+    final rows = await Supabase.instance.client
+        .from('invoices')
+        .select('id')
+        .eq('commerce_reference_id', referenceId)
+        .limit(1);
+    if (!context.mounted) return;
+    if (rows.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Receipt not issued yet.')),
+      );
+      return;
+    }
+    context.go(
+      AppRoutes.invoiceView.replaceFirst(':id', rows.first['id'] as String),
+    );
+  } catch (error) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$error')));
+    }
+  }
 }
 
 class StayOwnerScreen extends ConsumerWidget {
