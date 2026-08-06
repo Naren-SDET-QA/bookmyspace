@@ -15,6 +15,9 @@ import '../../../registration/presentation/screens/registration_screens.dart';
 import '../../domain/accommodation.dart';
 import '../accommodation_providers.dart';
 
+double computeStaySubtotal(double nightlyRate, int nights, int roomQuantity) =>
+    nightlyRate * nights * roomQuantity;
+
 class AccommodationDetailScreen extends ConsumerWidget {
   const AccommodationDetailScreen({
     super.key,
@@ -107,7 +110,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
         builder: (context) => AlertDialog(
           title: const Text('Review stay'),
           content: Text(
-            '${widget.property.name}\n${_unit!.name} × $_roomQuantity\n$nights nights • $_guests adults • $_children children\nSubtotal ₹${(match.nightlyRate * nights * _roomQuantity).toStringAsFixed(0)}\n${widget.property.bookingMode == 'approval' ? 'Owner approval required' : 'Instant booking'}',
+            '${widget.property.name}\n${_unit!.name} × $_roomQuantity\n$nights nights • $_guests adults • $_children children\nSubtotal ₹${computeStaySubtotal(match.nightlyRate, nights, _roomQuantity).toStringAsFixed(0)}\n${widget.property.bookingMode == 'approval' ? 'Owner approval required' : 'Instant booking'}',
           ),
           actions: [
             TextButton(
