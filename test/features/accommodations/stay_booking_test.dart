@@ -46,8 +46,8 @@ void main() {
           'rent_monthly': null,
           'deposit': 0,
           'available_from': '2026-08-01',
-          'amenities': [],
-          'photos': [],
+          'amenities': <String>[],
+          'photos': <String>[],
         },
       ],
     });
