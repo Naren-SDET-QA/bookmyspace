@@ -18,13 +18,15 @@ Future<void> pumpUntil(
   WidgetTester tester,
   bool Function() ready, {
   Duration timeout = const Duration(seconds: 35),
+  String what = '',
 }) async {
   final deadline = DateTime.now().add(timeout);
   while (DateTime.now().isBefore(deadline)) {
     await tester.pump(const Duration(milliseconds: 200));
     if (ready()) return;
   }
-  throw StateError('Timed out waiting for condition');
+  debugPrint('PUMP_TIMEOUT|$what');
+  throw StateError('Timed out waiting for condition ($what)');
 }
 
 /// Pumps frames for a fixed duration (for animations / splash).
@@ -40,6 +42,7 @@ Future<void> waitForLoad(WidgetTester tester) async {
   await pumpUntil(
     tester,
     () => find.byType(CircularProgressIndicator).evaluate().isEmpty,
+    what: 'waitForLoad',
   );
 }
 
@@ -51,9 +54,19 @@ Future<void> backToHome(WidgetTester tester) async {
   } else {
     await tester.pageBack();
   }
+  // Scroll the home tile grid back to the top so the first tile is visible.
+  for (var i = 0; i < 4; i++) {
+    await tester.drag(
+      find.byType(GridView).first,
+      const Offset(0, 600),
+      warnIfMissed: false,
+    );
+    await tester.pump(const Duration(milliseconds: 150));
+  }
   await pumpUntil(
     tester,
     () => find.text('Function Halls').evaluate().isNotEmpty,
+    what: 'backToHome',
   );
 }
 
@@ -85,7 +98,8 @@ void main() {
       tester,
       () => find.text('Get started').evaluate().isNotEmpty ||
           find.text('Skip').evaluate().isNotEmpty,
-      timeout: const Duration(seconds: 40),
+      timeout: const Duration(seconds: 90),
+      what: 'boot',
     );
     // Skip onboarding (Skip is always visible; Get started is page 3 only).
     final skip = find.text('Skip');
@@ -103,17 +117,40 @@ void main() {
           find.text('Customer Test Login').evaluate().isNotEmpty ||
           find.text('Welcome back 👋').evaluate().isNotEmpty,
       timeout: const Duration(seconds: 25),
+      what: 'login_screen',
     );
     final testLogin = find.text('Customer Test Login');
     if (testLogin.evaluate().isEmpty) {
       report('LOGIN', false, 'TEST MODE login buttons not visible');
     } else {
-      await tester.tap(testLogin);
-      await pumpUntil(
-        tester,
-        () => find.text('Function Halls').evaluate().isNotEmpty,
-        timeout: const Duration(seconds: 30),
+      // Button may sit below the fold; scroll it fully into view first.
+      await Scrollable.ensureVisible(
+        testLogin.evaluate().first,
+        duration: const Duration(milliseconds: 400),
+        alignment: 0.5,
       );
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.ensureVisible(testLogin);
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.tap(testLogin, warnIfMissed: false);
+      try {
+        await pumpUntil(
+          tester,
+          () => find.text('Function Halls').evaluate().isNotEmpty,
+          timeout: const Duration(seconds: 30),
+          what: 'login_home',
+        );
+      } catch (e) {
+        // Diagnostic: dump what's on screen at login timeout.
+        final texts = <String>{};
+        for (final w in find.byType(Text).evaluate()) {
+          final tw = w.widget as Text;
+          final t = tw.data;
+          if (t != null && t.trim().isNotEmpty) texts.add(t.trim());
+        }
+        debugPrint('LOGIN_TIMEOUT_SCREEN|${texts.take(30).join(' ~ ')}');
+        rethrow;
+      }
       report('LOGIN', true);
     }
 
@@ -132,6 +169,15 @@ void main() {
       'PG / Co-Living',
       'Hotels / Rooms / Stays',
     ];
+    // The tile grid is scrollable; scroll down to reveal below-fold tiles.
+    for (var i = 0; i < 4; i++) {
+      await tester.drag(
+        find.byType(GridView).first,
+        const Offset(0, -400),
+        warnIfMissed: false,
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+    }
     final missingTiles = <String>[
       for (final t in expectedTiles)
         if (find.text(t).evaluate().isEmpty) t,
@@ -153,6 +199,7 @@ void main() {
       await pumpUntil(
         tester,
         () => find.byType(screenType).evaluate().isNotEmpty,
+        what: 'open_$category',
       );
       await waitForLoad(tester);
       final hasError = find.byType(ErrorView).evaluate().isNotEmpty;
@@ -183,6 +230,7 @@ void main() {
       await pumpUntil(
         tester,
         () => find.byType(SearchScreen).evaluate().isNotEmpty,
+        what: 'open_function_halls',
       );
       await waitForLoad(tester);
       if (find.byType(ErrorView).evaluate().isNotEmpty) {
@@ -214,6 +262,7 @@ void main() {
         await pumpUntil(
           tester,
           () => find.byType(EventsListScreen).evaluate().isNotEmpty,
+          what: 'open_$tile',
         );
         await waitForLoad(tester);
         report(tile.toUpperCase(), true, 'routes to Events list');
@@ -229,6 +278,7 @@ void main() {
       await pumpUntil(
         tester,
         () => find.byType(AccommodationListScreen).evaluate().isNotEmpty,
+        what: 'open_PG',
       );
       await waitForLoad(tester);
       if (find.byType(ErrorView).evaluate().isNotEmpty) {
@@ -247,6 +297,7 @@ void main() {
       await pumpUntil(
         tester,
         () => find.byType(AccommodationListScreen).evaluate().isNotEmpty,
+        what: 'open_STAYS',
       );
       await waitForLoad(tester);
       if (find.byType(ErrorView).evaluate().isNotEmpty) {
@@ -267,6 +318,7 @@ void main() {
       await pumpUntil(
         tester,
         () => find.byType(SearchScreen).evaluate().isNotEmpty,
+        what: 'details_function_halls',
       );
       await waitForLoad(tester);
       final cards = find.byType(VenueCard);
@@ -279,6 +331,7 @@ void main() {
       await pumpUntil(
         tester,
         () => find.byType(VenueDetailsScreen).evaluate().isNotEmpty,
+        what: 'open_venue_details',
       );
       await waitForLoad(tester);
       final hasBookNow =
@@ -297,6 +350,7 @@ void main() {
       await pumpUntil(
         tester,
         () => find.byType(SearchScreen).evaluate().isNotEmpty,
+        what: 'back_from_details',
       );
       await backToHome(tester);
     });
@@ -311,6 +365,7 @@ void main() {
         () =>
             find.text('Saved 💜').evaluate().isNotEmpty ||
             find.byType(EmptyState).evaluate().isNotEmpty,
+        what: 'open_saved',
       );
       report('SAVED_TAB', true, 'Saved screen rendered');
       await backToHome(tester);

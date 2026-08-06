@@ -36,3 +36,4 @@ supabase/.branches/
 .env
 .env.local
 .env.*.local
+.aider*
