@@ -20,6 +20,12 @@ class SupabaseVenueRepository implements VenueRepository {
     venue_images (id, url, thumbnail_url, alt_text, is_cover, sort_order)
   ''';
 
+  static const String _venueSelectByCategory = '''
+    *,
+    venue_categories!inner (id, slug, name, icon),
+    venue_images (id, url, thumbnail_url, alt_text, is_cover, sort_order)
+  ''';
+
   @override
   Future<List<VenueCategory>> categories() async {
     try {
@@ -77,7 +83,11 @@ class SupabaseVenueRepository implements VenueRepository {
     try {
       var builder = _client
           .from('venues')
-          .select(_venueSelect)
+          .select(
+            query.categorySlug != null
+                ? _venueSelectByCategory
+                : _venueSelect,
+          )
           .eq('is_active', true);
 
       if (query.query.trim().isNotEmpty) {
