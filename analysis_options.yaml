@@ -12,6 +12,7 @@ analyzer:
     - "**/*.freezed.dart"
     - build/**
     - lib/**.g.dart
+    - bookmyspace_BACKUP_20260805/**
 
 linter:
   rules:
