@@ -109,7 +109,7 @@ void main() {
   testWidgets('Approvals tab lists pending halls and publishes on approve',
       (tester) async {
     final fake = _FakeAdminRepo();
-    final pendingVenue = AdminContentVenue(
+    const pendingVenue = AdminContentVenue(
       id: 'venue-1',
       name: 'Grand Function Hall',
       city: 'Ongole',
