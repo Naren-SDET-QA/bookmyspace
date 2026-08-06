@@ -24,7 +24,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 5, vsync: this);
+    _tabs = TabController(length: 6, vsync: this);
   }
 
   @override
@@ -70,6 +70,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen>
           unselectedLabelColor: AppTheme.muted,
           indicatorColor: AppTheme.brand,
           tabs: const [
+            Tab(text: 'Approvals'),
             Tab(text: 'Homepage'),
             Tab(text: 'Venues'),
             Tab(text: 'Categories'),
@@ -81,6 +82,7 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen>
       body: TabBarView(
         controller: _tabs,
         children: const [
+          _ApprovalsTab(),
           _HomepageTab(),
           _VenuesTab(),
           _CategoriesTab(),
@@ -88,6 +90,147 @@ class _AdminContentScreenState extends ConsumerState<AdminContentScreen>
           _PreviewTab(),
         ],
       ),
+    );
+  }
+}
+
+class _ApprovalsTab extends ConsumerStatefulWidget {
+  const _ApprovalsTab();
+
+  @override
+  ConsumerState<_ApprovalsTab> createState() => _ApprovalsTabState();
+}
+
+class _ApprovalsTabState extends ConsumerState<_ApprovalsTab> {
+  bool _busy = false;
+
+  Future<void> _decide(AdminContentVenue v, bool approve) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      final repo = ref.read(adminContentRepositoryProvider);
+      await repo.approveVenue(v.id, approve: approve);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              approve
+                  ? '${v.name} published — now bookable'
+                  : '${v.name} not approved',
+            ),
+          ),
+        );
+      }
+      ref.invalidate(adminContentVenuesProvider);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final venues = ref.watch(adminContentVenuesProvider);
+    return venues.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => ErrorView(
+        message: e.toString(),
+        onRetry: () => ref.invalidate(adminContentVenuesProvider),
+      ),
+      data: (items) {
+        // Pending = owner-submitted, not yet published/verified.
+        final pending = items
+            .where((v) => !v.isActive && !v.isVerified)
+            .toList();
+        if (pending.isEmpty) {
+          return const EmptyState(
+            icon: Icons.verified_outlined,
+            title: 'No pending approvals',
+            message: 'Owner-submitted halls appear here for review.',
+          );
+        }
+        return ListView.separated(
+          padding: const EdgeInsets.all(16),
+          itemCount: pending.length,
+          separatorBuilder: (_, _) => const SizedBox(height: 8),
+          itemBuilder: (context, i) {
+            final v = pending[i];
+            return Card(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            v.name,
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: PrototypeVisuals.badgeFeatBg,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            '⏳ Pending review',
+                            style: TextStyle(
+                              color: PrototypeVisuals.badgeFeatFg,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      [
+                        if (v.city.isNotEmpty) v.city,
+                        '₹${v.pricingBaseAmount.toStringAsFixed(0)}',
+                        'capacity ${v.capacity}',
+                        if (v.ownerVerified) '🔒 owner-verified',
+                      ].join(' · '),
+                      style: const TextStyle(color: AppTheme.muted, fontSize: 12),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: _busy ? null : () => _decide(v, true),
+                            icon: const Icon(Icons.check_rounded, size: 18),
+                            label: const Text('Approve & publish'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _busy ? null : () => _decide(v, false),
+                            icon: const Icon(Icons.close_rounded, size: 18),
+                            label: const Text('Reject'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

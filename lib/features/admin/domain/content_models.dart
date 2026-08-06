@@ -153,6 +153,7 @@ class AdminContentVenue {
     this.longitude = 0,
     this.isFeatured = false,
     this.isActive = true,
+    this.isVerified = false,
     this.ownerVerified = false,
     this.offerText = '',
     this.offerPercent,
@@ -175,6 +176,7 @@ class AdminContentVenue {
   final double longitude;
   final bool isFeatured;
   final bool isActive;
+  final bool isVerified;
   final bool ownerVerified;
   final String offerText;
   final double? offerPercent;
@@ -199,6 +201,7 @@ class AdminContentVenue {
         longitude: (json['longitude'] as num?)?.toDouble() ?? 0,
         isFeatured: json['is_featured'] as bool? ?? false,
         isActive: json['is_active'] as bool? ?? true,
+        isVerified: json['is_verified'] as bool? ?? false,
         ownerVerified: json['owner_verified'] as bool? ?? false,
         offerText: json['offer_text'] as String? ?? '',
         offerPercent: (json['offer_percent'] as num?)?.toDouble(),

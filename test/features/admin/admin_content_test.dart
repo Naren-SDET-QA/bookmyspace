@@ -187,6 +187,8 @@ void main() {
     expect(find.text('Offers'), findsOneWidget);
     expect(find.text('Preview'), findsWidgets);
 
+    await tester.ensureVisible(find.text('Preview').last);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Preview').last);
     await tester.pumpAndSettle();
     expect(find.textContaining('Customer home preview'), findsOneWidget);

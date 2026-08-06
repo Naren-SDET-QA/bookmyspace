@@ -57,6 +57,9 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
 
   bool get _editing => widget.venue != null;
 
+  /// Hall is customer-visible only when approved (published) by admin.
+  bool get _venueIsLive => widget.venue?.isActive ?? false;
+
   bool get _fieldLocked => _ownerVerified;
 
   @override
@@ -245,7 +248,7 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
             content: Text(
               _editing
                   ? 'Hall updated successfully'
-                  : 'Hall created successfully',
+                  : 'Hall submitted for admin review',
             ),
           ),
         );
@@ -275,6 +278,26 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (_editing && !_venueIsLive) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8F0FE),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFAECBFA)),
+                  ),
+                  child: const Text(
+                    '⏳ This hall is pending admin review and not yet visible '
+                    'to customers. You will be notified once it is approved.',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF174EA6),
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
               if (_fieldLocked) ...[
                 Container(
                   padding: const EdgeInsets.all(12),

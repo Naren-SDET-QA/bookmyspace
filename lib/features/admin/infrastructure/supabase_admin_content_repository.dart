@@ -94,6 +94,27 @@ class SupabaseAdminContentRepository implements AdminContentRepository {
   }
 
   @override
+  Future<AdminContentVenue> approveVenue(
+    String venueId, {
+    required bool approve,
+    String? notes,
+  }) async {
+    try {
+      final row = await _client.rpc<dynamic>(
+        'admin_approve_venue',
+        params: {
+          'p_venue_id': venueId,
+          'p_approve': approve,
+          'p_notes': notes,
+        },
+      );
+      return AdminContentVenue.fromJson(Map<String, dynamic>.from(row as Map));
+    } catch (e) {
+      throw app_errors.mapError(e);
+    }
+  }
+
+  @override
   Future<int> replaceVenueImages(
     String venueId,
     List<Map<String, dynamic>> images,

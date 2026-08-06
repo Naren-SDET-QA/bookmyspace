@@ -14,6 +14,13 @@ abstract class AdminContentRepository {
     Map<String, dynamic> patch,
   );
 
+  /// Admin approve (publish) or reject (unpublish) a venue.
+  Future<AdminContentVenue> approveVenue(
+    String venueId, {
+    required bool approve,
+    String? notes,
+  });
+
   Future<int> replaceVenueImages(String venueId, List<Map<String, dynamic>> images);
 
   Future<int> setVenueAmenities(String venueId, List<String> amenities);

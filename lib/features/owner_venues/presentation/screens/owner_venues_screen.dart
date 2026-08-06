@@ -81,27 +81,7 @@ class _VenueTile extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: venue.isActive
-                          ? AppTheme.brand.withValues(alpha: 0.12)
-                          : theme.colorScheme.error.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      venue.isActive ? 'Active' : 'Inactive',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: venue.isActive
-                            ? AppTheme.brand
-                            : theme.colorScheme.error,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
+                  _StatusBadge(venue: venue, theme: theme),
                 ],
               ),
               const SizedBox(height: 6),
@@ -147,6 +127,54 @@ class _VenueTile extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({required this.venue, required this.theme});
+
+  final Venue venue;
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, bg, fg) = _state();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        label,
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: fg,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+  (String, Color, Color) _state() {
+    if (venue.isActive) {
+      return (
+        '✅ Live',
+        AppTheme.brand.withValues(alpha: 0.12),
+        AppTheme.brand,
+      );
+    }
+    if (!venue.isVerified) {
+      return (
+        '⏳ Under review',
+        theme.colorScheme.tertiaryContainer.withValues(alpha: 0.4),
+        theme.colorScheme.onTertiaryContainer,
+      );
+    }
+    return (
+      '⛔ Inactive',
+      theme.colorScheme.error.withValues(alpha: 0.12),
+      theme.colorScheme.error,
     );
   }
 }
