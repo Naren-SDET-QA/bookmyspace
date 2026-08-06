@@ -32,6 +32,16 @@ final _ownerStayPropertiesProvider =
           .cast<Map<String, dynamic>>();
     });
 
+final _ownerStayBookingsProvider = FutureProvider<List<Map<String, dynamic>>>(
+  (ref) async => (await Supabase.instance.client
+          .from('stay_bookings')
+          .select(
+            '*, accommodation_properties!stay_bookings_property_id_fkey(name)',
+          )
+          .order('created_at', ascending: false))
+      .cast<Map<String, dynamic>>(),
+);
+
 class MyStayBookingsScreen extends ConsumerWidget {
   const MyStayBookingsScreen({super.key});
   @override
@@ -70,80 +80,264 @@ class MyStayBookingsScreen extends ConsumerWidget {
 class StayOwnerScreen extends ConsumerWidget {
   const StayOwnerScreen({super.key});
   @override
-  Widget build(BuildContext context, WidgetRef ref) => Scaffold(
-    appBar: AppBar(
-      title: const Text('Rooms & Stays'),
+  Widget build(BuildContext context, WidgetRef ref) => DefaultTabController(
+    length: 2,
+    child: Scaffold(
+      appBar: AppBar(
+        title: const Text('Rooms & Stays'),
+        actions: [
+          IconButton(
+            onPressed: () => _addProperty(context, ref),
+            icon: const Icon(Icons.add_business),
+          ),
+        ],
+        bottom: const TabBar(
+          tabs: [
+            Tab(text: 'Properties'),
+            Tab(text: 'Requests'),
+          ],
+        ),
+      ),
+      body: const TabBarView(
+        children: [
+          _PropertiesTab(),
+          _RequestsTab(),
+        ],
+      ),
+    ),
+  );
+}
+
+class _PropertiesTab extends ConsumerWidget {
+  const _PropertiesTab();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => ref
+      .watch(_ownerStayPropertiesProvider('stay'))
+      .when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text('$e')),
+        data: (items) => items.isEmpty
+            ? const Center(child: Text('Add your first hotel or stay'))
+            : ListView.builder(
+                padding: const EdgeInsets.all(AppTheme.pagePadding),
+                itemCount: items.length,
+                itemBuilder: (_, i) {
+                  final property = items[i],
+                      units =
+                          (property['accommodation_units'] as List? ??
+                          const []);
+                  return Card(
+                    child: ExpansionTile(
+                      title: Text(property['name'].toString()),
+                      subtitle: Text(
+                        '${property['property_type']} - ${property['booking_mode']}',
+                      ),
+                      children: [
+                        for (final raw in units)
+                          ListTile(
+                            title: Text((raw as Map)['name'].toString()),
+                            subtitle: Text(
+                              'Inventory ${raw['inventory']} - INR ${raw['price_nightly']}/night',
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  tooltip: 'Set date rates',
+                                  icon: const Icon(Icons.calendar_month),
+                                  onPressed: () => _rate(
+                                    context,
+                                    ref,
+                                    Map<String, dynamic>.from(raw),
+                                  ),
+                                ),
+                                IconButton(
+                                  tooltip: 'Block dates',
+                                  icon: const Icon(Icons.event_busy_rounded),
+                                  onPressed: () => _blockDates(
+                                    context,
+                                    ref,
+                                    Map<String, dynamic>.from(raw),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        OverflowBar(
+                          children: [
+                            TextButton.icon(
+                              onPressed: () => _addRoom(
+                                context,
+                                ref,
+                                property['id'] as String,
+                              ),
+                              icon: const Icon(Icons.add),
+                              label: const Text('Room type'),
+                            ),
+                            TextButton.icon(
+                              onPressed: () => _offline(context, property),
+                              icon: const Icon(Icons.person_add),
+                              label: const Text('Walk-in'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+      );
+}
+
+class _RequestsTab extends ConsumerWidget {
+  const _RequestsTab();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => ref
+      .watch(_ownerStayBookingsProvider)
+      .when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text('$e')),
+        data: (items) => items.isEmpty
+            ? const Center(child: Text('No stay bookings yet'))
+            : ListView.builder(
+                padding: const EdgeInsets.all(AppTheme.pagePadding),
+                itemCount: items.length,
+                itemBuilder: (_, i) {
+                  final booking = items[i],
+                      property = Map<String, dynamic>.from(
+                        booking['accommodation_properties'] as Map? ??
+                            const {},
+                      );
+                  final status = booking['status'] as String? ?? '';
+                  return Card(
+                    child: ListTile(
+                      title: Text(property['name']?.toString() ?? 'Stay'),
+                      subtitle: Text(
+                        '${booking['booking_ref']}\n${booking['check_in']} → ${booking['check_out']} • ${booking['adults']} adults • ${booking['total']} ${booking['currency']}',
+                      ),
+                      trailing: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Chip(
+                            label: Text(status.toUpperCase()),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          if (status == 'requested') ...[
+                            TextButton(
+                              onPressed: () => _setBookingStatus(
+                                context,
+                                ref,
+                                booking['id'] as String,
+                                'confirmed',
+                              ),
+                              child: const Text('Approve'),
+                            ),
+                            TextButton(
+                              onPressed: () => _setBookingStatus(
+                                context,
+                                ref,
+                                booking['id'] as String,
+                                'rejected',
+                              ),
+                              child: const Text('Reject'),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+      );
+}
+
+Future<void> _setBookingStatus(
+  BuildContext context,
+  WidgetRef ref,
+  String bookingId,
+  String status,
+) async {
+  try {
+    await Supabase.instance.client.rpc<void>(
+      'update_stay_booking_status',
+      params: {'p_booking_id': bookingId, 'p_status': status},
+    );
+    ref.invalidate(_ownerStayBookingsProvider);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Booking ${status.toUpperCase()}')),
+      );
+    }
+  } catch (error) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$error')),
+      );
+    }
+  }
+}
+
+Future<void> _blockDates(
+  BuildContext context,
+  WidgetRef ref,
+  Map<String, dynamic> unit,
+) async {
+  final dates = await showDateRangePicker(
+    context: context,
+    firstDate: DateTime.now(),
+    lastDate: DateTime.now().add(const Duration(days: 730)),
+  );
+  if (dates == null || !context.mounted) return;
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (c) => AlertDialog(
+      title: Text('Block ${unit['name']}'),
+      content: Text(
+        'Block all rooms of this type for ${DateFormat.yMMMd().format(dates.start)} – ${DateFormat.yMMMd().format(dates.end)}?',
+      ),
       actions: [
-        IconButton(
-          onPressed: () => _addProperty(context, ref),
-          icon: const Icon(Icons.add_business),
+        TextButton(
+          onPressed: () => Navigator.pop(c, false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(c, true),
+          child: const Text('Block'),
         ),
       ],
     ),
-    body: ref
-        .watch(_ownerStayPropertiesProvider('stay'))
-        .when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('$e')),
-          data: (items) => items.isEmpty
-              ? const Center(child: Text('Add your first hotel or stay'))
-              : ListView.builder(
-                  padding: const EdgeInsets.all(AppTheme.pagePadding),
-                  itemCount: items.length,
-                  itemBuilder: (_, i) {
-                    final property = items[i],
-                        units =
-                            (property['accommodation_units'] as List? ??
-                            const []);
-                    return Card(
-                      child: ExpansionTile(
-                        title: Text(property['name'].toString()),
-                        subtitle: Text(
-                          '${property['property_type']} - ${property['booking_mode']}',
-                        ),
-                        children: [
-                          for (final raw in units)
-                            ListTile(
-                              title: Text((raw as Map)['name'].toString()),
-                              subtitle: Text(
-                                'Inventory ${raw['inventory']} - INR ${raw['price_nightly']}/night',
-                              ),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.calendar_month),
-                                onPressed: () => _rate(
-                                  context,
-                                  ref,
-                                  Map<String, dynamic>.from(raw),
-                                ),
-                              ),
-                            ),
-                          OverflowBar(
-                            children: [
-                              TextButton.icon(
-                                onPressed: () => _addRoom(
-                                  context,
-                                  ref,
-                                  property['id'] as String,
-                                ),
-                                icon: const Icon(Icons.add),
-                                label: const Text('Room type'),
-                              ),
-                              TextButton.icon(
-                                onPressed: () => _offline(context, property),
-                                icon: const Icon(Icons.person_add),
-                                label: const Text('Walk-in'),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-        ),
   );
+  if (ok != true || !context.mounted) return;
+  try {
+    final rooms = await Supabase.instance.client
+        .from('stay_physical_rooms')
+        .select('id')
+        .eq('unit_id', unit['id'] as Object);
+    final f = DateFormat('yyyy-MM-dd');
+    await Supabase.instance.client.from('stay_blocks').insert([
+      for (final room in rooms)
+        {
+          'physical_room_id': room['id'],
+          'stay_dates': '[${f.format(dates.start)},${f.format(dates.end)})',
+          'reason': 'owner block',
+        },
+    ]);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Dates blocked.')),
+      );
+    }
+  } catch (error) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$error')),
+      );
+    }
+  }
+}
 
-  Future<void> _addProperty(BuildContext context, WidgetRef ref) async {
+Future<void> _addProperty(BuildContext context, WidgetRef ref) async {
     final name = TextEditingController(),
         city = TextEditingController(),
         address = TextEditingController();
@@ -390,4 +584,3 @@ class StayOwnerScreen extends ConsumerWidget {
       );
     }
   }
-}
