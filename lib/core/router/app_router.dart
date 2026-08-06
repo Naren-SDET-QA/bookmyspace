@@ -22,6 +22,7 @@ import '../../features/courses/presentation/screens/course_detail_screen.dart';
 import '../../features/courses/presentation/screens/courses_list_screen.dart';
 import '../../features/events/presentation/screens/event_detail_screen.dart';
 import '../../features/events/presentation/screens/events_list_screen.dart';
+import '../../features/home/presentation/screens/all_categories_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/invoices/presentation/screens/invoice_screens.dart';
 import '../../features/legal/presentation/screens/privacy_policy_screen.dart';
@@ -80,6 +81,7 @@ abstract class AppRoutes {
   static const eventsList = '/events';
   static const eventDetails = '/events/:id';
   static const coursesList = '/courses';
+  static const allCategories = '/categories';
   static const courseDetails = '/courses/:id';
   static const pgList = '/pg';
   static const pgDetails = '/pg/:id';
@@ -270,6 +272,11 @@ GoRouter createAppRouter({
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const CoursesListScreen(),
       ),
+            GoRoute(
+              path: AppRoutes.allCategories,
+              parentNavigatorKey: rootNavigatorKey,
+              builder: (context, state) => const AllCategoriesScreen(),
+            ),
       GoRoute(
         path: AppRoutes.pgList,
         parentNavigatorKey: rootNavigatorKey,

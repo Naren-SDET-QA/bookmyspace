@@ -24,6 +24,19 @@ class SupabaseOwnerVenueRepository implements OwnerVenueRepository {
   }
 
   @override
+  Future<OwnerVenueDetail> venueDetail(String venueId) async {
+    try {
+      final data = await _client.rpc<Map<String, dynamic>>(
+        'get_owner_venue_detail',
+        params: {'p_venue_id': venueId},
+      );
+      return OwnerVenueDetail.fromJson(data);
+    } catch (e) {
+      throw mapError(e);
+    }
+  }
+
+  @override
   Future<Venue> createVenue({
     required String name,
     required String categoryId,
@@ -34,6 +47,13 @@ class SupabaseOwnerVenueRepository implements OwnerVenueRepository {
     required double longitude,
     required int capacity,
     required double pricingBaseAmount,
+    String? addressLine1,
+    String? addressLine2,
+    String? postalCode,
+    String? phone,
+    String? website,
+    List<String>? amenities,
+    List<String>? imageUrls,
   }) async {
     try {
       final data = await _client.rpc<Map<String, dynamic>>(
@@ -48,6 +68,13 @@ class SupabaseOwnerVenueRepository implements OwnerVenueRepository {
           'p_longitude': longitude,
           'p_capacity': capacity,
           'p_pricing_base_amount': pricingBaseAmount,
+          'p_address_line1': addressLine1,
+          'p_address_line2': addressLine2,
+          'p_postal_code': postalCode,
+          'p_phone': phone,
+          'p_website': website,
+          'p_amenities': amenities,
+          'p_image_urls': imageUrls,
         },
       );
       return Venue.fromJson(data);
@@ -69,6 +96,13 @@ class SupabaseOwnerVenueRepository implements OwnerVenueRepository {
     int? capacity,
     double? pricingBaseAmount,
     bool? isActive,
+    String? addressLine1,
+    String? addressLine2,
+    String? postalCode,
+    String? phone,
+    String? website,
+    List<String>? amenities,
+    List<String>? imageUrls,
   }) async {
     try {
       final data = await _client.rpc<Map<String, dynamic>>(
@@ -85,6 +119,13 @@ class SupabaseOwnerVenueRepository implements OwnerVenueRepository {
           'p_capacity': ?capacity,
           'p_pricing_base_amount': ?pricingBaseAmount,
           'p_is_active': ?isActive,
+          'p_address_line1': ?addressLine1,
+          'p_address_line2': ?addressLine2,
+          'p_postal_code': ?postalCode,
+          'p_phone': ?phone,
+          'p_website': ?website,
+          'p_amenities': ?amenities,
+          'p_image_urls': ?imageUrls,
         },
       );
       return Venue.fromJson(data);

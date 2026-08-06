@@ -9,18 +9,21 @@ import '../domain/meeting_room.dart';
 class SupabaseMeetingRoomRepository implements MeetingRoomRepository {
   SupabaseMeetingRoomRepository(this.client);
   final SupabaseClient client;
-  static const _select =
-      '*,venues!inner(id,name,description,city,state,capacity,is_active)';
+
+  /// [list_meeting_rooms] performs the venues join in plain SQL. It returns
+  /// the same payload shape as the old PostgREST embedding
+  /// ({...profile, venues: {...venue}}) but avoids the two-level `!inner`
+  /// embed that older PostgREST versions compiled into an aggregate-in-FROM
+  /// query (PostgreSQL 42803).
+  List<MeetingRoom> _mapRows(List<dynamic> rows) => rows
+      .map((r) => MeetingRoom.fromJson(Map<String, dynamic>.from(r as Map)))
+      .toList();
 
   @override
   Future<List<MeetingRoom>> rooms() async {
     try {
-      final rows = await client
-          .from('meeting_room_profiles')
-          .select(_select)
-          .eq('venues.is_active', true)
-          .order('updated_at');
-      return rows.map(MeetingRoom.fromJson).toList();
+      final rows = await client.rpc<List<dynamic>>('list_meeting_rooms');
+      return _mapRows(rows);
     } catch (e) {
       throw app_errors.mapError(e);
     }
@@ -29,16 +32,12 @@ class SupabaseMeetingRoomRepository implements MeetingRoomRepository {
   @override
   Future<List<MeetingRoom>> ownedRooms() async {
     try {
-      final userId = client.auth.currentUser?.id;
-      if (userId == null) return const [];
-      final rows = await client
-          .from('meeting_room_profiles')
-          .select(
-            '*,venues!inner(id,name,description,city,state,capacity,is_active,organizations!inner(owner_user_id))',
-          )
-          .eq('venues.organizations.owner_user_id', userId)
-          .order('updated_at');
-      return rows.map(MeetingRoom.fromJson).toList();
+      if (client.auth.currentUser?.id == null) return const [];
+      final rows = await client.rpc<List<dynamic>>(
+        'list_meeting_rooms',
+        params: {'p_owned': true},
+      );
+      return _mapRows(rows);
     } catch (e) {
       throw app_errors.mapError(e);
     }
@@ -47,12 +46,14 @@ class SupabaseMeetingRoomRepository implements MeetingRoomRepository {
   @override
   Future<MeetingRoom> room(String id) async {
     try {
-      final row = await client
-          .from('meeting_room_profiles')
-          .select(_select)
-          .eq('venue_id', id)
-          .single();
-      return MeetingRoom.fromJson(row);
+      final rows = await client.rpc<List<dynamic>>(
+        'list_meeting_rooms',
+        params: {'p_venue_id': id},
+      );
+      if (rows.isEmpty) {
+        throw const app_errors.NotFoundException('Meeting room not found');
+      }
+      return _mapRows(rows).first;
     } catch (e) {
       throw app_errors.mapError(e);
     }

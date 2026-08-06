@@ -22,6 +22,13 @@ class MockOwnerVenueRepository implements OwnerVenueRepository {
     required double longitude,
     required int capacity,
     required double pricingBaseAmount,
+    String? addressLine1,
+    String? addressLine2,
+    String? postalCode,
+    String? phone,
+    String? website,
+    List<String>? amenities,
+    List<String>? imageUrls,
   }) async {
     lastCreate = (
       name: name,
@@ -38,6 +45,10 @@ class MockOwnerVenueRepository implements OwnerVenueRepository {
   Future<List<Venue>> myVenues() async => _venues;
 
   @override
+  Future<OwnerVenueDetail> venueDetail(String venueId) async =>
+      OwnerVenueDetail(venue: _venues.first);
+
+  @override
   Future<Venue> updateVenue({
     required String venueId,
     String? name,
@@ -50,6 +61,13 @@ class MockOwnerVenueRepository implements OwnerVenueRepository {
     int? capacity,
     double? pricingBaseAmount,
     bool? isActive,
+    String? addressLine1,
+    String? addressLine2,
+    String? postalCode,
+    String? phone,
+    String? website,
+    List<String>? amenities,
+    List<String>? imageUrls,
   }) async =>
       _venues.first;
 }

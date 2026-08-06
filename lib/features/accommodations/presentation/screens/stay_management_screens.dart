@@ -14,24 +14,23 @@ final _myStaysProvider = FutureProvider<List<Map<String, dynamic>>>(
               .order('created_at', ascending: false))
           .cast<Map<String, dynamic>>(),
 );
-final _ownerStayPropertiesProvider = FutureProvider<List<Map<String, dynamic>>>(
-  (ref) async {
-    final client = Supabase.instance.client;
-    final uid = client.auth.currentUser!.id;
-    final orgs = await client
-        .from('organizations')
-        .select('id')
-        .eq('owner_user_id', uid);
-    final ids = orgs.map((row) => row['id'] as String).toList();
-    if (ids.isEmpty) return const [];
-    return (await client
-            .from('accommodation_properties')
-            .select('*, accommodation_units(*)')
-            .eq('module', 'stay')
-            .inFilter('org_id', ids))
-        .cast<Map<String, dynamic>>();
-  },
-);
+final _ownerStayPropertiesProvider =
+    FutureProvider.family<List<Map<String, dynamic>>, String>((ref, module) async {
+      final client = Supabase.instance.client;
+      final uid = client.auth.currentUser!.id;
+      final orgs = await client
+          .from('organizations')
+          .select('id')
+          .eq('owner_user_id', uid);
+      final ids = orgs.map((row) => row['id'] as String).toList();
+      if (ids.isEmpty) return const [];
+      return (await client
+              .from('accommodation_properties')
+              .select('*, accommodation_units(*)')
+              .eq('module', module)
+              .inFilter('org_id', ids))
+          .cast<Map<String, dynamic>>();
+    });
 
 class MyStayBookingsScreen extends ConsumerWidget {
   const MyStayBookingsScreen({super.key});
@@ -82,7 +81,7 @@ class StayOwnerScreen extends ConsumerWidget {
       ],
     ),
     body: ref
-        .watch(_ownerStayPropertiesProvider)
+        .watch(_ownerStayPropertiesProvider('stay'))
         .when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Center(child: Text('$e')),
@@ -219,7 +218,7 @@ class StayOwnerScreen extends ConsumerWidget {
       'city': city.text.trim(),
       'address': address.text.trim(),
     });
-    ref.invalidate(_ownerStayPropertiesProvider);
+    ref.invalidate(_ownerStayPropertiesProvider('stay'));
   }
 
   Future<void> _addRoom(
@@ -284,7 +283,7 @@ class StayOwnerScreen extends ConsumerWidget {
       for (var i = 1; i <= count; i++)
         {'unit_id': unit['id'], 'room_code': 'ROOM-$i'},
     ]);
-    ref.invalidate(_ownerStayPropertiesProvider);
+    ref.invalidate(_ownerStayPropertiesProvider('stay'));
   }
 
   Future<void> _rate(

@@ -759,32 +759,44 @@ class _PrimaryCategories extends ConsumerWidget {
       ),
     );
 
+    // Ensure Home shows the 8 primary tiles and a final "View All Categories" tile.
+    final displayTiles = List<HomeCategoryTile>.of(tiles);
+    if (!displayTiles.any((t) => t.tileKey == 'view_all')) {
+     displayTiles.add(const HomeCategoryTile(
+       id: 'view_all',
+       tileKey: 'view_all',
+       label: 'View All',
+       emoji: '🔎',
+       routeTarget: 'all_categories',
+     ));
+    }
+
     return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
-        // Prototype catT is roughly square (emoji 23 + label + padding).
-        childAspectRatio: 1.02,
-      ),
-      itemCount: tiles.length,
-      itemBuilder: (context, index) {
-        final item = tiles[index];
-        return PrototypeCategoryTile(
-          key: ValueKey('home-category-${item.tileKey}'),
-          emoji: PrototypeVisuals.emojiForCategorySlug(
-            item.tileKey,
-            icon: item.emoji,
-          ),
-          label: item.label,
-          onTap: () => _openPrimaryCategory(
-            context,
-            item.routeTarget.isNotEmpty ? item.routeTarget : item.tileKey,
-          ),
-        );
-      },
+     shrinkWrap: true,
+     physics: const NeverScrollableScrollPhysics(),
+     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+       crossAxisCount: 4,
+       mainAxisSpacing: 10,
+       crossAxisSpacing: 10,
+       // Prototype catT is roughly square (emoji 23 + label + padding).
+       childAspectRatio: 1.02,
+     ),
+     itemCount: displayTiles.length,
+     itemBuilder: (context, index) {
+       final item = displayTiles[index];
+       return PrototypeCategoryTile(
+         key: ValueKey('home-category-${item.tileKey}'),
+         emoji: PrototypeVisuals.emojiForCategorySlug(
+           item.tileKey,
+           icon: item.emoji,
+         ),
+         label: item.label,
+         onTap: () => _openPrimaryCategory(
+           context,
+           item.routeTarget.isNotEmpty ? item.routeTarget : item.tileKey,
+         ),
+       );
+     },
     );
   }
 
@@ -799,14 +811,19 @@ class _PrimaryCategories extends ConsumerWidget {
           ),
       ];
 
-  /// Guarantees PG / Co-Living and Hotels / Rooms / Stays always appear on
-  /// Home, appended when the remote/admin tile config does not define them.
+  /// Guarantees all 8 primary categories (including PG, Hotels, Courses) always 
+  /// appear on Home, appended when the remote/admin tile config does not define them.
   static List<HomeCategoryTile> _withCoreTiles(List<HomeCategoryTile> tiles) {
-    if (tiles.any((t) => t.tileKey == 'pg') &&
-        tiles.any((t) => t.tileKey == 'stays')) {
+    final hasAllCore = tiles.any((t) => t.tileKey == 'pg') &&
+        tiles.any((t) => t.tileKey == 'stays') &&
+        tiles.any((t) => t.tileKey == 'courses');
+    
+    if (hasAllCore) {
       return tiles;
     }
+    
     final result = List<HomeCategoryTile>.of(tiles);
+    
     if (!tiles.any((t) => t.tileKey == 'pg')) {
       result.add(const HomeCategoryTile(
         id: 'pg',
@@ -816,15 +833,27 @@ class _PrimaryCategories extends ConsumerWidget {
         routeTarget: 'pg',
       ));
     }
+    
     if (!tiles.any((t) => t.tileKey == 'stays')) {
       result.add(const HomeCategoryTile(
         id: 'stays',
         tileKey: 'stays',
         label: 'Hotels / Rooms / Stays',
-        emoji: '🛏️',
+        emoji: '🏨',
         routeTarget: 'stays',
       ));
     }
+    
+    if (!tiles.any((t) => t.tileKey == 'courses')) {
+      result.add(const HomeCategoryTile(
+        id: 'courses',
+        tileKey: 'courses',
+        label: 'Courses',
+        emoji: '📚',
+        routeTarget: 'courses',
+      ));
+    }
+    
     return result;
   }
 }
@@ -839,13 +868,12 @@ void _openPrimaryCategory(BuildContext context, String categoryOrRoute) {
 
   switch (target) {
     case 'courses':
+      context.push(AppRoutes.coursesList);
+      return;
     case 'classes':
       context.push(AppRoutes.coursesList);
       return;
     case 'events':
-    case 'conferences':
-    case 'parties':
-    case 'shows':
       context.push(AppRoutes.eventsList);
       return;
     case 'pg':
@@ -854,8 +882,8 @@ void _openPrimaryCategory(BuildContext context, String categoryOrRoute) {
     case 'stays':
       context.push(AppRoutes.staysList);
       return;
-    case 'meeting_rooms':
     case 'meeting_room':
+    case 'meeting_rooms':
       context.push(AppRoutes.meetingRooms);
       return;
     case 'sports':
@@ -869,6 +897,9 @@ void _openPrimaryCategory(BuildContext context, String categoryOrRoute) {
           queryParameters: {'category': category},
         ).toString(),
       );
+      return;
+    case 'all_categories':
+      context.push(AppRoutes.allCategories);
       return;
     default:
       context.go(

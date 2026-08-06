@@ -7,22 +7,22 @@ import '../domain/sports_venue.dart';
 class SupabaseSportsRepository implements SportsRepository {
   SupabaseSportsRepository(this.client);
   final SupabaseClient client;
-  static const select =
-      '*,venues!inner(id,name,description,city,state,capacity,is_active,organizations!inner(owner_user_id))';
+
+  /// [list_sports_venues] performs the venues join in plain SQL. It returns
+  /// the same payload shape as the old PostgREST embedding
+  /// ({...profile, venues: {...venue}}) but avoids the two-level `!inner`
+  /// embed that older PostgREST versions compiled into an aggregate-in-FROM
+  /// query (PostgreSQL 42803).
   @override
   Future<List<SportsVenue>> venues({bool owned = false}) async {
     try {
-      var q = client
-          .from('sports_venue_profiles')
-          .select(select)
-          .eq('venues.is_active', true);
-      if (owned) {
-        final id = client.auth.currentUser?.id;
-        if (id == null) return const [];
-        q = q.eq('venues.organizations.owner_user_id', id);
-      }
-      final rows = await q.order('updated_at');
-      return rows.map(SportsVenue.fromJson).toList();
+      final rows = await client.rpc<List<dynamic>>(
+        'list_sports_venues',
+        params: {'p_owned': owned},
+      );
+      return rows
+          .map((r) => SportsVenue.fromJson(Map<String, dynamic>.from(r as Map)))
+          .toList();
     } catch (e) {
       throw errors.mapError(e);
     }
@@ -31,13 +31,14 @@ class SupabaseSportsRepository implements SportsRepository {
   @override
   Future<SportsVenue> venue(String id) async {
     try {
-      return SportsVenue.fromJson(
-        await client
-            .from('sports_venue_profiles')
-            .select(select)
-            .eq('venue_id', id)
-            .single(),
+      final rows = await client.rpc<List<dynamic>>(
+        'list_sports_venues',
+        params: {'p_venue_id': id},
       );
+      if (rows.isEmpty) {
+        throw const errors.NotFoundException('Sports venue not found');
+      }
+      return SportsVenue.fromJson(Map<String, dynamic>.from(rows.first as Map));
     } catch (e) {
       throw errors.mapError(e);
     }

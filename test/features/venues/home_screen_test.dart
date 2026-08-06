@@ -330,11 +330,14 @@ void main() {
     expect(find.text('🏛️'), findsWidgets);
     expect(find.text('🎓'), findsWidgets);
     expect(find.text('📅'), findsWidgets);
-    // Remote tiles win, but PG / Co-Living and Hotels / Rooms / Stays are
-    // always appended so those categories stay reachable from Home.
-    expect(find.byType(PrototypeCategoryTile), findsNWidgets(5));
+    // Remote tiles win, but PG / Co-Living, Hotels / Rooms / Stays, and Courses
+    // are always appended so those categories stay reachable from Home, plus the
+    // trailing View All tile.
+    expect(find.byType(PrototypeCategoryTile), findsNWidgets(7));
     expect(find.text('PG / Co-Living'), findsOneWidget);
     expect(find.text('Hotels / Rooms / Stays'), findsOneWidget);
+    expect(find.text('Courses'), findsOneWidget);
+    expect(find.byKey(const ValueKey('home-category-view_all')), findsOneWidget);
 
     // Brand violet must be the theme primary (prototype #6c3df4).
     final builtContext = tester.element(find.byType(PrototypeCategoryTile).first);

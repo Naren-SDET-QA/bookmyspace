@@ -22,19 +22,19 @@ void main() {
   test('CATS order and emojis match prototype', () {
     expect(
       PrototypeVisuals.homeCategories.map((c) => c.emoji).toList(),
-      ['🏛️', '🎓', '📅', '🤝', '🎤', '🎉', '🏆', '🎭'],
+      ['🏛️', '🏨', '🏠', '🎓', '💼', '⚽', '📅', '📚'],
     );
     expect(
       PrototypeVisuals.homeCategories.map((c) => c.label).toList(),
       [
         'Function Halls',
-        'Classes',
+        'Hotels / Rooms / Stays',
+        'PG / Co-Living',
+        'Classes / Institutes',
+        'Meeting Rooms / Coworking',
+        'Sports / Courts / Grounds',
         'Events',
-        'Meetings',
-        'Conferences',
-        'Parties',
-        'Sports',
-        'Shows',
+        'Courses',
       ],
     );
   });
@@ -45,13 +45,13 @@ void main() {
       [
         '✨ All',
         '🏛️ Halls',
+        '🏨 Hotels / Stays',
+        '🏠 PG / Co-Living',
         '🎓 Classes',
+        '💼 Meetings',
+        '⚽ Sports',
         '📅 Events',
-        '🤝 Meetings',
-        '🎤 Conferences',
-        '🎉 Parties',
-        '🏆 Sports',
-        '🎭 Shows',
+        '📚 Courses',
       ],
     );
   });
@@ -88,15 +88,27 @@ void main() {
     );
     expect(
       PrototypeVisuals.emojiForCategorySlug('meeting_room', icon: null),
-      '🤝',
+      '💼',
     );
     expect(
-      PrototypeVisuals.emojiForCategorySlug('parties', icon: '🎉'),
-      '🎉',
+      PrototypeVisuals.emojiForCategorySlug('sports_ground', icon: null),
+      '⚽',
     );
     expect(
       PrototypeVisuals.emojiForCategorySlug('halls', icon: null),
       '🏛️',
+    );
+    expect(
+      PrototypeVisuals.emojiForCategorySlug('stays', icon: null),
+      '🏨',
+    );
+    expect(
+      PrototypeVisuals.emojiForCategorySlug('pg', icon: null),
+      '🏠',
+    );
+    expect(
+      PrototypeVisuals.emojiForCategorySlug('courses', icon: null),
+      '📚',
     );
   });
 

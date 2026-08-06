@@ -100,33 +100,33 @@ abstract final class PrototypeVisuals {
   /// Home / explore category tiles from the prototype `CATS` list.
   ///
   /// Keys stay DB-compatible (`function_hall`, …) while labels/emojis/order
-  /// match the HTML source of truth.
+  /// match the HTML source of truth. Displays 8 primary categories.
   static const List<PrototypeCategory> homeCategories = [
     PrototypeCategory(
       key: 'function_hall',
       emoji: '🏛️',
       label: 'Function Halls',
     ),
-    PrototypeCategory(key: 'classes', emoji: '🎓', label: 'Classes'),
+    PrototypeCategory(key: 'stays', emoji: '🏨', label: 'Hotels / Rooms / Stays'),
+    PrototypeCategory(key: 'pg', emoji: '🏠', label: 'PG / Co-Living'),
+    PrototypeCategory(key: 'classes', emoji: '🎓', label: 'Classes / Institutes'),
+    PrototypeCategory(key: 'meeting_room', emoji: '💼', label: 'Meeting Rooms / Coworking'),
+    PrototypeCategory(key: 'sports_ground', emoji: '⚽', label: 'Sports / Courts / Grounds'),
     PrototypeCategory(key: 'events', emoji: '📅', label: 'Events'),
-    PrototypeCategory(key: 'meeting_room', emoji: '🤝', label: 'Meetings'),
-    PrototypeCategory(key: 'conferences', emoji: '🎤', label: 'Conferences'),
-    PrototypeCategory(key: 'parties', emoji: '🎉', label: 'Parties'),
-    PrototypeCategory(key: 'sports_ground', emoji: '🏆', label: 'Sports'),
-    PrototypeCategory(key: 'shows', emoji: '🎭', label: 'Shows'),
+    PrototypeCategory(key: 'courses', emoji: '📚', label: 'Courses'),
   ];
 
   /// Explore filter chips from the prototype `CATCHIPS` list.
   static const List<PrototypeCategory> exploreChips = [
     PrototypeCategory(key: 'all', emoji: '✨', label: 'All'),
     PrototypeCategory(key: 'function_hall', emoji: '🏛️', label: 'Halls'),
+    PrototypeCategory(key: 'stays', emoji: '🏨', label: 'Hotels / Stays'),
+    PrototypeCategory(key: 'pg', emoji: '🏠', label: 'PG / Co-Living'),
     PrototypeCategory(key: 'classes', emoji: '🎓', label: 'Classes'),
+    PrototypeCategory(key: 'meeting_room', emoji: '💼', label: 'Meetings'),
+    PrototypeCategory(key: 'sports_ground', emoji: '⚽', label: 'Sports'),
     PrototypeCategory(key: 'events', emoji: '📅', label: 'Events'),
-    PrototypeCategory(key: 'meeting_room', emoji: '🤝', label: 'Meetings'),
-    PrototypeCategory(key: 'conferences', emoji: '🎤', label: 'Conferences'),
-    PrototypeCategory(key: 'parties', emoji: '🎉', label: 'Parties'),
-    PrototypeCategory(key: 'sports_ground', emoji: '🏆', label: 'Sports'),
-    PrototypeCategory(key: 'shows', emoji: '🎭', label: 'Shows'),
+    PrototypeCategory(key: 'courses', emoji: '📚', label: 'Courses'),
   ];
 
   /// Prototype radius chips: 2 / 5 / 10 / 25 / Entire city (99).
@@ -162,22 +162,59 @@ abstract final class PrototypeVisuals {
       if (c.key == slug) return c.emoji;
     }
     return switch (slug) {
-      'halls' || 'venues' || 'venue' => '🏛️',
-      'marriage_hall' => '💍',
-      'convention_center' => '🏨',
-      'party_hall' => '🎉',
-      'community_hall' => '🏛️',
-      'meetings' || 'meeting' => '🤝',
-      'confs' || 'conference' => '🎤',
-      'coworking_space' || 'work' || 'studios' => '💻',
+      // Venues & Spaces
+      'halls' || 'venues' || 'venue' || 'function_hall' => '🏛️',
+      'marriage_hall' || 'marriage' => '💍',
+      'banquet_hall' || 'banquet' => '🍽️',
+      'convention_center' || 'convention' => '🏢',
+      'conference' || 'conference_room' || 'conference_rooms' => '📊',
+      'community_hall' => '👥',
+      'party_hall' || 'parties' || 'party' => '🎉',
+      'farm_house' || 'farmhouse' => '🌳',
       'auditorium' => '🎭',
-      'hotel' => '🛏️',
-      'resort' => '🌴',
-      'institute' || 'classroom' => '🎓',
-      'event_space' => '🎪',
-      'sports' => '🏆',
-      'pg' => '🏠',
-      'stays' => '🛏️',
+      'exhibition_center' || 'exhibition' => '🖼️',
+      'open_grounds' || 'open_ground' || 'open_ground_s' => '🌾',
+
+      // Stays & Living
+      'hotel' || 'resort' || 'stays' || 'hotel_resort' => '🏨',
+      'pg' || 'pg_coliving' || 'co_living' => '🏠',
+
+      // Business & Professional
+      'conference_room' || 'confs' => '📊',
+      'meeting_room' || 'meeting_rooms' || 'meeting' => '🤝',
+      'coworking_space' || 'coworking' || 'work' || 'studios' => '💻',
+
+      // Education & Training
+      'training_institute' || 'training' || 'institute' || 'classroom' => '🎓',
+      'tuition_center' || 'tuition' => '📚',
+      'coaching_center' || 'coaching' => '✏️',
+      'courses' => '📚',
+
+      // Sports & Recreation
+      'sports' || 'sports_ground' || 'sports_grounds' => '🏏',
+      'cricket_ground' || 'cricket' => '🏏',
+      'football_ground' || 'football' => '⚽',
+      'indoor_stadium' || 'stadium' || 'indoor_stadiums' => '🏟️',
+      'club_house' || 'clubhouse' => '🍸',
+
+      // Entertainment & Culture
+      'movie_theater' || 'cinema' => '🎬',
+
+      // Government & Public
+      'govt_hall' || 'ttd_hall' || 'govt' => '🏛️',
+
+      // Services & Opportunities
+      'local_jobs' || 'jobs' => '💼',
+
+      // Devotional & Religious Events
+      'devotional' || 'religious' => '🙏',
+      'devotional_hindu' || 'hindu' => '🕉️',
+      'devotional_muslim' || 'muslim' => '☪️',
+      'devotional_christian' || 'christian' => '✝️',
+      'devotional_buddhist' || 'buddhist' => '☸️',
+
+      // Fallbacks
+      'event_space' => '📅',
       _ => '🏛️',
     };
   }
