@@ -21,6 +21,20 @@ class SupabaseVenueRepository implements VenueRepository {
     venue_facilities (facility, is_available)
   ''';
 
+  /// Category-filtered variant. The `!inner` hint forces PostgREST to
+  /// compile the category filter as a JOIN instead of an aggregate subquery
+  /// in the FROM clause — the exact SQL shape older hosted PostgREST
+  /// versions reject with PostgreSQL 42803
+  /// ("aggregate functions are not allowed in FROM clause of their own
+  /// query level"). It also guarantees only venues whose category matches
+  /// the requested slug are returned.
+  static const String _venueSelectWithCategory = '''
+    *,
+    venue_categories!inner (id, slug, name, icon),
+    venue_images (id, url, thumbnail_url, alt_text, is_cover, sort_order),
+    venue_facilities (facility, is_available)
+  ''';
+
   @override
   Future<List<VenueCategory>> categories() async {
     try {
@@ -112,7 +126,11 @@ class SupabaseVenueRepository implements VenueRepository {
 
       var builder = _client
           .from('venues')
-          .select(_venueSelect)
+          .select(
+            query.categorySlug != null
+                ? _venueSelectWithCategory
+                : _venueSelect,
+          )
           .eq('is_active', true);
 
       if (query.query.trim().isNotEmpty) {
