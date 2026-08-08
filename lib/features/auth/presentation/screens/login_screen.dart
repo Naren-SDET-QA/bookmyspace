@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/config/test_mode.dart';
+import '../../../../core/debug/debug_log.dart';
+import '../../../../core/debug/test_accounts.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -30,6 +33,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _busy = false;
   bool _otpBusy = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    if (TestMode.debugMenuEnabled) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final account = ref.read(selectedTestAccountProvider);
+        if (account == null) return;
+        final isEmail = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+            .hasMatch(account.email);
+        setState(() {
+          _channel = isEmail ? _OtpChannel.email : _OtpChannel.phone;
+          _otpSent = false;
+          _contactController.text =
+              isEmail ? account.email : (account.phone ?? account.email);
+        });
+        DebugLog.info(
+          'TEST',
+          'Prefilled login with test account ${account.role}',
+          detail: isEmail ? account.email : (account.phone ?? account.email),
+        );
+      });
+    }
+  }
 
   @override
   void dispose() {

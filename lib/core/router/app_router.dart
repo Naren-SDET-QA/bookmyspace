@@ -10,6 +10,7 @@ import '../../features/booking/presentation/screens/booking_screen.dart';
 import '../../features/booking/presentation/screens/my_bookings_screen.dart';
 import '../../features/courses/presentation/screens/course_detail_screen.dart';
 import '../../features/courses/presentation/screens/courses_list_screen.dart';
+import '../../features/debug/presentation/screens/debug_menu_screen.dart';
 import '../../features/events/presentation/screens/event_detail_screen.dart';
 import '../../features/events/presentation/screens/events_list_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
@@ -40,6 +41,7 @@ abstract class AppRoutes {
   static const saved = '/saved';
   static const profile = '/profile';
   static const settings = '/settings';
+  static const debug = '/debug';
   static const login = '/login';
   static const venueDetails = '/venues/:id';
   static const bookingFlow = '/venues/:id/book';
@@ -100,6 +102,11 @@ GoRouter createAppRouter({
         path: AppRoutes.settings,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.debug,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const DebugMenuScreen(),
       ),
       GoRoute(
         path: AppRoutes.venueDetails,
