@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bookmyspace.bookmyspace.data.model.Booking
+import com.bookmyspace.bookmyspace.data.model.CustomerSectionCatalog
 import com.bookmyspace.bookmyspace.data.model.QuickBookPreferences
 import com.bookmyspace.bookmyspace.data.model.Venue
 import com.bookmyspace.bookmyspace.data.repository.BookMySpaceRepository
@@ -46,6 +47,7 @@ fun QuickBookCard(
     val speechHelper = remember { SpeechHelper.getInstance(context) }
     val quickPrefs by BookMySpaceRepository.quickBookPreferences.collectAsState()
     val venues by BookMySpaceRepository.venues.collectAsState()
+    val selectedSection by BookMySpaceRepository.selectedCustomerSection.collectAsState()
 
     var showEditPrefsDialog by remember { mutableStateOf(false) }
     var confirmedBooking by remember { mutableStateOf<Booking?>(null) }
@@ -54,12 +56,17 @@ fun QuickBookCard(
 
     val timingOptions = listOf("Tomorrow (10 AM)", "This Weekend (Sat)", "Next Saturday")
 
-    // Find best matching venue based on saved preferences
-    val matchedVenue = remember(quickPrefs, venues) {
-        venues.find { v ->
+    // Find best matching venue based on saved preferences, scoped to the selected section
+    val matchedVenue = remember(quickPrefs, venues, selectedSection) {
+        val scoped = if (selectedSection == null) {
+            emptyList()
+        } else {
+            venues.filter { CustomerSectionCatalog.matchesVenue(it, selectedSection!!) }
+        }
+        scoped.find { v ->
             v.capacity >= quickPrefs.preferredCapacity &&
                     v.pricingBaseAmount <= quickPrefs.preferredBudgetMax
-        } ?: venues.firstOrNull()
+        } ?: scoped.firstOrNull()
     }
 
     if (showEditPrefsDialog) {

@@ -8,6 +8,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
@@ -38,6 +39,7 @@ class HomeScreenAmenityFilterTest {
     fun setUp() = runBlocking {
         context = ApplicationProvider.getApplicationContext<Context>()
         BookMySpaceRepository.init(context)
+        BookMySpaceRepository.clearSelectedCustomerSection()
     }
 
     @Test
@@ -59,6 +61,32 @@ class HomeScreenAmenityFilterTest {
             v.parkingCapacity > 0 || v.facilities.any { it.facility.contains("Parking", ignoreCase = true) }
         }
         assertTrue("Should have venues with Parking", venuesWithParking.isNotEmpty())
+    }
+
+    @OptIn(androidx.compose.animation.ExperimentalSharedTransitionApi::class)
+    @Test
+    fun testHomeScreen_FirstScreenShowsOnlyFourSections() {
+        composeTestRule.setContent {
+            BookMySpaceTheme {
+                HomeScreen(
+                    onNavigateToVenue = {},
+                    onNavigateToSearch = {},
+                    onNavigateToEvents = {},
+                    onNavigateToCourses = {},
+                    onNavigateToNotifications = {}
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("home_screen").assertExists()
+        composeTestRule.onNodeWithText("Function Halls", substring = true).assertExists()
+        composeTestRule.onNodeWithText("Lodge / Rooms", substring = true).assertExists()
+        composeTestRule.onNodeWithText("PG / Hostels", substring = true).assertExists()
+        composeTestRule.onNodeWithText("Institutes / Classes", substring = true).assertExists()
+        composeTestRule.onNodeWithText("Royal Grand Convention", substring = true).assertDoesNotExist()
+        composeTestRule.onNodeWithText("UrbanNest", substring = true).assertDoesNotExist()
+        composeTestRule.onNodeWithText("Choose Category").assertDoesNotExist()
     }
 
     @OptIn(androidx.compose.animation.ExperimentalSharedTransitionApi::class)

@@ -142,15 +142,19 @@ fun ContextAwareHelpFab(
 
     if (isDismissed) return
 
+    val selectedSection by BookMySpaceRepository.selectedCustomerSection.collectAsState()
+
     // Derive context title
-    val contextLabel = remember(currentRoute) {
+    val contextLabel = remember(currentRoute, selectedSection) {
+        val sectionPrefix = selectedSection?.let { "${it.title}: " } ?: ""
         when {
-            currentRoute?.startsWith("venues/") == true && currentRoute.endsWith("/book") -> "Booking Policy"
-            currentRoute?.startsWith("venues/") == true -> "Venue Policy & Rules"
+            currentRoute?.startsWith("venues/") == true && currentRoute.endsWith("/book") -> "${sectionPrefix}Booking Policy"
+            currentRoute?.startsWith("venues/") == true -> "${sectionPrefix}Venue Policy & Rules"
             currentRoute?.startsWith("bookings/") == true && currentRoute.endsWith("/pay") -> "Payment Help"
-            currentRoute == "search" || currentRoute?.startsWith("search?") == true -> "Search & Filter Tips"
+            currentRoute == "search" || currentRoute?.startsWith("search?") == true -> "${sectionPrefix}Search & Filter Tips"
             currentRoute == "bookings" -> "Cancellation & Receipts"
             currentRoute == "profile" -> "Account & Support"
+            selectedSection != null -> "${selectedSection!!.title} Help"
             else -> "Booking Assistance"
         }
     }

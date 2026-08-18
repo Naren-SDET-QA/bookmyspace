@@ -38,6 +38,8 @@ import com.bookmyspace.bookmyspace.ui.components.RatingBadge
 import com.bookmyspace.bookmyspace.ui.components.VoiceReadoutButton
 import com.bookmyspace.bookmyspace.ui.components.VenueImageCarousel
 import com.bookmyspace.bookmyspace.ui.components.DynamicListingFieldsDisplay
+import com.bookmyspace.bookmyspace.data.model.CustomerSection
+import com.bookmyspace.bookmyspace.data.model.CustomerSectionCatalog
 import com.bookmyspace.bookmyspace.data.model.ListingTargetCategory
 import com.bookmyspace.bookmyspace.util.PgRentCalculator
 
@@ -387,8 +389,9 @@ fun VenueDetailsScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    val listingSection = CustomerSectionCatalog.sectionForVenue(venue)
                     Column(modifier = Modifier.weight(0.9f).padding(end = 4.dp)) {
-                        val isPg = venue.pgDetails != null || venue.category?.slug == "pg_hostel"
+                        val isPg = listingSection == CustomerSection.PG_HOSTELS
                         val selectedOpt = venue.pgDetails?.sharingOptions?.getOrNull(selectedSharingIndex)
                         val rentText = if (selectedOpt != null) "₹%,d/mo".format(selectedOpt.monthlyRent.toInt()) else if (isPg) "₹%,d/mo".format(venue.pricingBaseAmount.toInt()) else "₹%,d".format(venue.pricingBaseAmount.toInt())
                         
@@ -476,7 +479,7 @@ fun VenueDetailsScreen(
                             shape = RoundedCornerShape(10.dp)
                         ) {
                             Text(
-                                text = if (venue.pgDetails != null) "Reserve" else "Book Now",
+                                text = CustomerSectionCatalog.bookingCtaLabel(listingSection),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold
                             )

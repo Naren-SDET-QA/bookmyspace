@@ -34,6 +34,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.bookmyspace.bookmyspace.data.model.CustomerSection
+import com.bookmyspace.bookmyspace.data.model.CustomerSectionCatalog
 import com.bookmyspace.bookmyspace.data.model.LocationHierarchy
 import com.bookmyspace.bookmyspace.data.model.LocationSearchRadius
 import com.bookmyspace.bookmyspace.data.location.IndiaLocationMasterData
@@ -149,6 +151,14 @@ data class MainSectionCategoryOption(
     val description: String = ""
 )
 
+fun MainHomeSection.toCustomerSection(): CustomerSection {
+    return CustomerSection.fromId(id) ?: CustomerSection.FUNCTION_HALLS
+}
+
+fun CustomerSection.toMainHomeSection(): MainHomeSection? {
+    return MainHomeSection.values().find { it.id == id }
+}
+
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun HomeScreen(
@@ -179,6 +189,8 @@ fun HomeScreen(
     val userLocationHierarchy by BookMySpaceRepository.userLocationHierarchy.collectAsState()
     val userLocationRadius by BookMySpaceRepository.userLocationRadius.collectAsState()
     val appSections by BookMySpaceRepository.appSections.collectAsState()
+    val repoSection by BookMySpaceRepository.selectedCustomerSection.collectAsState()
+    val repoCategorySlug by BookMySpaceRepository.selectedCustomerCategorySlug.collectAsState()
 
     // Display ONLY the enabled 4 main section cards (governed by Admin feature toggles)
     val availableSections = remember(appSections) {
@@ -187,9 +199,15 @@ fun HomeScreen(
         }
     }
 
-    // Main section navigation state (null = First Screen with 4 main sections)
-    var selectedMainSection by remember { mutableStateOf<MainHomeSection?>(initialSelectedSection) }
-    var selectedCategorySlug by remember { mutableStateOf("all") }
+    // Tests can seed a section via initialSelectedSection; otherwise repository is source of truth.
+    LaunchedEffect(initialSelectedSection) {
+        if (initialSelectedSection != null && repoSection == null) {
+            BookMySpaceRepository.setSelectedCustomerSection(initialSelectedSection.toCustomerSection())
+        }
+    }
+
+    val selectedMainSection = repoSection?.toMainHomeSection() ?: initialSelectedSection
+    val selectedCategorySlug = if (selectedMainSection == null) "all" else repoCategorySlug
 
     var showLocationDialog by remember { mutableStateOf(false) }
     var showEasyVoiceBookingDialog by remember { mutableStateOf(false) }
@@ -202,20 +220,16 @@ fun HomeScreen(
     var filterMaxPrice by remember { mutableFloatStateOf(500000f) }
     var filterMinRating by remember { mutableFloatStateOf(0f) }
 
-    val homeAmenityFilterOptions = remember {
-        listOf(
-            AmenityFilterOption("parking", "Parking", "🅿️", listOf("parking", "valet", "car")),
-            AmenityFilterOption("wifi", "Wi-Fi", "📶", listOf("wifi", "wi-fi", "internet", "fiber")),
-            AmenityFilterOption("changing_rooms", "Changing Rooms", "🚿", listOf("changing", "shower", "washroom", "restroom", "dressing", "locker", "bath")),
-            AmenityFilterOption("ac", "Air Conditioned", "❄️", listOf("ac", "air condition", "centralized ac", "cooling")),
-            AmenityFilterOption("power_backup", "Power Backup", "⚡", listOf("power backup", "generator", "power", "electricity")),
-            AmenityFilterOption("catering", "In-House Food", "🍽️", listOf("cater", "kitchen", "food", "dining", "meal", "buffet", "snack")),
-            AmenityFilterOption("stage_sound", "Stage / Sound", "🎤", listOf("stage", "sound", "led", "audio", "mic", "dj")),
-            AmenityFilterOption("rooms", "Guest Rooms", "🛏️", listOf("room", "suite", "bridal", "bedroom", "stay")),
-            AmenityFilterOption("pool", "Swimming Pool", "🏊", listOf("pool", "swimming")),
-            AmenityFilterOption("lockers", "Lockers", "🔒", listOf("locker")),
-            AmenityFilterOption("lights", "Floodlights", "💡", listOf("light", "floodlight"))
-        )
+    val homeAmenityFilterOptions = remember(selectedMainSection) {
+        val section = selectedMainSection?.toCustomerSection() ?: return@remember emptyList()
+        CustomerSectionCatalog.amenityFilters(section).map { spec ->
+            AmenityFilterOption(spec.id, spec.label, spec.emoji, spec.keywords)
+        }
+    }
+
+    val filteredInstitutes = remember(institutes, selectedMainSection, selectedCategorySlug) {
+        if (selectedMainSection != MainHomeSection.INSTITUTES_CLASSES) emptyList()
+        else institutes.filter { CustomerSectionCatalog.matchesInstitute(it, selectedCategorySlug) }
     }
 
     // Filter venues for currently selected main section and category
@@ -227,11 +241,13 @@ fun HomeScreen(
         filterMinPrice,
         filterMaxPrice,
         filterMinRating,
-        userLocationHierarchy
+        userLocationHierarchy,
+        homeAmenityFilterOptions
     ) {
         if (selectedMainSection == null) return@remember emptyList<Venue>()
 
         PerformanceTracer.traceSection("FilterHomeScreenVenues", TraceCategory.DATA_FETCH) {
+            val catalogSection = selectedMainSection.toCustomerSection()
             val list = venues.map { v ->
                 val vLat = v.locationHierarchy?.latitude ?: v.latitude
                 val vLng = v.locationHierarchy?.longitude ?: v.longitude
@@ -241,74 +257,13 @@ fun HomeScreen(
 
                 v.copy(distanceKm = calculatedDist)
             }.filter { v ->
-                val slug = v.category?.slug?.lowercase() ?: "venue"
+                if (!CustomerSectionCatalog.matchesVenue(v, catalogSection, selectedCategorySlug)) {
+                    return@filter false
+                }
+
                 val name = v.name.lowercase()
                 val desc = v.description.lowercase()
-                val fac = v.facilities.joinToString(" ") { it.facility.lowercase() }
 
-                // 1. Matches Main Section
-                val matchesMainSection = when (selectedMainSection) {
-                    MainHomeSection.FUNCTION_HALLS -> {
-                        slug.contains("function") || slug.contains("banquet") || slug.contains("marriage") ||
-                                slug.contains("lawn") || slug.contains("convention") || slug.contains("community") ||
-                                slug.contains("hall") || slug.contains("venue") || name.contains("hall") ||
-                                name.contains("palace") || name.contains("lawn") || name.contains("convention") ||
-                                name.contains("marriage") || name.contains("banquet")
-                    }
-                    MainHomeSection.LODGE_ROOMS -> {
-                        slug.contains("hotel") || slug.contains("room") || slug.contains("lodge") ||
-                                slug.contains("stay") || slug.contains("resort") || name.contains("hotel") ||
-                                name.contains("lodge") || name.contains("room") || name.contains("stay") ||
-                                name.contains("resort") || v.hotelDetails != null
-                    }
-                    MainHomeSection.PG_HOSTELS -> {
-                        slug.contains("pg") || slug.contains("hostel") || slug.contains("co_living") ||
-                                name.contains("pg") || name.contains("hostel") || desc.contains("pg") ||
-                                desc.contains("hostel") || desc.contains("co-living")
-                    }
-                    MainHomeSection.INSTITUTES_CLASSES -> {
-                        slug.contains("institute") || slug.contains("class") || slug.contains("coaching") ||
-                                slug.contains("academy") || slug.contains("dance") || slug.contains("music") ||
-                                slug.contains("sports") || slug.contains("badminton") || slug.contains("turf") ||
-                                name.contains("academy") || name.contains("institute") || name.contains("coaching") ||
-                                name.contains("class") || desc.contains("academy") || desc.contains("classes")
-                    }
-                    null -> true
-                }
-
-                if (!matchesMainSection) return@filter false
-
-                // 2. Matches Sub-category
-                val matchesCategory = if (selectedCategorySlug == "all") {
-                    true
-                } else {
-                    when (selectedCategorySlug) {
-                        "marriage_hall" -> slug.contains("marriage") || name.contains("marriage") || name.contains("kalyana") || desc.contains("marriage")
-                        "convention_center" -> slug.contains("convention") || name.contains("convention") || desc.contains("convention")
-                        "banquet_hall" -> slug.contains("banquet") || name.contains("banquet") || name.contains("party") || desc.contains("banquet")
-                        "community_hall" -> slug.contains("community") || name.contains("community") || desc.contains("community")
-                        "govt_hall" -> slug.contains("govt") || name.contains("government") || name.contains("town hall") || desc.contains("government")
-                        "party_lawn" -> slug.contains("lawn") || name.contains("lawn") || desc.contains("lawn") || desc.contains("ground")
-                        "hotel" -> slug.contains("hotel") || name.contains("hotel")
-                        "lodge" -> slug.contains("lodge") || name.contains("lodge")
-                        "guest_house" -> slug.contains("guest") || name.contains("guest house") || desc.contains("guest house")
-                        "hourly_room" -> slug.contains("room") || name.contains("room") || desc.contains("hourly") || desc.contains("day stay")
-                        "resort" -> slug.contains("resort") || name.contains("resort") || desc.contains("resort")
-                        "gents_pg" -> name.contains("gent") || name.contains("men") || desc.contains("gents") || slug.contains("pg")
-                        "ladies_pg" -> name.contains("lad") || name.contains("women") || desc.contains("ladies") || desc.contains("women")
-                        "student_hostel" -> name.contains("hostel") || desc.contains("student") || slug.contains("hostel")
-                        "co_living" -> slug.contains("co_living") || desc.contains("co-living") || name.contains("living")
-                        "single_room" -> desc.contains("single") || desc.contains("sharing") || slug.contains("pg")
-                        "coaching" -> name.contains("coaching") || name.contains("tuition") || desc.contains("coaching") || desc.contains("tuition")
-                        "computer_it" -> name.contains("computer") || name.contains("code") || name.contains("stem") || desc.contains("python") || desc.contains("coding")
-                        "dance_academy" -> name.contains("dance") || desc.contains("dance") || slug.contains("dance")
-                        "music_class" -> name.contains("music") || desc.contains("music") || name.contains("symphony") || slug.contains("music")
-                        "sports_academy" -> name.contains("sports") || name.contains("academy") || name.contains("badminton") || name.contains("turf")
-                        else -> slug.contains(selectedCategorySlug) || name.contains(selectedCategorySlug)
-                    }
-                }
-
-                // 3. Matches Amenities
                 val matchesAmenities = if (selectedAmenityFilters.isEmpty()) {
                     true
                 } else {
@@ -331,11 +286,10 @@ fun HomeScreen(
                     }
                 }
 
-                // 4. Matches Price and Rating
                 val matchesPrice = v.pricingBaseAmount in filterMinPrice..filterMaxPrice
                 val matchesRating = filterMinRating == 0f || v.avgRating >= filterMinRating
 
-                matchesCategory && matchesAmenities && matchesPrice && matchesRating
+                matchesAmenities && matchesPrice && matchesRating
             }
 
             list.sortedWith(
@@ -556,8 +510,7 @@ fun HomeScreen(
                     MainSectionBigHeroCard(
                         section = section,
                         onClick = {
-                            selectedMainSection = section
-                            selectedCategorySlug = "all"
+                            BookMySpaceRepository.setSelectedCustomerSection(section.toCustomerSection())
                         },
                         isTabletOrWide = responsiveInfo.isTabletOrWide,
                         modifier = Modifier.fillMaxWidth()
@@ -626,8 +579,7 @@ fun HomeScreen(
                     ) {
                         OutlinedButton(
                             onClick = {
-                                selectedMainSection = null
-                                selectedCategorySlug = "all"
+                                BookMySpaceRepository.clearSelectedCustomerSection()
                             },
                             shape = RoundedCornerShape(16.dp),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
@@ -712,7 +664,7 @@ fun HomeScreen(
                             val isSelected = selectedCategorySlug == cat.id
                             FilterChip(
                                 selected = isSelected,
-                                onClick = { selectedCategorySlug = cat.id },
+                                onClick = { BookMySpaceRepository.setSelectedCustomerCategory(cat.id) },
                                 label = {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
@@ -760,7 +712,10 @@ fun HomeScreen(
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onNavigateToSearch(if (selectedCategorySlug == "all") null else selectedCategorySlug) }
+                            .clickable {
+                                BookMySpaceRepository.setSelectedCustomerCategory(selectedCategorySlug)
+                                onNavigateToSearch(if (selectedCategorySlug == "all") activeSection.id else selectedCategorySlug)
+                            }
                             .testTag("home_search_bar_box"),
                         shape = RoundedCornerShape(16.dp),
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
@@ -948,7 +903,7 @@ fun HomeScreen(
             }
 
             // 4. Institutes / Classes Module Special Section
-            if (activeSection == MainHomeSection.INSTITUTES_CLASSES && institutes.isNotEmpty()) {
+            if (activeSection == MainHomeSection.INSTITUTES_CLASSES && filteredInstitutes.isNotEmpty()) {
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(
@@ -968,7 +923,7 @@ fun HomeScreen(
                             onClick = onNavigateToInstitutes,
                             contentPadding = PaddingValues(horizontal = 6.dp)
                         ) {
-                            Text("View All (${institutes.size}) →", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("View All (${filteredInstitutes.size}) →", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                     Spacer(modifier = Modifier.height(6.dp))
@@ -977,7 +932,7 @@ fun HomeScreen(
                         contentPadding = PaddingValues(horizontal = 20.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(institutes, key = { it.id }) { inst ->
+                        items(filteredInstitutes, key = { it.id }) { inst ->
                             Surface(
                                 onClick = onNavigateToInstitutes,
                                 shape = RoundedCornerShape(16.dp),
@@ -1092,7 +1047,7 @@ fun HomeScreen(
                             Spacer(modifier = Modifier.height(12.dp))
                             Button(
                                 onClick = {
-                                    selectedCategorySlug = "all"
+                                    BookMySpaceRepository.setSelectedCustomerCategory("all")
                                     selectedAmenityFilters = emptySet()
                                     filterMinRating = 0f
                                     filterMinPrice = 0f

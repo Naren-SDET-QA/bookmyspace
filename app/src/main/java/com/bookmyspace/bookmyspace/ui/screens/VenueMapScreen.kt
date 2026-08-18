@@ -30,6 +30,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.toArgb
+import com.bookmyspace.bookmyspace.data.model.CustomerSection
+import com.bookmyspace.bookmyspace.data.model.CustomerSectionCatalog
 import com.bookmyspace.bookmyspace.data.model.Venue
 import com.bookmyspace.bookmyspace.data.repository.BookMySpaceRepository
 import com.bookmyspace.bookmyspace.map.DefaultMapConfiguration
@@ -87,23 +89,25 @@ fun VenueMapScreen(
     val surfaceColorInt = MaterialTheme.colorScheme.surface.toArgb()
     val outlineColorInt = MaterialTheme.colorScheme.outline.toArgb()
 
-    val categoryChips = remember {
-        listOf(
-            QuickFilterChip("all", "All Venues", "✨"),
-            QuickFilterChip("cricket", "Cricket", "🏏"),
-            QuickFilterChip("football", "Football", "⚽"),
-            QuickFilterChip("indoor", "Indoor", "🏸"),
-            QuickFilterChip("function_hall", "Function Hall", "🏰"),
-            QuickFilterChip("banquet_hall", "Banquet", "🍸"),
-            QuickFilterChip("pg_hostel", "PG / Co-Living", "🏡"),
-            QuickFilterChip("hotel_stay", "Hotel & Stay", "🏨"),
-            QuickFilterChip("party_lawn", "Outdoor Lawn", "🌳"),
-            QuickFilterChip("meeting_room", "Meeting Space", "💼")
-        )
+    val selectedSection by BookMySpaceRepository.selectedCustomerSection.collectAsState()
+    val selectedSectionCategory by BookMySpaceRepository.selectedCustomerCategorySlug.collectAsState()
+
+    val categoryChips = remember(selectedSection) {
+        if (selectedSection == null) {
+            CustomerSection.entries.map { QuickFilterChip(it.id, it.title, it.emoji) }
+        } else {
+            selectedSection!!.categories.map { QuickFilterChip(it.id, it.label, it.emoji) }
+        }
+    }
+
+    LaunchedEffect(selectedSection, selectedSectionCategory) {
+        if (selectedSection != null && selectedCategoryFilter == "all") {
+            selectedCategoryFilter = selectedSectionCategory
+        }
     }
 
     // Filter venues based on user search query, category filter, radius distance, price range, min rating & amenities
-    val filteredVenues: List<Venue> = remember(allVenues, searchQuery, selectedCategoryFilter, radiusKmFilter, userLocation, minPriceFilter, maxPriceFilter, minRatingFilter, selectedAmenitiesFilter) {
+    val filteredVenues: List<Venue> = remember(allVenues, searchQuery, selectedCategoryFilter, radiusKmFilter, userLocation, minPriceFilter, maxPriceFilter, minRatingFilter, selectedAmenitiesFilter, selectedSection) {
         allVenues.filter { v: Venue ->
             val distKm = calculateDistanceKm(userLocation.latitude, userLocation.longitude, v.latitude, v.longitude)
             val matchesRadius = distKm <= radiusKmFilter
@@ -114,24 +118,15 @@ fun VenueMapScreen(
                     v.city.contains(searchQuery, ignoreCase = true) ||
                     v.fullAddress.contains(searchQuery, ignoreCase = true)
 
-            val name = v.name.lowercase()
-            val desc = v.description.lowercase()
-            val slug = v.category?.slug?.lowercase() ?: ""
-            val catName = v.category?.name?.lowercase() ?: ""
-            val fac = v.facilities.joinToString(" ") { it.facility.lowercase() }
-
-            val matchesCategory = when (selectedCategoryFilter) {
-                "all" -> true
-                "cricket" -> name.contains("cricket") || desc.contains("cricket") || desc.contains("turf") || desc.contains("ground") || fac.contains("cricket") || slug.contains("badminton")
-                "football" -> name.contains("football") || desc.contains("football") || desc.contains("turf") || fac.contains("football") || desc.contains("soccer")
-                "indoor" -> desc.contains("ac") || desc.contains("indoor") || slug.contains("conference") || slug.contains("meeting") || slug.contains("banquet") || slug.contains("hall") || fac.contains("air condition")
-                "function_hall" -> slug.contains("function_hall") || name.contains("function") || catName.contains("function")
-                "banquet_hall" -> slug.contains("banquet") || name.contains("banquet") || catName.contains("banquet")
-                "pg_hostel" -> slug.contains("pg") || name.contains("pg") || desc.contains("hostel") || desc.contains("co-living")
-                "hotel_stay" -> slug.contains("hotel") || name.contains("hotel") || desc.contains("stay") || desc.contains("resort")
-                "party_lawn" -> slug.contains("lawn") || desc.contains("lawn") || desc.contains("outdoor") || name.contains("lawn")
-                "meeting_room" -> slug.contains("meeting") || slug.contains("conference") || name.contains("meeting") || desc.contains("workstation")
-                else -> slug.contains(selectedCategoryFilter) || name.contains(selectedCategoryFilter)
+            val matchesCategory = if (selectedSection != null) {
+                CustomerSectionCatalog.matchesVenue(v, selectedSection!!, selectedCategoryFilter)
+            } else {
+                val chipSection = CustomerSection.fromId(selectedCategoryFilter)
+                if (chipSection != null) {
+                    CustomerSectionCatalog.matchesVenue(v, chipSection, "all")
+                } else {
+                    false
+                }
             }
 
             val matchesPrice = v.pricingBaseAmount >= minPriceFilter && v.pricingBaseAmount <= maxPriceFilter
@@ -424,7 +419,17 @@ fun VenueMapScreen(
                     val isSelected = selectedCategoryFilter == chip.id
                     FilterChip(
                         selected = isSelected,
-                        onClick = { selectedCategoryFilter = chip.id },
+                        onClick = {
+                            if (selectedSection == null) {
+                                CustomerSection.fromId(chip.id)?.let {
+                                    BookMySpaceRepository.setSelectedCustomerSection(it)
+                                }
+                                selectedCategoryFilter = "all"
+                            } else {
+                                selectedCategoryFilter = chip.id
+                                BookMySpaceRepository.setSelectedCustomerCategory(chip.id)
+                            }
+                        },
                         label = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(chip.emoji, fontSize = 13.sp)

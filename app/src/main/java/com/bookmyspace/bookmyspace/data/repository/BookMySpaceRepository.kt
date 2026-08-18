@@ -1002,7 +1002,7 @@ object BookMySpaceRepository {
             isVerified = true,
             avgRating = 4.9,
             ratingCount = 195,
-            category = categories[3],
+            category = categories.first { it.slug == "party_lawn" },
             facilities = listOf(
                 VenueFacility("2-Acre Open Landscaped Lawn"),
                 VenueFacility("Poolside Deck & Bar Area"),
@@ -3639,6 +3639,47 @@ object BookMySpaceRepository {
     fun setUserLocationRadius(radius: LocationSearchRadius) {
         _userLocationRadius.value = radius
         addAuditLog("LOCATION_RADIUS_CHANGED", "Radius updated to ${radius.displayName}")
+    }
+
+    // =========================================================================
+    // --- Customer 4-section session (source of truth: CustomerSectionCatalog) ---
+    // In-memory only so a cold start always shows the first 4-section screen.
+    // Search / Map / Voice / 1-Tap / Help read this so they stay scoped.
+    // =========================================================================
+    private val _selectedCustomerSection = MutableStateFlow<CustomerSection?>(null)
+    val selectedCustomerSection: StateFlow<CustomerSection?> = _selectedCustomerSection.asStateFlow()
+
+    private val _selectedCustomerCategorySlug = MutableStateFlow("all")
+    val selectedCustomerCategorySlug: StateFlow<String> = _selectedCustomerCategorySlug.asStateFlow()
+
+    fun setSelectedCustomerSection(section: CustomerSection?, categorySlug: String = "all") {
+        _selectedCustomerSection.value = section
+        _selectedCustomerCategorySlug.value = if (section == null) "all" else {
+            val valid = section.categories.any { it.id.equals(categorySlug, ignoreCase = true) }
+            if (valid) categorySlug else "all"
+        }
+    }
+
+    fun setSelectedCustomerCategory(categorySlug: String) {
+        val section = _selectedCustomerSection.value
+        if (section == null) {
+            _selectedCustomerCategorySlug.value = "all"
+            return
+        }
+        val valid = section.categories.any { it.id.equals(categorySlug, ignoreCase = true) }
+        _selectedCustomerCategorySlug.value = if (valid) categorySlug else "all"
+    }
+
+    fun clearSelectedCustomerSection() {
+        setSelectedCustomerSection(null)
+    }
+
+    fun venuesForCustomerSection(
+        section: CustomerSection? = _selectedCustomerSection.value,
+        categorySlug: String = _selectedCustomerCategorySlug.value
+    ): List<Venue> {
+        if (section == null) return emptyList()
+        return _venues.value.filter { CustomerSectionCatalog.matchesVenue(it, section, categorySlug) }
     }
 
     // =========================================================================

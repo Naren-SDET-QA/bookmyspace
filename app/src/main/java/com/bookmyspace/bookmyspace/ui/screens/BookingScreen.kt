@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bookmyspace.bookmyspace.data.model.Booking
 import com.bookmyspace.bookmyspace.data.model.BookingStatus
+import com.bookmyspace.bookmyspace.data.model.CustomerSectionCatalog
 import com.bookmyspace.bookmyspace.data.model.TimeSlot
 import com.bookmyspace.bookmyspace.data.repository.BookMySpaceRepository
 import java.time.LocalDate
@@ -98,10 +99,12 @@ fun BookingScreen(
 
     com.bookmyspace.bookmyspace.util.TraceComposition("BookingScreen")
 
+    val bookingSection = CustomerSectionCatalog.sectionForVenue(venue)
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Book Court / Slot", fontWeight = FontWeight.Bold) },
+                title = { Text(CustomerSectionCatalog.bookingScreenTitle(bookingSection), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")

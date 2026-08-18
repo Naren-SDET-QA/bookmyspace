@@ -29,6 +29,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.bookmyspace.bookmyspace.data.model.CustomerSection
+import com.bookmyspace.bookmyspace.data.model.CustomerSectionCatalog
 import com.bookmyspace.bookmyspace.data.model.Venue
 import com.bookmyspace.bookmyspace.data.repository.BookMySpaceRepository
 import com.bookmyspace.bookmyspace.util.LocalizedStrings
@@ -139,27 +141,27 @@ fun EasyVoiceBookingDialog(
     val scope = rememberCoroutineScope()
     val venues by BookMySpaceRepository.venues.collectAsState()
     val appSections by BookMySpaceRepository.appSections.collectAsState()
+    val selectedSection by BookMySpaceRepository.selectedCustomerSection.collectAsState()
 
-    val availableVoiceCategories = remember(appSections) {
-        val list = mutableListOf<Triple<String, String, String>>()
-        if (BookMySpaceRepository.isSectionEnabled("venues_halls")) {
-            list.add(Triple("VENUE", "🏰 Function Hall", "Marriage/Party"))
-        }
-        if (BookMySpaceRepository.isSectionEnabled("pg_hostels")) {
-            list.add(Triple("PG", "🏡 PG Room", "Gents/Ladies"))
-        }
-        if (BookMySpaceRepository.isSectionEnabled("hotels_rooms")) {
-            list.add(Triple("HOTEL", "🏨 Hotel Room", "Day/Night Stay"))
-        }
-        if (BookMySpaceRepository.isCategoryEnabled("cricket") || BookMySpaceRepository.isCategoryEnabled("football") || BookMySpaceRepository.isCategoryEnabled("indoor")) {
-            list.add(Triple("TURF", "🏏 Turf / Ground", "Cricket/Football"))
-        }
-        list
+    val availableVoiceCategories = remember(appSections, selectedSection) {
+        data class VoiceCategory(val section: CustomerSection, val key: String, val name: String, val sub: String)
+        val all = listOf(
+            VoiceCategory(CustomerSection.FUNCTION_HALLS, "VENUE", "🏰 Function Hall", "Marriage/Party"),
+            VoiceCategory(CustomerSection.PG_HOSTELS, "PG", "🏡 PG Room", "Gents/Ladies"),
+            VoiceCategory(CustomerSection.LODGE_ROOMS, "HOTEL", "🏨 Hotel Room", "Day/Night Stay"),
+            VoiceCategory(CustomerSection.INSTITUTES_CLASSES, "INSTITUTE", "🎓 Classes / Turf", "Sports & Coaching")
+        )
+        all.filter { item ->
+            BookMySpaceRepository.isSectionEnabled(item.section.adminSectionKey) &&
+                (selectedSection == null || selectedSection == item.section)
+        }.map { Triple(it.key, it.name, it.sub) }
     }
 
     var isListening by remember { mutableStateOf(false) }
     var spokenText by remember { mutableStateOf("") }
-    var selectedCategoryType by remember { mutableStateOf<String?>(null) } // "PG", "VENUE", "HOTEL", "TURF"
+    var selectedCategoryType by remember {
+        mutableStateOf(selectedSection?.let { CustomerSectionCatalog.voiceTypeForSection(it) })
+    }
     var selectedBudgetTier by remember { mutableStateOf<String?>(null) } // "BUDGET", "MID", "PREMIUM"
     var bookedVenueResult by remember { mutableStateOf<Venue?>(null) }
     var bookingConfirmed by remember { mutableStateOf(false) }
@@ -448,14 +450,14 @@ fun EasyVoiceBookingDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // MATCHING SPACES DISPLAY FOR 1-TAP INSTANT BOOKING
-                val matchingVenues = remember(selectedCategoryType, selectedBudgetTier, venues) {
+                val matchingVenues = remember(selectedCategoryType, selectedBudgetTier, venues, selectedSection) {
                     venues.filter { v ->
-                        val matchType = when (selectedCategoryType) {
-                            "PG" -> v.pgDetails != null || v.category?.slug == "pg_hostel"
-                            "HOTEL" -> v.hotelDetails != null || v.category?.slug == "hotel_stay"
-                            "TURF" -> v.category?.slug == "sports_turf"
-                            "VENUE" -> v.pgDetails == null && v.hotelDetails == null
-                            else -> true
+                        val voiceSection = CustomerSectionCatalog.sectionForVoiceType(selectedCategoryType)
+                            ?: selectedSection
+                        val matchType = if (voiceSection != null) {
+                            CustomerSectionCatalog.matchesVenue(v, voiceSection)
+                        } else {
+                            false
                         }
                         val matchBudget = when (selectedBudgetTier) {
                             "BUDGET" -> v.pricingBaseAmount <= 25000
