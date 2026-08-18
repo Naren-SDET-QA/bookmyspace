@@ -268,6 +268,39 @@ class CustomerSectionCatalog {
     };
   }
 
+  /// Owner phone stays hidden on bookable listings until a confirmed/paid booking.
+  /// Institute listings keep Call / WhatsApp available.
+  static bool canRevealOwnerContact({
+    required CustomerSection? section,
+    required bool hasConfirmedPaidBooking,
+  }) {
+    if (section == CustomerSection.institutesClasses) return true;
+    return hasConfirmedPaidBooking;
+  }
+
+  static List<CustomerDetailField> requiredCustomerFields(
+    CustomerSection? section,
+  ) {
+    return switch (section) {
+      CustomerSection.functionHalls => const [
+        CustomerDetailField.fullName,
+        CustomerDetailField.phone,
+        CustomerDetailField.eventType,
+      ],
+      CustomerSection.lodgeRooms => const [
+        CustomerDetailField.fullName,
+        CustomerDetailField.phone,
+      ],
+      CustomerSection.pgHostels => const [
+        CustomerDetailField.fullName,
+        CustomerDetailField.phone,
+        CustomerDetailField.idNumber,
+        CustomerDetailField.address,
+      ],
+      CustomerSection.institutesClasses || null => const [],
+    };
+  }
+
   static bool matchesAmenities(Venue venue, Set<String> amenityIds) {
     if (amenityIds.isEmpty) return true;
     final section = sectionForVenue(venue);
@@ -352,5 +385,39 @@ class CustomerSectionCatalog {
       venue.category?.slug ?? '',
       ...venue.facilities.map((f) => f.facility),
     ].join(' ').toLowerCase();
+  }
+}
+
+enum CustomerDetailField { fullName, phone, eventType, idNumber, address }
+
+class CustomerBookingDetails {
+  const CustomerBookingDetails({
+    this.fullName = '',
+    this.phone = '',
+    this.eventType = '',
+    this.idNumber = '',
+    this.address = '',
+  });
+
+  final String fullName;
+  final String phone;
+  final String eventType;
+  final String idNumber;
+  final String address;
+
+  CustomerBookingDetails copyWith({
+    String? fullName,
+    String? phone,
+    String? eventType,
+    String? idNumber,
+    String? address,
+  }) {
+    return CustomerBookingDetails(
+      fullName: fullName ?? this.fullName,
+      phone: phone ?? this.phone,
+      eventType: eventType ?? this.eventType,
+      idNumber: idNumber ?? this.idNumber,
+      address: address ?? this.address,
+    );
   }
 }

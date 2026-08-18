@@ -9,11 +9,14 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/error_view.dart';
+import '../../../../core/validators/app_validators.dart';
+import '../../../auth/presentation/auth_providers.dart';
 import '../../../home/domain/customer_section_catalog.dart';
 import '../../../venues/domain/venue.dart';
 import '../../../venues/presentation/widgets/venue_badges.dart';
 import '../../domain/booking.dart';
 import '../booking_providers.dart';
+import '../widgets/section_customer_details_form.dart';
 
 /// Booking flow: pick a date, pick an available slot, confirm the hold.
 ///
@@ -30,17 +33,24 @@ class BookingScreen extends ConsumerStatefulWidget {
 }
 
 class _BookingScreenState extends ConsumerState<BookingScreen> {
+  final _detailsFormKey = GlobalKey<FormState>();
   DateTime? _selectedDate;
   DateTime? _checkOutDate;
   SlotAvailability? _selectedSlot;
   bool _confirming = false;
   int _guestCount = 100;
   int _sharingIndex = 0;
+  CustomerBookingDetails _details = const CustomerBookingDetails();
 
   @override
   void initState() {
     super.initState();
     _selectedDate = DateTime.now();
+    final user = ref.read(authNotifierProvider).user;
+    _details = CustomerBookingDetails(
+      fullName: user?.fullName ?? '',
+      phone: user?.phone ?? '',
+    );
   }
 
   @override
@@ -71,10 +81,17 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
       ),
       body: date == null
           ? const Center(child: CircularProgressIndicator())
-          : Column(
+          : Form(
+              key: _detailsFormKey,
+              child: Column(
               children: [
                 _VenueHeader(venue: widget.venue),
                 const Divider(height: 1),
+                SectionCustomerDetailsForm(
+                  section: section,
+                  details: _details,
+                  onChanged: (next) => setState(() => _details = next),
+                ),
                 _SectionBookingFields(
                   section: section,
                   venue: widget.venue,
@@ -107,6 +124,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                 ),
               ],
             ),
+            ),
       bottomNavigationBar: _selectedSlot != null
           ? _ConfirmBar(
               venue: widget.venue,
@@ -119,9 +137,43 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
     );
   }
 
+  String? _validateSectionDetails(
+    CustomerSection? section,
+    CustomerBookingDetails details,
+  ) {
+    final fields = CustomerSectionCatalog.requiredCustomerFields(section);
+    for (final field in fields) {
+      final error = switch (field) {
+        CustomerDetailField.fullName => AppValidators.name(details.fullName),
+        CustomerDetailField.phone => AppValidators.phone(details.phone),
+        CustomerDetailField.eventType =>
+          AppValidators.required(details.eventType, fieldName: 'Event type'),
+        CustomerDetailField.idNumber => AppValidators.required(
+          details.idNumber,
+          fieldName: 'ID number',
+          minLength: 6,
+        ),
+        CustomerDetailField.address => AppValidators.required(
+          details.address,
+          fieldName: 'Address',
+          minLength: 8,
+        ),
+      };
+      if (error != null) return error;
+    }
+    return null;
+  }
+
   Future<void> _confirmBooking(DateTime date) async {
     final slot = _selectedSlot;
     if (slot == null || _confirming) return;
+    if (_detailsFormKey.currentState?.validate() == false) return;
+    final section = CustomerSectionCatalog.sectionForVenue(widget.venue);
+    final missing = _validateSectionDetails(section, _details);
+    if (missing != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(missing)));
+      return;
+    }
     final l10n = AppLocalizations.of(context);
     final repo = ref.read(bookingRepositoryProvider);
 

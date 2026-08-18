@@ -10,6 +10,8 @@ import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/responsive_layout.dart';
 import '../../../../core/widgets/skeleton.dart';
 import '../../../auth/presentation/auth_providers.dart';
+import '../../../booking/domain/booking.dart';
+import '../../../booking/presentation/booking_providers.dart';
 import '../../../venues/domain/venue.dart';
 import '../../../venues/presentation/venue_providers.dart';
 import '../../../venues/presentation/widgets/venue_badges.dart';
@@ -868,19 +870,47 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
+  bool _hasConfirmedPaidBooking(String venueId) {
+    final bookings = ref.read(myBookingsProvider).asData?.value ?? const [];
+    return bookings.any(
+      (b) =>
+          b.venueId == venueId &&
+          (b.status == BookingStatus.confirmed ||
+              b.status == BookingStatus.completed),
+    );
+  }
+
   void _handleCall(BuildContext context, Venue venue) {
+    final section = CustomerSectionCatalog.sectionForVenue(venue);
+    final allowed = CustomerSectionCatalog.canRevealOwnerContact(
+      section: section,
+      hasConfirmedPaidBooking: _hasConfirmedPaidBooking(venue.id),
+    );
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Calling ${venue.name} contact desk...'),
+        content: Text(
+          allowed
+              ? 'Calling ${venue.name}...'
+              : 'Owner number unlocks after confirmed advance payment.',
+        ),
         duration: const Duration(seconds: 2),
       ),
     );
   }
 
   void _handleWhatsApp(BuildContext context, Venue venue) {
+    final section = CustomerSectionCatalog.sectionForVenue(venue);
+    final allowed = CustomerSectionCatalog.canRevealOwnerContact(
+      section: section,
+      hasConfirmedPaidBooking: _hasConfirmedPaidBooking(venue.id),
+    );
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Opening WhatsApp chat with ${venue.name}...'),
+        content: Text(
+          allowed
+              ? 'Opening WhatsApp chat with ${venue.name}...'
+              : 'Owner WhatsApp unlocks after confirmed advance payment.',
+        ),
         duration: const Duration(seconds: 2),
       ),
     );

@@ -164,6 +164,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Sign in with email or phone. Extra details are asked only when you book.',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                   const SizedBox(height: 40),
                   FilledButton.icon(
                     onPressed: _busy

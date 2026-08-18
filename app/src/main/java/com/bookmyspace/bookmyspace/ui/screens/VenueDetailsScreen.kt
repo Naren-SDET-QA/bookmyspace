@@ -371,12 +371,16 @@ fun VenueDetailsScreen(
         bottomBar = {
             val context = LocalContext.current
             val cs = venue.contactSettings
-            val canDirectPostBooking = userHasConfirmedBooking && cs.allowPostBookingDirectContact
+            val listingSectionForContact = CustomerSectionCatalog.sectionForVenue(venue)
+            val revealOwner = CustomerSectionCatalog.canRevealOwnerContact(
+                listingSectionForContact,
+                userHasConfirmedBooking
+            ) || cs.showOwnerContact
 
-            val showCall = cs.showCall || (canDirectPostBooking && cs.showCall)
-            val showWhatsapp = cs.showWhatsapp || (canDirectPostBooking && cs.showWhatsapp)
-            val showChat = cs.showChat || (canDirectPostBooking && cs.showChat)
-            val showBmsSupport = cs.contactBookMySpace || (!cs.showCall && !cs.showWhatsapp && !cs.showChat && !cs.showOwnerContact)
+            val showCall = revealOwner && (cs.showCall || listingSectionForContact == CustomerSection.INSTITUTES_CLASSES || userHasConfirmedBooking)
+            val showWhatsapp = revealOwner && (cs.showWhatsapp || listingSectionForContact == CustomerSection.INSTITUTES_CLASSES || userHasConfirmedBooking)
+            val showChat = cs.showChat || (userHasConfirmedBooking && cs.allowPostBookingDirectContact)
+            val showBmsSupport = !revealOwner || cs.contactBookMySpace || (!cs.showCall && !cs.showWhatsapp && !cs.showChat && !cs.showOwnerContact)
 
             Surface(
                 tonalElevation = 8.dp,

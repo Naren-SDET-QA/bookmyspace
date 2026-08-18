@@ -72,6 +72,11 @@ fun BookingScreen(
     var guestCount by remember { mutableIntStateOf(venue.minGuests.coerceAtLeast(1)) }
     var checkOutDateStr by remember { mutableStateOf("2026-08-09") }
     var selectedSharingIndex by remember { mutableIntStateOf(0) }
+    var customerName by remember { mutableStateOf(user?.fullName.orEmpty()) }
+    var customerPhone by remember { mutableStateOf(user?.phone.orEmpty()) }
+    var eventType by remember { mutableStateOf("") }
+    var tenantIdNumber by remember { mutableStateOf("") }
+    var tenantAddress by remember { mutableStateOf("") }
 
     val currentSlotLabel = selectedSlot?.label ?: "Standard Slot"
 
@@ -146,6 +151,25 @@ fun BookingScreen(
                                 }
 
                                 val slot = selectedSlot
+                                val bookingSection = CustomerSectionCatalog.sectionForVenue(venue)
+                                if (bookingSection == com.bookmyspace.bookmyspace.data.model.CustomerSection.FUNCTION_HALLS &&
+                                    (customerName.isBlank() || customerPhone.isBlank() || eventType.isBlank())
+                                ) {
+                                    duplicateErrorMsg = "Enter your name, phone and event type to hold this hall."
+                                    return@traceBlock
+                                }
+                                if (bookingSection == com.bookmyspace.bookmyspace.data.model.CustomerSection.LODGE_ROOMS &&
+                                    (customerName.isBlank() || customerPhone.isBlank())
+                                ) {
+                                    duplicateErrorMsg = "Enter guest name and phone to book this stay."
+                                    return@traceBlock
+                                }
+                                if (bookingSection == com.bookmyspace.bookmyspace.data.model.CustomerSection.PG_HOSTELS &&
+                                    (customerName.isBlank() || customerPhone.isBlank() || tenantIdNumber.isBlank() || tenantAddress.isBlank())
+                                ) {
+                                    duplicateErrorMsg = "Enter tenant name, phone, ID and address to reserve this PG."
+                                    return@traceBlock
+                                }
                                 val newBooking = Booking(
                                     id = "bk_${System.currentTimeMillis()}",
                                     userId = user?.id ?: "guest",
@@ -221,6 +245,53 @@ fun BookingScreen(
 
             item {
                 val bookingSectionFields = CustomerSectionCatalog.sectionForVenue(venue)
+                if (bookingSectionFields != null && bookingSectionFields != com.bookmyspace.bookmyspace.data.model.CustomerSection.INSTITUTES_CLASSES) {
+                    Text("Your details for this booking", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = customerName,
+                        onValueChange = { customerName = it },
+                        label = { Text("Full name") },
+                        modifier = Modifier.fillMaxWidth().testTag("booking_customer_name"),
+                        singleLine = true
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = customerPhone,
+                        onValueChange = { customerPhone = it },
+                        label = { Text("Phone") },
+                        modifier = Modifier.fillMaxWidth().testTag("booking_customer_phone"),
+                        singleLine = true
+                    )
+                    if (bookingSectionFields == com.bookmyspace.bookmyspace.data.model.CustomerSection.FUNCTION_HALLS) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = eventType,
+                            onValueChange = { eventType = it },
+                            label = { Text("Event type") },
+                            modifier = Modifier.fillMaxWidth().testTag("booking_event_type"),
+                            singleLine = true
+                        )
+                    }
+                    if (bookingSectionFields == com.bookmyspace.bookmyspace.data.model.CustomerSection.PG_HOSTELS) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = tenantIdNumber,
+                            onValueChange = { tenantIdNumber = it },
+                            label = { Text("ID number (Aadhaar / Passport)") },
+                            modifier = Modifier.fillMaxWidth().testTag("booking_tenant_id"),
+                            singleLine = true
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = tenantAddress,
+                            onValueChange = { tenantAddress = it },
+                            label = { Text("Current address") },
+                            modifier = Modifier.fillMaxWidth().testTag("booking_tenant_address")
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(14.dp))
+                }
                 when (bookingSectionFields) {
                     com.bookmyspace.bookmyspace.data.model.CustomerSection.FUNCTION_HALLS -> {
                         Text("Event guests: $guestCount", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)

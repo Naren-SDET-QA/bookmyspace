@@ -98,6 +98,19 @@ class CustomerSectionCatalogTest {
     }
 
     @Test
+    fun ownerContactStaysHiddenUntilPaidExceptInstitutes() {
+        assertFalse(
+            CustomerSectionCatalog.canRevealOwnerContact(CustomerSection.FUNCTION_HALLS, false)
+        )
+        assertTrue(
+            CustomerSectionCatalog.canRevealOwnerContact(CustomerSection.FUNCTION_HALLS, true)
+        )
+        assertTrue(
+            CustomerSectionCatalog.canRevealOwnerContact(CustomerSection.INSTITUTES_CLASSES, false)
+        )
+    }
+
+    @Test
     fun bookingLabelsStaySectionSpecific() {
         assertEquals("Book Now", CustomerSectionCatalog.bookingCtaLabel(CustomerSection.FUNCTION_HALLS))
         assertEquals("Book Stay", CustomerSectionCatalog.bookingCtaLabel(CustomerSection.LODGE_ROOMS))

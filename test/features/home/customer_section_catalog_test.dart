@@ -50,6 +50,55 @@ void main() {
     );
   });
 
+  test('owner contact stays hidden until paid booking except institutes', () {
+    expect(
+      CustomerSectionCatalog.canRevealOwnerContact(
+        section: CustomerSection.functionHalls,
+        hasConfirmedPaidBooking: false,
+      ),
+      isFalse,
+    );
+    expect(
+      CustomerSectionCatalog.canRevealOwnerContact(
+        section: CustomerSection.functionHalls,
+        hasConfirmedPaidBooking: true,
+      ),
+      isTrue,
+    );
+    expect(
+      CustomerSectionCatalog.canRevealOwnerContact(
+        section: CustomerSection.institutesClasses,
+        hasConfirmedPaidBooking: false,
+      ),
+      isTrue,
+    );
+  });
+
+  test('required customer fields stay section-specific', () {
+    expect(
+      CustomerSectionCatalog.requiredCustomerFields(
+        CustomerSection.functionHalls,
+      ),
+      containsAll([
+        CustomerDetailField.fullName,
+        CustomerDetailField.phone,
+        CustomerDetailField.eventType,
+      ]),
+    );
+    expect(
+      CustomerSectionCatalog.requiredCustomerFields(
+        CustomerSection.pgHostels,
+      ),
+      contains(CustomerDetailField.idNumber),
+    );
+    expect(
+      CustomerSectionCatalog.requiredCustomerFields(
+        CustomerSection.institutesClasses,
+      ),
+      isEmpty,
+    );
+  });
+
   test('unknown slugs are excluded from all four sections', () {
     const coworking = Venue(
       id: 'x',

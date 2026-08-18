@@ -1073,15 +1073,31 @@ fun HomeScreen(
                         venue = venue,
                         onClick = { onNavigateToVenue(venue.id) },
                         onCallClick = {
-                            val phone = venue.contactPhone.ifBlank { "+919876543210" }
-                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
-                            try { context.startActivity(intent) } catch (e: Exception) { e.printStackTrace() }
+                            val section = CustomerSectionCatalog.sectionForVenue(venue)
+                            val paid = BookMySpaceRepository.bookings.value.any {
+                                it.venueId == venue.id && (it.status == com.bookmyspace.bookmyspace.data.model.BookingStatus.CONFIRMED || it.isPaid)
+                            }
+                            if (CustomerSectionCatalog.canRevealOwnerContact(section, paid)) {
+                                val phone = venue.contactPhone.ifBlank { "+919876543210" }
+                                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
+                                try { context.startActivity(intent) } catch (e: Exception) { e.printStackTrace() }
+                            } else {
+                                android.widget.Toast.makeText(context, "Owner number unlocks after confirmed advance payment.", android.widget.Toast.LENGTH_SHORT).show()
+                            }
                         },
                         onWhatsAppClick = {
-                            val phone = venue.contactPhone.filter { it.isDigit() }.ifBlank { "919876543210" }
-                            val url = "https://wa.me/$phone?text=Hi, I am interested in booking ${venue.name} on BookMySpace."
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                            try { context.startActivity(intent) } catch (e: Exception) { e.printStackTrace() }
+                            val section = CustomerSectionCatalog.sectionForVenue(venue)
+                            val paid = BookMySpaceRepository.bookings.value.any {
+                                it.venueId == venue.id && (it.status == com.bookmyspace.bookmyspace.data.model.BookingStatus.CONFIRMED || it.isPaid)
+                            }
+                            if (CustomerSectionCatalog.canRevealOwnerContact(section, paid)) {
+                                val phone = venue.contactPhone.filter { it.isDigit() }.ifBlank { "919876543210" }
+                                val url = "https://wa.me/$phone?text=Hi, I am interested in booking ${venue.name} on BookMySpace."
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                try { context.startActivity(intent) } catch (e: Exception) { e.printStackTrace() }
+                            } else {
+                                android.widget.Toast.makeText(context, "Owner WhatsApp unlocks after confirmed advance payment.", android.widget.Toast.LENGTH_SHORT).show()
+                            }
                         },
                         modifier = Modifier.fillMaxWidth()
                     )

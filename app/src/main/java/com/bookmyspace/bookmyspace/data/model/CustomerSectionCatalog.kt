@@ -240,6 +240,14 @@ object CustomerSectionCatalog {
         }
     }
 
+    fun canRevealOwnerContact(
+        section: CustomerSection?,
+        hasConfirmedPaidBooking: Boolean
+    ): Boolean {
+        if (section == CustomerSection.INSTITUTES_CLASSES) return true
+        return hasConfirmedPaidBooking
+    }
+
     fun voiceTypeForSection(section: CustomerSection): String {
         return when (section) {
             CustomerSection.FUNCTION_HALLS -> "VENUE"

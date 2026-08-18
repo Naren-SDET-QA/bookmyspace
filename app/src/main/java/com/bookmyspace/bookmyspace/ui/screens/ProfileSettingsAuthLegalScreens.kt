@@ -726,6 +726,12 @@ fun LoginScreen(
 
             com.bookmyspace.bookmyspace.ui.components.BookMySpaceLogo(showSubtext = true)
 
+            Text(
+                text = "Sign in with email. Extra details are asked only when you book.",
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
 
             if (pendingVerification != null) {
@@ -1437,10 +1443,6 @@ fun LoginScreen(
                             }
 
                             if (isSignUpMode) {
-                                if (fullName.isBlank()) {
-                                    errorMessage = "Please enter your full name."
-                                    return@traceBlock
-                                }
                                 if (password != confirmPassword) {
                                     errorMessage = "Passwords do not match."
                                     return@traceBlock

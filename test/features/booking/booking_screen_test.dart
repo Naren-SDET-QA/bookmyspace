@@ -33,7 +33,12 @@ Widget _app(
       venueRepositoryProvider.overrideWithValue(venue),
       authRepositoryProvider.overrideWithValue(
         MockAuthRepository(
-          initialUser: const AuthUser(id: 'u1', email: 'a@b.com'),
+          initialUser: const AuthUser(
+            id: 'u1',
+            email: 'a@b.com',
+            fullName: 'Test Customer',
+            phone: '9876543210',
+          ),
         ),
       ),
       eventRepositoryProvider.overrideWithValue(MockEventRepository()),
@@ -55,6 +60,13 @@ Widget _app(
   );
 }
 
+Future<void> _fillHallCustomerDetails(WidgetTester tester) async {
+  final fields = find.byType(TextFormField);
+  expect(fields, findsWidgets);
+  await tester.enterText(fields.at(2), 'Wedding');
+  await tester.pump();
+}
+
 void main() {
   testWidgets('booking flow lists slots and disables unavailable ones', (
     tester,
@@ -68,6 +80,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Morning'), findsOneWidget);
+    await tester.drag(find.byType(ListView).last, const Offset(0, -240));
+    await tester.pumpAndSettle();
     expect(find.text('Evening'), findsOneWidget);
     expect(find.text('Booked'), findsOneWidget);
   });
@@ -81,6 +95,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('Book Now'));
     await tester.pumpAndSettle();
+    await _fillHallCustomerDetails(tester);
 
     await tester.tap(find.text('Morning'));
     await tester.pumpAndSettle();
@@ -110,6 +125,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('Book Now'));
     await tester.pumpAndSettle();
+    await _fillHallCustomerDetails(tester);
 
     await tester.tap(find.text('Morning'));
     await tester.pumpAndSettle();
