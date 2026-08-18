@@ -1,0 +1,6 @@
+{
+  "name": "BookMySpace",
+  "description": "Sports venue, turf, event, and coaching course booking platform",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

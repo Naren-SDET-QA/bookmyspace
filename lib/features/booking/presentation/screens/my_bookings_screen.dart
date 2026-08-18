@@ -123,6 +123,10 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                 padding: const EdgeInsets.only(bottom: 12),
                 child: _BookingCard(
                   booking: list[i],
+                  onShowPass: (list[i].status == BookingStatus.confirmed ||
+                          list[i].status == BookingStatus.completed)
+                      ? () => _showEntryPass(list[i])
+                      : null,
                   onCancel: list[i].canCancel
                       ? () => _cancelBooking(list[i])
                       : null,
@@ -137,12 +141,134 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
       ),
     );
   }
+
+  void _showEntryPass(Booking booking) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.qr_code_2_rounded, color: AppTheme.brand),
+            const SizedBox(width: 8),
+            Text(
+              'Digital Entry Pass',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: theme.colorScheme.outlineVariant,
+                ),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    width: 140,
+                    height: 140,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.black12),
+                    ),
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.qr_code_scanner_rounded,
+                            size: 64,
+                            color: Colors.black87,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            booking.bookingRef.isNotEmpty
+                                ? booking.bookingRef
+                                : 'BMS-PASS',
+                            style: const TextStyle(
+                              color: Colors.black87,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    booking.venueName.isNotEmpty
+                        ? booking.venueName
+                        : 'Venue Booking',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${DateFormat.yMMMd().format(booking.bookDate)} • ${booking.displayStart} – ${booking.displayEnd}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  if (booking.slotLabel.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      booking.slotLabel,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppTheme.brand,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Show this QR pass at the venue entrance gate for instant check-in verification.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.done),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _BookingCard extends StatelessWidget {
-  const _BookingCard({required this.booking, this.onCancel, this.onRefund});
+  const _BookingCard({
+    required this.booking,
+    this.onShowPass,
+    this.onCancel,
+    this.onRefund,
+  });
 
   final Booking booking;
+  final VoidCallback? onShowPass;
   final VoidCallback? onCancel;
   final VoidCallback? onRefund;
 
@@ -223,6 +349,17 @@ class _BookingCard extends StatelessWidget {
                 ),
               ],
             ),
+            if (onShowPass != null) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.tonalIcon(
+                  onPressed: onShowPass,
+                  icon: const Icon(Icons.qr_code_2_rounded, size: 18),
+                  label: const Text('View Entry Pass / QR'),
+                ),
+              ),
+            ],
             if (onCancel != null) ...[
               const SizedBox(height: 12),
               SizedBox(

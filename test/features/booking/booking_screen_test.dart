@@ -230,4 +230,52 @@ void main() {
     expect(paymentRepo.lastRefundAmount, 41300);
     expect(find.textContaining('Refund requested'), findsOneWidget);
   });
+
+  testWidgets('confirmed bookings show digital entry pass modal with QR', (
+    tester,
+  ) async {
+    final bookingRepo = MockBookingRepository(
+      bookings: [
+        MockBookingRepository.sampleBooking(
+          id: 'b_conf_qr_1',
+          status: BookingStatus.confirmed,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          bookingRepositoryProvider.overrideWithValue(bookingRepo),
+          authRepositoryProvider.overrideWithValue(
+            MockAuthRepository(
+              initialUser: const AuthUser(id: 'u1', email: 'a@b.com'),
+            ),
+          ),
+        ],
+        child: const MaterialApp(
+          home: MyBookingsScreen(),
+          localizationsDelegates: [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('View Entry Pass / QR'), findsOneWidget);
+    await tester.tap(find.text('View Entry Pass / QR'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Digital Entry Pass'), findsOneWidget);
+    expect(find.textContaining('Show this QR pass'), findsOneWidget);
+
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+    expect(find.text('Digital Entry Pass'), findsNothing);
+  });
 }

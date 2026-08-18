@@ -20,12 +20,6 @@ class SupabaseVenueRepository implements VenueRepository {
     venue_images (id, url, thumbnail_url, alt_text, is_cover, sort_order)
   ''';
 
-  static const String _venueSelectByCategory = '''
-    *,
-    venue_categories!inner (id, slug, name, icon),
-    venue_images (id, url, thumbnail_url, alt_text, is_cover, sort_order)
-  ''';
-
   @override
   Future<List<VenueCategory>> categories() async {
     try {
@@ -81,24 +75,36 @@ class SupabaseVenueRepository implements VenueRepository {
   @override
   Future<List<Venue>> search(VenueSearchQuery query) async {
     try {
+      String? categoryId;
+      if (query.categorySlug != null) {
+        final catRow = await _client
+            .from('venue_categories')
+            .select('id')
+            .eq('slug', query.categorySlug!)
+            .maybeSingle();
+        categoryId = catRow?['id'] as String?;
+      }
+
+      // Use inner join syntax on venue_categories when filtering by category to avoid PostgREST 42803 grouping errors
+      final selectClause = (query.categorySlug != null)
+          ? '''
+            *,
+            venue_categories!inner (id, slug, name, icon),
+            venue_images (id, url, thumbnail_url, alt_text, is_cover, sort_order)
+          '''
+          : _venueSelect;
+
       var builder = _client
           .from('venues')
-          .select(
-            query.categorySlug != null
-                ? _venueSelectByCategory
-                : _venueSelect,
-          )
+          .select(selectClause)
           .eq('is_active', true);
 
       if (query.query.trim().isNotEmpty) {
         builder = builder.textSearch('search_document', query.query.trim());
       }
-      if (query.categorySlug != null) {
-        builder = builder.filter(
-          'venue_categories.slug',
-          'eq',
-          query.categorySlug,
-        );
+      if (categoryId != null && categoryId.isNotEmpty) {
+        // Explicitly cast category_id UUID parameter for PostgREST
+        builder = builder.filter('category_id', 'eq', categoryId);
       }
       if (query.city != null && query.city!.trim().isNotEmpty) {
         builder = builder.ilike('city', '%${query.city!.trim()}%');
@@ -119,6 +125,20 @@ class SupabaseVenueRepository implements VenueRepository {
         VenueSortBy.distance ||
         VenueSortBy.relevance => ('rating_count', false),
       };
+
+      // Log exact SQL executed for function hall / category searches
+      if (query.categorySlug != null) {
+        final executedSql = "SELECT $selectClause FROM venues WHERE is_active = true"
+            " AND category_id = '${categoryId ?? ''}'::uuid"
+            "${query.query.trim().isNotEmpty ? " AND search_document @@ to_tsquery('${query.query.trim()}')" : ""}"
+            "${query.city != null && query.city!.trim().isNotEmpty ? " AND city ILIKE '%${query.city!.trim()}%'" : ""}"
+            " ORDER BY $orderColumn ${ascending ? 'ASC' : 'DESC'} LIMIT 50;";
+
+        ErrorLogger.logMessage(
+          'Executing PostgREST Category Search SQL [slug=${query.categorySlug}, category_id=${categoryId ?? 'NULL'}]: $executedSql',
+          context: 'SupabaseVenueRepository.search',
+        );
+      }
 
       final rows = await builder
           .order(orderColumn, ascending: ascending)

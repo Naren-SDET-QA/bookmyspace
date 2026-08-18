@@ -38,6 +38,9 @@ abstract interface class AuthRepository {
   /// Deletes the current user's account and all data.
   Future<void> deleteAccount();
 
+  /// Updates display name and avatar URL directly in the user profile.
+  Future<AuthUser> updateProfile({String? fullName, String? avatarUrl});
+
   /// Refreshes the session if it is close to expiry.
   Future<void> refreshSession();
 }

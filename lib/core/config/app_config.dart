@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'env_model.dart';
 
 /// Supported runtime environments.
 ///
@@ -58,6 +59,15 @@ enum AppEnvironment {
 
   static const String _envDefine = String.fromEnvironment('APP_ENV');
 
+  /// Converts environment to [EnvModel].
+  EnvModel toModel() => EnvModel(
+        name: name,
+        supabaseUrl: supabaseUrl,
+        supabaseAnonKey: supabaseAnonKey,
+        razorpayKeyId: razorpayKeyId,
+        apiBaseUrl: apiBaseUrl,
+      );
+
   /// Resolves the active environment from `--dart-define=APP_ENV=...`.
   static AppEnvironment get current {
     if (_envDefine.isNotEmpty) {
@@ -76,12 +86,39 @@ enum AppEnvironment {
 class AppConfig {
   const AppConfig._();
 
+  static const String _supabaseUrlDefine = String.fromEnvironment('SUPABASE_URL');
+  static const String _supabaseAnonKeyDefine = String.fromEnvironment('SUPABASE_ANON_KEY');
+  static const String _razorpayKeyIdDefine = String.fromEnvironment('RAZORPAY_KEY_ID');
+
   static AppEnvironment get environment => AppEnvironment.current;
-  static String get supabaseUrl => environment.supabaseUrl;
-  static String get supabaseAnonKey => environment.supabaseAnonKey;
-  static String get razorpayKeyId => environment.razorpayKeyId;
+
+  /// Returns active [EnvModel] populated from environment and dart-defines.
+  static EnvModel get activeEnv => EnvModel(
+        name: environment.name,
+        supabaseUrl: supabaseUrl,
+        supabaseAnonKey: supabaseAnonKey,
+        razorpayKeyId: razorpayKeyId,
+        apiBaseUrl: apiBaseUrl,
+      );
+
+  static String get supabaseUrl =>
+      _supabaseUrlDefine.isNotEmpty ? _supabaseUrlDefine : environment.supabaseUrl;
+  static String get supabaseAnonKey =>
+      _supabaseAnonKeyDefine.isNotEmpty ? _supabaseAnonKeyDefine : environment.supabaseAnonKey;
+  static String get razorpayKeyId =>
+      _razorpayKeyIdDefine.isNotEmpty ? _razorpayKeyIdDefine : environment.razorpayKeyId;
   static String get apiBaseUrl => environment.apiBaseUrl;
   static String get appName => 'BookMySpace';
+
+  /// Environment helpers
+  static bool get isDevelopment =>
+      environment == AppEnvironment.development || environment == AppEnvironment.local;
+  static bool get isStaging => environment == AppEnvironment.staging;
+  static bool get isProduction => environment == AppEnvironment.production;
+  static bool get isRazorpayTestMode => razorpayKeyId.startsWith('rzp_test_');
+
+  /// Safe diagnostic summary of active environment settings (no sensitive keys exposed).
+  static Map<String, dynamic> get environmentSummary => activeEnv.toSummaryMap();
 
   /// Booking hold duration before automatic expiry (server enforced too).
   static const Duration bookingHoldDuration = Duration(minutes: 10);

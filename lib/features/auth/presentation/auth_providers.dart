@@ -1,28 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthUser;
 
-import '../../../core/config/test_mode.dart';
-import '../../../core/network/logging_http_client.dart';
+import '../../../core/config/app_config.dart';
 import '../domain/auth_repository.dart';
 import '../domain/auth_user.dart';
 import '../infrastructure/supabase_auth_repository.dart';
 
 /// Initialises the Supabase client. Call once before runApp().
-///
-/// In Test Mode the app uses the existing development backend URL and wraps
-/// the real HTTP transport with a logging client so every API call is visible
-/// in the debug menu. No local server, proxy or mock is involved.
 Future<void> initSupabase() async {
-  final client = http.Client();
-  final httpClient = TestMode.networkLoggingEnabled
-      ? LoggingHttpClient(client)
-      : client;
-
   await Supabase.initialize(
-    url: TestMode.supabaseUrl,
-    publishableKey: TestMode.supabaseAnonKey,
-    httpClient: httpClient,
+    url: AppConfig.supabaseUrl,
+    publishableKey: AppConfig.supabaseAnonKey,
   );
 }
 
@@ -41,3 +29,74 @@ final authStateProvider = StreamProvider<AuthUser?>((ref) {
   final repo = ref.watch(authRepositoryProvider);
   return repo.authStateChanges();
 });
+
+/// Auth state holder.
+class AuthState {
+  const AuthState({
+    this.user,
+    this.isLoading = false,
+    this.error,
+  });
+
+  final AuthUser? user;
+  final bool isLoading;
+  final String? error;
+
+  AuthState copyWith({
+    AuthUser? user,
+    bool? isLoading,
+    String? error,
+  }) {
+    return AuthState(
+      user: user ?? this.user,
+      isLoading: isLoading ?? this.isLoading,
+      error: error,
+    );
+  }
+}
+
+/// State notifier managing active user profile updates and authentication state.
+class AuthNotifier extends StateNotifier<AuthState> {
+  AuthNotifier(this._repository)
+      : super(AuthState(user: _repository.currentUser)) {
+    _repository.authStateChanges().listen((user) {
+      state = state.copyWith(user: user, isLoading: false);
+    });
+  }
+
+  final AuthRepository _repository;
+
+  Future<void> updateProfile({
+    String? fullName,
+    String? avatarUrl,
+  }) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final updatedUser = await _repository.updateProfile(
+        fullName: fullName,
+        avatarUrl: avatarUrl,
+      );
+      state = state.copyWith(user: updatedUser, isLoading: false);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+      rethrow;
+    }
+  }
+
+  Future<void> signOut() async {
+    await _repository.signOut();
+    state = const AuthState(user: null);
+  }
+}
+
+/// Global AuthNotifierProvider for reactive UI consumption.
+final authNotifierProvider =
+    StateNotifierProvider<AuthNotifier, AuthState>((ref) {
+  return AuthNotifier(ref.watch(authRepositoryProvider));
+});
+
+/// Direct accessor for the current user.
+final currentUserProvider = Provider<AuthUser?>((ref) {
+  return ref.watch(authNotifierProvider).user;
+});
+

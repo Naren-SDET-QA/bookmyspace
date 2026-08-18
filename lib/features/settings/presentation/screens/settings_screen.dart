@@ -3,34 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/config/settings_controller.dart';
-import '../../../../core/config/test_mode.dart';
-import '../../../../core/debug/debug_log.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/router/app_router.dart';
 
 /// Settings screen: theme, language and account management entry points.
-class SettingsScreen extends ConsumerStatefulWidget {
+class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   @override
-  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
-}
-
-class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  int _aboutTaps = 0;
-
-  void _onAboutTap() {
-    if (!TestMode.debugMenuEnabled) return;
-    setState(() => _aboutTaps++);
-    if (_aboutTaps >= 7) {
-      _aboutTaps = 0;
-      DebugLog.info('DEBUG', 'Opening hidden Test Mode debug menu');
-      context.push(AppRoutes.debug);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final themeMode = ref.watch(themeModeProvider);
     final locale = ref.watch(localeProvider);
@@ -82,10 +63,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ListTile(
             leading: const Icon(Icons.info_outline),
             title: Text(l10n.about),
-            onTap: () {
-              _onAboutTap();
-              _showAboutDialog(context, l10n);
-            },
+            onTap: () => _showAboutDialog(context, l10n),
           ),
           const Divider(),
           ListTile(

@@ -155,6 +155,46 @@ class SupabaseAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<domain.AuthUser> updateProfile({
+    String? fullName,
+    String? avatarUrl,
+  }) async {
+    try {
+      final userMetadata = <String, dynamic>{};
+      if (fullName != null) userMetadata['full_name'] = fullName;
+      if (avatarUrl != null) userMetadata['avatar_url'] = avatarUrl;
+
+      final res = await _client.auth.updateUser(
+        UserAttributes(data: userMetadata),
+      );
+
+      final user = res.user ?? _client.auth.currentUser;
+      if (user == null) {
+        throw const AppAuthException('Failed to update user profile.');
+      }
+
+      // Also sync to the public 'profiles' table if present in Supabase
+      try {
+        await _client.from('profiles').upsert({
+          'id': user.id,
+          if (fullName != null) 'full_name': fullName,
+          if (avatarUrl != null) 'avatar_url': avatarUrl,
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+      } catch (e) {
+        // Non-fatal if table/RLS policy is not configured yet
+        debugPrint('Supabase profiles table upsert notice: $e');
+      }
+
+      return _toUser(user);
+    } on AuthException catch (e) {
+      throw AppAuthException(e.message);
+    } catch (e) {
+      throw mapError(e);
+    }
+  }
+
+  @override
   Future<void> refreshSession() async {
     try {
       await _client.auth.refreshSession();

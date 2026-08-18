@@ -14,10 +14,7 @@ create table if not exists auth.users (
 
 create or replace function auth.uid()
 returns uuid language sql stable as $$
-  select nullif(
-    current_setting('request.jwt.claims', true)::jsonb ->> 'sub',
-    ''
-  )::uuid;
+  select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid;
 $$;
 
 -- Demo user so migration 0007 seed data (org, venues) is created locally.
