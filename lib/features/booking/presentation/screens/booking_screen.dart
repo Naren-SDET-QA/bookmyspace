@@ -9,6 +9,7 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/error_view.dart';
+import '../../../home/domain/customer_section_catalog.dart';
 import '../../../venues/domain/venue.dart';
 import '../../../venues/presentation/widgets/venue_badges.dart';
 import '../../domain/booking.dart';
@@ -30,8 +31,11 @@ class BookingScreen extends ConsumerStatefulWidget {
 
 class _BookingScreenState extends ConsumerState<BookingScreen> {
   DateTime? _selectedDate;
+  DateTime? _checkOutDate;
   SlotAvailability? _selectedSlot;
   bool _confirming = false;
+  int _guestCount = 100;
+  int _sharingIndex = 0;
 
   @override
   void initState() {
@@ -41,17 +45,47 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     final date = _selectedDate;
+    final section = CustomerSectionCatalog.sectionForVenue(widget.venue);
+
+    if (section == CustomerSection.institutesClasses) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(CustomerSectionCatalog.bookingScreenTitle(section)),
+        ),
+        body: const Padding(
+          padding: EdgeInsets.all(24),
+          child: EmptyState(
+            icon: Icons.school_outlined,
+            title: 'Listing only',
+            message:
+                'Institutes and classes are advertising listings. Use Call or WhatsApp from the details page.',
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.bookNow)),
+      appBar: AppBar(
+        title: Text(CustomerSectionCatalog.bookingScreenTitle(section)),
+      ),
       body: date == null
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
                 _VenueHeader(venue: widget.venue),
                 const Divider(height: 1),
+                _SectionBookingFields(
+                  section: section,
+                  venue: widget.venue,
+                  guestCount: _guestCount,
+                  checkIn: date,
+                  checkOut: _checkOutDate ?? date.add(const Duration(days: 1)),
+                  sharingIndex: _sharingIndex,
+                  onGuestsChanged: (v) => setState(() => _guestCount = v),
+                  onCheckOutChanged: (v) => setState(() => _checkOutDate = v),
+                  onSharingChanged: (v) => setState(() => _sharingIndex = v),
+                ),
                 _DateStrip(
                   selected: date,
                   onSelected: (d) {
@@ -601,5 +635,114 @@ class _SummaryRow extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _SectionBookingFields extends StatelessWidget {
+  const _SectionBookingFields({
+    required this.section,
+    required this.venue,
+    required this.guestCount,
+    required this.checkIn,
+    required this.checkOut,
+    required this.sharingIndex,
+    required this.onGuestsChanged,
+    required this.onCheckOutChanged,
+    required this.onSharingChanged,
+  });
+
+  final CustomerSection? section;
+  final Venue venue;
+  final int guestCount;
+  final DateTime checkIn;
+  final DateTime checkOut;
+  final int sharingIndex;
+  final ValueChanged<int> onGuestsChanged;
+  final ValueChanged<DateTime> onCheckOutChanged;
+  final ValueChanged<int> onSharingChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    if (section == null || section == CustomerSection.functionHalls) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        child: Row(
+          children: [
+            const Text('Guests'),
+            const Spacer(),
+            IconButton(
+              onPressed: guestCount > 10
+                  ? () => onGuestsChanged(guestCount - 10)
+                  : null,
+              icon: const Icon(Icons.remove_circle_outline),
+            ),
+            Text('$guestCount'),
+            IconButton(
+              onPressed: () => onGuestsChanged(guestCount + 10),
+              icon: const Icon(Icons.add_circle_outline),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (section == CustomerSection.lodgeRooms) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Check-in ${DateFormat.MMMd().format(checkIn)}',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
+            TextButton(
+              onPressed: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: checkOut,
+                  firstDate: checkIn.add(const Duration(days: 1)),
+                  lastDate: checkIn.add(const Duration(days: 30)),
+                );
+                if (picked != null) onCheckOutChanged(picked);
+              },
+              child: Text('Check-out ${DateFormat.MMMd().format(checkOut)}'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (section == CustomerSection.pgHostels) {
+      final deposit = venue.pricingBaseAmount;
+      final totalMoveIn = venue.pricingBaseAmount + deposit;
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Move-in ${DateFormat.yMMMd().format(checkIn)} · Sharing option ${sharingIndex + 1}',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Rent ${formatInr(venue.pricingBaseAmount)} + deposit ${formatInr(deposit)} = ${formatInr(totalMoveIn)}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                onPressed: () => onSharingChanged((sharingIndex + 1) % 3),
+                child: const Text('Change sharing'),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 }

@@ -1,3 +1,4 @@
+import 'package:bookmyspace/features/home/domain/customer_section_catalog.dart';
 import 'package:bookmyspace/features/venues/domain/venue.dart';
 import 'package:bookmyspace/features/venues/domain/venue_repository.dart';
 
@@ -91,6 +92,49 @@ class MockVenueRepository implements VenueRepository {
         name: 'Coworking Space',
       ),
     ),
+    Venue(
+      id: 'v4',
+      name: 'Crown Lodge Rooms',
+      description: 'Budget lodge and hotel rooms near the metro.',
+      city: 'Hyderabad',
+      latitude: 17.44,
+      longitude: 78.39,
+      capacity: 4,
+      pricingBaseAmount: 2800,
+      avgRating: 4.4,
+      ratingCount: 40,
+      category: VenueCategory(id: 'cat-4', slug: 'hotel_stay', name: 'Hotel'),
+    ),
+    Venue(
+      id: 'v5',
+      name: 'Starlight Ladies PG',
+      description: 'Safe ladies PG hostel with food and wifi.',
+      city: 'Hyderabad',
+      latitude: 17.45,
+      longitude: 78.37,
+      capacity: 3,
+      pricingBaseAmount: 9000,
+      avgRating: 4.9,
+      ratingCount: 80,
+      category: VenueCategory(id: 'cat-5', slug: 'pg_hostel', name: 'PG'),
+    ),
+    Venue(
+      id: 'v6',
+      name: 'Apex Sports Academy',
+      description: 'Badminton coaching and sports turf listings.',
+      city: 'Hyderabad',
+      latitude: 17.42,
+      longitude: 78.40,
+      capacity: 30,
+      pricingBaseAmount: 450,
+      avgRating: 4.6,
+      ratingCount: 22,
+      category: VenueCategory(
+        id: 'cat-6',
+        slug: 'sports_ground',
+        name: 'Sports Ground',
+      ),
+    ),
   ];
 
   @override
@@ -139,12 +183,22 @@ class MockVenueRepository implements VenueRepository {
           v.name.toLowerCase().contains(query.query.toLowerCase()) ||
           v.city.toLowerCase().contains(query.query.toLowerCase());
       final matchesCategory =
-          query.categorySlug == null || v.category?.slug == query.categorySlug;
+          query.categorySlug == null ||
+          query.categorySlug == 'all' ||
+          v.category?.slug == query.categorySlug;
+      final section = CustomerSection.fromId(query.sectionId);
+      final matchesSection =
+          section == null ||
+          CustomerSectionCatalog.matchesVenue(v, section, query.categorySlug);
       final matchesMin =
           query.minPrice == null || v.pricingBaseAmount >= query.minPrice!;
       final matchesMax =
           query.maxPrice == null || v.pricingBaseAmount <= query.maxPrice!;
-      return matchesQuery && matchesCategory && matchesMin && matchesMax;
+      return matchesQuery &&
+          matchesCategory &&
+          matchesSection &&
+          matchesMin &&
+          matchesMax;
     }).toList();
 
     switch (query.sortBy) {

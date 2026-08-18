@@ -69,6 +69,9 @@ fun BookingScreen(
     var appliedCoupon by remember { mutableStateOf<String?>(null) }
     var discountAmount by remember { mutableStateOf(0.0) }
     var duplicateErrorMsg by remember { mutableStateOf<String?>(null) }
+    var guestCount by remember { mutableIntStateOf(venue.minGuests.coerceAtLeast(1)) }
+    var checkOutDateStr by remember { mutableStateOf("2026-08-09") }
+    var selectedSharingIndex by remember { mutableIntStateOf(0) }
 
     val currentSlotLabel = selectedSlot?.label ?: "Standard Slot"
 
@@ -168,7 +171,10 @@ fun BookingScreen(
                         modifier = Modifier
                             .height(50.dp)
                             .testTag("confirm_and_pay_button"),
-                        enabled = selectedSlot != null && !isDuplicate && dateAvailability.status != BookMySpaceRepository.DateAvailabilityStatus.FULLY_BOOKED,
+                        enabled = selectedSlot != null &&
+                            !isDuplicate &&
+                            dateAvailability.status != BookMySpaceRepository.DateAvailabilityStatus.FULLY_BOOKED &&
+                            bookingSection != com.bookmyspace.bookmyspace.data.model.CustomerSection.INSTITUTES_CLASSES,
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(if (isDuplicate) "Slot Unavailable" else "Hold Slot & Pay", fontWeight = FontWeight.Bold, fontSize = 14.sp)
@@ -211,6 +217,53 @@ fun BookingScreen(
                     }
                 }
                 Spacer(modifier = Modifier.height(20.dp))
+            }
+
+            item {
+                val bookingSectionFields = CustomerSectionCatalog.sectionForVenue(venue)
+                when (bookingSectionFields) {
+                    com.bookmyspace.bookmyspace.data.model.CustomerSection.FUNCTION_HALLS -> {
+                        Text("Event guests: $guestCount", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                        Slider(
+                            value = guestCount.toFloat(),
+                            onValueChange = { guestCount = it.toInt() },
+                            valueRange = venue.minGuests.toFloat().coerceAtLeast(10f)..venue.maxGuests.toFloat().coerceAtLeast(50f),
+                            modifier = Modifier.testTag("hall_guest_count_slider")
+                        )
+                    }
+                    com.bookmyspace.bookmyspace.data.model.CustomerSection.LODGE_ROOMS -> {
+                        Text("Check-in $selectedDateStr  ·  Check-out $checkOutDateStr", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                        Text(
+                            text = venue.hotelDetails?.roomTypes?.joinToString(" · ") ?: "Standard room",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    com.bookmyspace.bookmyspace.data.model.CustomerSection.PG_HOSTELS -> {
+                        val pg = venue.pgDetails
+                        val option = pg?.sharingOptions?.getOrNull(selectedSharingIndex)
+                        val quote = com.bookmyspace.bookmyspace.util.PgRentCalculator.calculate(venue, selectedSharingIndex)
+                        Text("Move-in $selectedDateStr", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                        Text(
+                            text = "${option?.typeName ?: "Sharing"} · Rent ₹${quote.monthlyBaseRent.toInt()} + Deposit ₹${quote.securityDeposit.toInt()}",
+                            fontSize = 12.sp
+                        )
+                        if ((pg?.sharingOptions?.size ?: 0) > 1) {
+                            TextButton(onClick = {
+                                selectedSharingIndex = (selectedSharingIndex + 1) % pg!!.sharingOptions.size
+                            }) { Text("Change sharing option") }
+                        }
+                    }
+                    com.bookmyspace.bookmyspace.data.model.CustomerSection.INSTITUTES_CLASSES -> {
+                        Text(
+                            "This listing is advertising only. Use Call or WhatsApp instead of a hall hold.",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                    null -> {}
+                }
+                Spacer(modifier = Modifier.height(14.dp))
             }
 
             // DUPLICATE & SMART ALTERNATIVE SLOTS SUGGESTIONS

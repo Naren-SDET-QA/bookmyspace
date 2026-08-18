@@ -24,6 +24,7 @@ import 'mock_booking_repository.dart';
 Widget _app(
   MockBookingRepository bookingRepo, {
   MockVenueRepository? venueRepo,
+  String initialLocation = AppRoutes.home,
 }) {
   final venue = venueRepo ?? MockVenueRepository();
   return ProviderScope(
@@ -40,7 +41,7 @@ Widget _app(
     ],
     child: MaterialApp.router(
       routerConfig: createAppRouter(
-        initialLocation: AppRoutes.home,
+        initialLocation: initialLocation,
         currentUser: const AuthUser(id: 'u1', email: 'a@b.com'),
       ),
       localizationsDelegates: const [
@@ -59,13 +60,11 @@ void main() {
     tester,
   ) async {
     final bookingRepo = MockBookingRepository();
-    await tester.pumpWidget(_app(bookingRepo));
+    await tester.pumpWidget(_app(bookingRepo, initialLocation: '/venues/v1'));
 
-    // Navigate from home to a venue, then to the booking flow.
+    // Start on venue details, then enter the existing hold booking flow.
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Sunrise Function Hall').first);
-    await tester.pumpAndSettle();
-    await tester.tap(find.textContaining('Book now'));
+    await tester.tap(find.textContaining('Book Now'));
     await tester.pumpAndSettle();
 
     expect(find.text('Morning'), findsOneWidget);
@@ -77,12 +76,10 @@ void main() {
     tester,
   ) async {
     final bookingRepo = MockBookingRepository();
-    await tester.pumpWidget(_app(bookingRepo));
+    await tester.pumpWidget(_app(bookingRepo, initialLocation: '/venues/v1'));
 
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Sunrise Function Hall').first);
-    await tester.pumpAndSettle();
-    await tester.tap(find.textContaining('Book now'));
+    await tester.tap(find.textContaining('Book Now'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Morning'));
@@ -108,12 +105,10 @@ void main() {
     tester,
   ) async {
     final bookingRepo = MockBookingRepository()..failAcquire = true;
-    await tester.pumpWidget(_app(bookingRepo));
+    await tester.pumpWidget(_app(bookingRepo, initialLocation: '/venues/v1'));
 
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Sunrise Function Hall').first);
-    await tester.pumpAndSettle();
-    await tester.tap(find.textContaining('Book now'));
+    await tester.tap(find.textContaining('Book Now'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Morning'));

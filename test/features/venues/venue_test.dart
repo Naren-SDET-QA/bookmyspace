@@ -100,7 +100,7 @@ void main() {
       final repo = MockVenueRepository();
       final popular = await repo.popularVenues();
       expect(popular.first.id, 'v3'); // 214 ratings
-      expect(popular.length, 3);
+      expect(popular.length, 6);
     });
 
     test('search filters by category and price', () async {
@@ -123,7 +123,7 @@ void main() {
       final results = await repo.search(
         const VenueSearchQuery(sortBy: VenueSortBy.priceAsc),
       );
-      expect(results.first.id, 'v3');
+      expect(results.first.id, 'v6');
       expect(results.last.id, 'v1');
     });
 

@@ -471,7 +471,13 @@ fun VenueDetailsScreen(
                         }
 
                         Button(
-                            onClick = { onBookSlot(venue.id) },
+                            onClick = {
+                                if (listingSection == CustomerSection.INSTITUTES_CLASSES) {
+                                    showInAppEnquiryDialog = true
+                                } else {
+                                    onBookSlot(venue.id)
+                                }
+                            },
                             modifier = Modifier
                                 .height(36.dp)
                                 .testTag("book_slot_button"),

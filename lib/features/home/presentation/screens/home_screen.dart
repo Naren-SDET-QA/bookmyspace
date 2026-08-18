@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_network_image.dart';
@@ -14,6 +13,8 @@ import '../../../auth/presentation/auth_providers.dart';
 import '../../../venues/domain/venue.dart';
 import '../../../venues/presentation/venue_providers.dart';
 import '../../../venues/presentation/widgets/venue_badges.dart';
+import '../../domain/customer_section_catalog.dart';
+import '../customer_section_providers.dart';
 
 /// The 4 primary sections of BookMySpace
 enum MainHomeSection {
@@ -87,50 +88,12 @@ enum MainHomeSection {
     }
   }
 
-  List<SubCategoryOption> get categoryOptions {
-    switch (this) {
-      case MainHomeSection.functionHalls:
-        return const [
-          SubCategoryOption('all', 'All Halls', '🏛️'),
-          SubCategoryOption('marriage_hall', 'Marriage Hall', '💍'),
-          SubCategoryOption('convention_center', 'Convention Hall', '🏢'),
-          SubCategoryOption('party_hall', 'Party Hall', '🎉'),
-          SubCategoryOption('community_hall', 'Community Hall', '👥'),
-          SubCategoryOption('govt_hall', 'Govt Hall', '🏛️'),
-          SubCategoryOption('auditorium', 'Auditorium', '🎭'),
-        ];
-      case MainHomeSection.lodgeRooms:
-        return const [
-          SubCategoryOption('all', 'All Rooms', '🏨'),
-          SubCategoryOption('hotel', 'Hotel', '🛎️'),
-          SubCategoryOption('lodge', 'Lodge', '🛏️'),
-          SubCategoryOption('guest_house', 'Guest House', '🏡'),
-          SubCategoryOption('homestay', 'Homestay', '🌿'),
-          SubCategoryOption('resort', 'Resort', '🌴'),
-          SubCategoryOption('hourly_room', 'Hourly Room', '⏱️'),
-        ];
-      case MainHomeSection.pgHostels:
-        return const [
-          SubCategoryOption('all', 'All PGs', '🏠'),
-          SubCategoryOption('gents_pg', 'Gents PG', '👨'),
-          SubCategoryOption('ladies_pg', 'Ladies PG', '👩'),
-          SubCategoryOption('student_hostel', 'Student Hostel', '🎒'),
-          SubCategoryOption('coliving', 'Co-Living', '🛋️'),
-          SubCategoryOption('working_men', 'Working Men', '💼'),
-          SubCategoryOption('working_women', 'Working Women', '👩‍💼'),
-        ];
-      case MainHomeSection.institutesClasses:
-        return const [
-          SubCategoryOption('all', 'All Classes', '🎓'),
-          SubCategoryOption('coaching', 'Coaching', '📚'),
-          SubCategoryOption('tuition', 'Tuition', '✏️'),
-          SubCategoryOption('computer', 'Computer / IT', '💻'),
-          SubCategoryOption('dance', 'Dance Academy', '💃'),
-          SubCategoryOption('music', 'Music School', '🎵'),
-          SubCategoryOption('sports', 'Sports & Gym', '⚽'),
-        ];
-    }
-  }
+  CustomerSection get catalog =>
+      CustomerSection.fromId(id) ?? CustomerSection.functionHalls;
+
+  List<SubCategoryOption> get categoryOptions => catalog.categories
+      .map((c) => SubCategoryOption(c.id, c.label, c.emoji))
+      .toList();
 }
 
 class SubCategoryOption {
@@ -147,41 +110,56 @@ class AmenityFilter {
   final String emoji;
 }
 
-const _homeAmenities = [
-  AmenityFilter('wifi', 'WiFi', '📶'),
-  AmenityFilter('ac', 'Air Conditioned', '❄️'),
-  AmenityFilter('parking', 'Parking', '🚗'),
-  AmenityFilter('food', 'Food / Catering', '🍽️'),
-  AmenityFilter('generator', 'Power Backup', '⚡'),
-  AmenityFilter('cctv', 'CCTV Security', '📹'),
-  AmenityFilter('lift', 'Elevator', '🛗'),
-];
+List<AmenityFilter> _amenitiesFor(CustomerSection? section) {
+  if (section == null) return const [];
+  return CustomerSectionCatalog.amenityFilters(section)
+      .map((s) => AmenityFilter(s.id, s.label, s.emoji))
+      .toList();
+}
 
 /// Redesigned BookMySpace customer Home Screen:
 /// - First Screen: ONLY 4 Main Sections in a fast, responsive, attractive layout
 /// - Section Drill-Down: Category Index -> Location -> Search & Voice Booking -> Results -> Direct Booking/Call/WhatsApp
 class HomeScreen extends ConsumerStatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, this.initialSection});
+
+  final CustomerSection? initialSection;
 
   @override
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  MainHomeSection? _selectedSection;
-  String _selectedCategorySlug = 'all';
   String _currentLocation = 'Hyderabad (Madhapur)';
   String _searchRadius = 'Within 10 km';
   final Set<String> _selectedAmenities = {};
-  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initialSection;
+    if (initial != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        selectCustomerSection(ref, initial);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context);
     final authState = ref.watch(authNotifierProvider);
     final user = authState.user;
     final popularVenuesAsync = ref.watch(popularVenuesProvider);
+    final selectedCatalog = ref.watch(selectedCustomerSectionProvider);
+    final selectedCategorySlug = ref.watch(selectedCustomerCategoryProvider);
+    final selectedSection = selectedCatalog == null
+        ? null
+        : MainHomeSection.values.firstWhere(
+            (s) => s.id == selectedCatalog.id,
+            orElse: () => MainHomeSection.functionHalls,
+          );
 
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
@@ -211,7 +189,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   // =========================================================
                   // 🌟 FIRST SCREEN: EXACTLY 4 MAIN SECTIONS ONLY
                   // =========================================================
-                  if (_selectedSection == null) ...[
+                  if (selectedSection == null) ...[
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: EdgeInsets.symmetric(
@@ -258,13 +236,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           (context, index) {
                             final section = MainHomeSection.values[index];
                             return _MainSectionHeroCard(
+                              key: ValueKey('section_${section.id}'),
                               section: section,
                               isTabletOrWide: responsive.isTabletOrLandscape,
                               onTap: () {
-                                setState(() {
-                                  _selectedSection = section;
-                                  _selectedCategorySlug = 'all';
-                                });
+                                selectCustomerSection(ref, section.catalog);
                               },
                             );
                           },
@@ -308,10 +284,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               children: [
                                 OutlinedButton.icon(
                                   onPressed: () {
-                                    setState(() {
-                                      _selectedSection = null;
-                                      _selectedCategorySlug = 'all';
-                                    });
+                                    clearCustomerSection(ref);
                                   },
                                   style: OutlinedButton.styleFrom(
                                     minimumSize: const Size(120, 44),
@@ -341,10 +314,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Text(_selectedSection!.emoji, style: const TextStyle(fontSize: 16)),
+                                      Text(selectedSection.emoji, style: const TextStyle(fontSize: 16)),
                                       const SizedBox(width: 6),
                                       Text(
-                                        _selectedSection!.title,
+                                        selectedSection.title,
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 13,
@@ -358,13 +331,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              '${_selectedSection!.emoji} ${_selectedSection!.title}',
+                              '${selectedSection.emoji} ${selectedSection.title}',
                               style: theme.textTheme.headlineSmall?.copyWith(
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
                             Text(
-                              _selectedSection!.subtitle,
+                              selectedSection.subtitle,
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: theme.colorScheme.onSurfaceVariant,
                               ),
@@ -407,17 +380,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               padding: EdgeInsets.symmetric(
                                 horizontal: responsive.horizontalPadding,
                               ),
-                              itemCount: _selectedSection!.categoryOptions.length,
+                              itemCount: selectedSection.categoryOptions.length,
                               separatorBuilder: (_, __) => const SizedBox(width: 8),
                               itemBuilder: (context, index) {
-                                final cat = _selectedSection!.categoryOptions[index];
-                                final isSelected = _selectedCategorySlug == cat.id;
+                                final cat = selectedSection.categoryOptions[index];
+                                final isSelected = selectedCategorySlug == cat.id;
                                 return FilterChip(
                                   selected: isSelected,
                                   onSelected: (_) {
-                                    setState(() {
-                                      _selectedCategorySlug = cat.id;
-                                    });
+                                    ref
+                                        .read(
+                                          selectedCustomerCategoryProvider
+                                              .notifier,
+                                        )
+                                        .state = cat.id;
                                   },
                                   avatar: Text(cat.emoji, style: const TextStyle(fontSize: 14)),
                                   label: Text(
@@ -457,9 +433,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 context.push(
                                   AppRoutes.search,
                                   extra: {
-                                    'category': _selectedCategorySlug == 'all'
-                                        ? _selectedSection!.id
-                                        : _selectedCategorySlug,
+                                    'section': selectedSection.id,
+                                    'category': selectedCategorySlug == 'all'
+                                        ? null
+                                        : selectedCategorySlug,
                                   },
                                 );
                               },
@@ -485,7 +462,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     const SizedBox(width: 10),
                                     Expanded(
                                       child: Text(
-                                        'Search ${_selectedSection!.title} in $_currentLocation...',
+                                        'Search ${selectedSection.title} in $_currentLocation...',
                                         style: TextStyle(
                                           color: theme.colorScheme.onSurfaceVariant,
                                           fontSize: 13.5,
@@ -520,13 +497,44 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                             // 1-Tap Quick Book Card
                             _QuickBookCard(
-                              sectionTitle: _selectedSection!.title,
+                              sectionTitle: selectedSection.title,
                               onQuickBookTap: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Finding fastest verified ${_selectedSection!.title}...'),
-                                    duration: const Duration(seconds: 2),
+                                final section = selectedSection.catalog;
+                                if (!section.isBookable) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Institutes are listings only. Call or WhatsApp the academy.',
+                                      ),
+                                    ),
+                                  );
+                                  return;
+                                }
+                                final match = popularVenuesAsync.value
+                                    ?.where(
+                                      (v) => CustomerSectionCatalog.matchesVenue(
+                                        v,
+                                        section,
+                                        selectedCategorySlug,
+                                      ),
+                                    )
+                                    .firstOrNull;
+                                if (match == null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'No verified ${selectedSection.title} available right now.',
+                                      ),
+                                    ),
+                                  );
+                                  return;
+                                }
+                                context.push(
+                                  AppRoutes.bookingFlow.replaceAll(
+                                    ':id',
+                                    match.id,
                                   ),
+                                  extra: match,
                                 );
                               },
                             ),
@@ -569,10 +577,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               height: 38,
                               child: ListView.separated(
                                 scrollDirection: Axis.horizontal,
-                                itemCount: _homeAmenities.length,
+                                itemCount: _amenitiesFor(
+                                  selectedSection?.catalog,
+                                ).length,
                                 separatorBuilder: (_, __) => const SizedBox(width: 8),
                                 itemBuilder: (context, index) {
-                                  final amenity = _homeAmenities[index];
+                                  final amenity = _amenitiesFor(
+                                    selectedSection?.catalog,
+                                  )[index];
                                   final isSelected = _selectedAmenities.contains(amenity.id);
                                   return FilterChip(
                                     selected: isSelected,
@@ -611,7 +623,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     // 4. Venues List / Grid in Responsive Layout
                     popularVenuesAsync.when(
                       data: (venues) {
-                        if (venues.isEmpty) {
+                        final scoped = venues.where((v) {
+                          final section = selectedSection?.catalog;
+                          if (section == null) return false;
+                          return CustomerSectionCatalog.matchesVenue(
+                                v,
+                                section,
+                                selectedCategorySlug,
+                              ) &&
+                              CustomerSectionCatalog.matchesAmenities(
+                                v,
+                                _selectedAmenities,
+                              );
+                        }).toList();
+                        if (scoped.isEmpty) {
                           return const SliverToBoxAdapter(
                             child: Padding(
                               padding: EdgeInsets.all(32),
@@ -638,20 +663,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                             delegate: SliverChildBuilderDelegate(
                               (context, index) {
-                                final venue = venues[index % venues.length];
+                                final venue = scoped[index];
+                                final bookable =
+                                    selectedSection?.catalog.isBookable ??
+                                    false;
                                 return _SectionVenueCard(
                                   venue: venue,
+                                  bookLabel: CustomerSectionCatalog.bookingCtaLabel(
+                                    selectedSection?.catalog,
+                                  ),
                                   onTap: () => context.push(
                                     AppRoutes.venueDetails.replaceAll(':id', venue.id),
                                   ),
-                                  onBookTap: () => context.push(
-                                    AppRoutes.bookingFlow.replaceAll(':id', venue.id),
-                                  ),
+                                  onBookTap: bookable
+                                      ? () => context.push(
+                                          AppRoutes.bookingFlow.replaceAll(
+                                            ':id',
+                                            venue.id,
+                                          ),
+                                          extra: venue,
+                                        )
+                                      : () => _handleCall(context, venue),
                                   onCallTap: () => _handleCall(context, venue),
-                                  onWhatsAppTap: () => _handleWhatsApp(context, venue),
+                                  onWhatsAppTap: () =>
+                                      _handleWhatsApp(context, venue),
                                 );
                               },
-                              childCount: venues.length,
+                              childCount: scoped.length,
                             ),
                           ),
                         );
@@ -927,7 +965,11 @@ class _TopHeaderBar extends StatelessWidget {
                     radius: 18,
                     backgroundColor: theme.colorScheme.primaryContainer,
                     child: Text(
-                      user?.email?.isNotEmpty == true ? user.email[0].toUpperCase() : 'U',
+                      () {
+                        final email = user?.email as String?;
+                        if (email == null || email.isEmpty) return 'U';
+                        return email[0].toUpperCase();
+                      }(),
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: theme.colorScheme.onPrimaryContainer,
@@ -952,6 +994,7 @@ class _TopHeaderBar extends StatelessWidget {
 /// Adapts dynamically on phone single-column, tablet 2-column, and extra-wide landscape 4-column layouts.
 class _MainSectionHeroCard extends StatelessWidget {
   const _MainSectionHeroCard({
+    super.key,
     required this.section,
     required this.isTabletOrWide,
     required this.onTap,
@@ -965,7 +1008,10 @@ class _MainSectionHeroCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Card(
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Card(
       clipBehavior: Clip.antiAlias,
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -974,9 +1020,7 @@ class _MainSectionHeroCard extends StatelessWidget {
           color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
         ),
       ),
-      child: InkWell(
-        onTap: onTap,
-        child: Stack(
+      child: Stack(
           fit: StackFit.expand,
           children: [
             // Background Image
@@ -1349,6 +1393,7 @@ class _SectionVenueCard extends StatelessWidget {
     required this.onBookTap,
     required this.onCallTap,
     required this.onWhatsAppTap,
+    this.bookLabel = 'Book Now',
   });
 
   final Venue venue;
@@ -1356,6 +1401,7 @@ class _SectionVenueCard extends StatelessWidget {
   final VoidCallback onBookTap;
   final VoidCallback onCallTap;
   final VoidCallback onWhatsAppTap;
+  final String bookLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -1493,16 +1539,16 @@ class _SectionVenueCard extends StatelessWidget {
                               borderRadius: BorderRadius.circular(10),
                             ),
                           ),
-                          child: const Text(
-                            'Book Now',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                          child: Text(
+                            bookLabel,
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                           ),
                         ),
                       ),
                       const SizedBox(width: 6),
                       IconButton.outlined(
                         onPressed: onCallTap,
-                        style: IconButton.outlinedFrom(
+                        style: IconButton.styleFrom(
                           minimumSize: const Size(38, 38),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
@@ -1513,7 +1559,7 @@ class _SectionVenueCard extends StatelessWidget {
                       const SizedBox(width: 6),
                       IconButton.filledTonal(
                         onPressed: onWhatsAppTap,
-                        style: IconButton.filledTonalFrom(
+                        style: IconButton.styleFrom(
                           minimumSize: const Size(38, 38),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),

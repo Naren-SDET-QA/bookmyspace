@@ -232,7 +232,13 @@ GoRouter createAppRouter({
                   final category = extra is Map<String, dynamic>
                       ? extra['category'] as String?
                       : null;
-                  return SearchScreen(initialCategory: category);
+                  final section = extra is Map<String, dynamic>
+                      ? extra['section'] as String?
+                      : null;
+                  return SearchScreen(
+                    initialCategory: category,
+                    initialSection: section,
+                  );
                 },
               ),
             ],

@@ -7,16 +7,19 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/skeleton.dart';
+import '../../../home/domain/customer_section_catalog.dart';
+import '../../../home/presentation/customer_section_providers.dart';
 import '../../../venues/domain/venue.dart';
 import '../../../venues/presentation/venue_providers.dart';
 import '../../../venues/presentation/widgets/venue_card.dart';
 
 /// Search screen: text query + category chips + sort/filter sheet.
 class SearchScreen extends ConsumerStatefulWidget {
-  const SearchScreen({super.key, this.initialCategory});
+  const SearchScreen({super.key, this.initialCategory, this.initialSection});
 
   /// Preselected category slug (set when navigating from home chips).
   final String? initialCategory;
+  final String? initialSection;
 
   @override
   ConsumerState<SearchScreen> createState() => _SearchScreenState();
@@ -30,12 +33,21 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   void initState() {
     super.initState();
     _controller = TextEditingController();
-    if (widget.initialCategory != null) {
-      final current = ref.read(searchQueryProvider);
-      ref.read(searchQueryProvider.notifier).state = current.copyWith(
-        categorySlug: () => widget.initialCategory,
-      );
+    final incomingSection =
+        CustomerSection.fromId(widget.initialSection) ??
+        CustomerSectionCatalog.fromAny(widget.initialCategory) ??
+        ref.read(selectedCustomerSectionProvider);
+    if (incomingSection != null) {
+      ref.read(selectedCustomerSectionProvider.notifier).state = incomingSection;
     }
+    final category =
+        widget.initialCategory ?? ref.read(selectedCustomerCategoryProvider);
+    final current = ref.read(searchQueryProvider);
+    ref.read(searchQueryProvider.notifier).state = current.copyWith(
+      sectionId: () => incomingSection?.id,
+      categorySlug: () =>
+          category == 'all' || category == incomingSection?.id ? null : category,
+    );
   }
 
   @override
@@ -52,12 +64,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       final current = ref.read(searchQueryProvider);
       ref.read(searchQueryProvider.notifier).state = current.copyWith(
         query: value.trim(),
+        sectionId: () => ref.read(selectedCustomerSectionProvider)?.id,
       );
     });
   }
 
   void _clearFilters() {
-    ref.read(searchQueryProvider.notifier).state = const VenueSearchQuery();
+    final section = ref.read(selectedCustomerSectionProvider);
+    ref.read(searchQueryProvider.notifier).state = VenueSearchQuery(
+      sectionId: section?.id,
+    );
+    ref.read(selectedCustomerCategoryProvider.notifier).state = 'all';
     _controller.clear();
   }
 
@@ -68,6 +85,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       builder: (_) => _FilterSheet(
         initial: ref.read(searchQueryProvider),
         categories: ref.read(venueCategoriesProvider).value ?? const [],
+        section: ref.read(selectedCustomerSectionProvider),
         onApply: (updated) {
           ref.read(searchQueryProvider.notifier).state = updated;
         },
@@ -80,7 +98,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final l10n = AppLocalizations.of(context);
     final query = ref.watch(searchQueryProvider);
     final results = ref.watch(searchResultsProvider);
-    final categories = ref.watch(venueCategoriesProvider);
+    final section = ref.watch(selectedCustomerSectionProvider);
+    final sectionCategories = section?.categories ?? const <CustomerSectionCategory>[];
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.search)),
@@ -125,30 +144,66 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text(l10n.allCategories),
-                    selected: query.categorySlug == null,
-                    onSelected: (_) {
-                      ref.read(searchQueryProvider.notifier).state = query
-                          .copyWith(categorySlug: () => null);
-                    },
-                  ),
-                ),
-                ...?categories.value?.map((c) {
-                  return Padding(
+                if (section == null)
+                  ...CustomerSection.values.map((s) {
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text('${s.emoji} ${s.title}'),
+                        selected: false,
+                        onSelected: (_) {
+                          selectCustomerSection(ref, s);
+                          ref.read(searchQueryProvider.notifier).state = query
+                              .copyWith(
+                                sectionId: () => s.id,
+                                categorySlug: () => null,
+                              );
+                        },
+                      ),
+                    );
+                  })
+                else ...[
+                  Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: ChoiceChip(
-                      label: Text(c.name),
-                      selected: query.categorySlug == c.slug,
+                      label: Text(l10n.allCategories),
+                      selected:
+                          query.categorySlug == null ||
+                          query.categorySlug == 'all',
                       onSelected: (_) {
+                        ref.read(selectedCustomerCategoryProvider.notifier).state =
+                            'all';
                         ref.read(searchQueryProvider.notifier).state = query
-                            .copyWith(categorySlug: () => c.slug);
+                            .copyWith(
+                              sectionId: () => section.id,
+                              categorySlug: () => null,
+                            );
                       },
                     ),
-                  );
-                }),
+                  ),
+                  ...sectionCategories.where((c) => c.id != 'all').map((c) {
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text('${c.emoji} ${c.label}'),
+                        selected: query.categorySlug == c.id,
+                        onSelected: (_) {
+                          ref
+                                  .read(
+                                    selectedCustomerCategoryProvider.notifier,
+                                  )
+                                  .state =
+                              c.id;
+                          ref.read(searchQueryProvider.notifier).state = query
+                              .copyWith(
+                                sectionId: () => section.id,
+                                categorySlug: () => c.id,
+                              );
+                        },
+                      ),
+                    );
+                  }),
+                ],
               ],
             ),
           ),
@@ -189,10 +244,12 @@ class _FilterSheet extends StatefulWidget {
     required this.initial,
     required this.categories,
     required this.onApply,
+    this.section,
   });
 
   final VenueSearchQuery initial;
   final List<VenueCategory> categories;
+  final CustomerSection? section;
   final void Function(VenueSearchQuery) onApply;
 
   @override
@@ -228,6 +285,7 @@ class _FilterSheetState extends State<_FilterSheet> {
   void _apply() {
     final updated = widget.initial.copyWith(
       sortBy: _sortBy,
+      sectionId: () => widget.section?.id ?? widget.initial.sectionId,
       categorySlug: () => _categorySlug,
       minPrice: () => double.tryParse(_minController.text),
       maxPrice: () => double.tryParse(_maxController.text),
@@ -308,13 +366,25 @@ class _FilterSheetState extends State<_FilterSheet> {
                   selected: _categorySlug == null,
                   onSelected: (_) => setState(() => _categorySlug = null),
                 ),
-                ...widget.categories.map(
-                  (c) => ChoiceChip(
-                    label: Text(c.name),
-                    selected: _categorySlug == c.slug,
-                    onSelected: (_) => setState(() => _categorySlug = c.slug),
+                if (widget.section != null)
+                  ...widget.section!.categories
+                      .where((c) => c.id != 'all')
+                      .map(
+                        (c) => ChoiceChip(
+                          label: Text(c.label),
+                          selected: _categorySlug == c.id,
+                          onSelected: (_) =>
+                              setState(() => _categorySlug = c.id),
+                        ),
+                      )
+                else
+                  ...widget.categories.map(
+                    (c) => ChoiceChip(
+                      label: Text(c.name),
+                      selected: _categorySlug == c.slug,
+                      onSelected: (_) => setState(() => _categorySlug = c.slug),
+                    ),
                   ),
-                ),
               ],
             ),
             const SizedBox(height: 20),

@@ -8,6 +8,7 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_network_image.dart';
 import '../../../../core/widgets/error_view.dart';
+import '../../../home/domain/customer_section_catalog.dart';
 import '../../domain/venue.dart';
 import '../venue_providers.dart';
 import '../widgets/venue_badges.dart';
@@ -445,7 +446,47 @@ class _BookingBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    final section = CustomerSectionCatalog.sectionForVenue(venue);
+    final cta = CustomerSectionCatalog.bookingCtaLabel(section);
+
+    if (section == CustomerSection.institutesClasses) {
+      return SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Calling ${venue.name}...')),
+                    );
+                  },
+                  icon: const Icon(Icons.call_rounded),
+                  label: const Text('Call'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Opening WhatsApp for ${venue.name}...'),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.chat_rounded),
+                  label: const Text('WhatsApp'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return SafeArea(
       top: false,
       child: Padding(
@@ -454,7 +495,7 @@ class _BookingBar extends StatelessWidget {
           onPressed: () =>
               context.push('/venues/${venue.id}/book', extra: venue),
           icon: const Icon(Icons.event_available_rounded),
-          label: Text('${l10n.bookNow} · ${formatInr(venue.price)}'),
+          label: Text('$cta · ${formatInr(venue.price)}'),
         ),
       ),
     );

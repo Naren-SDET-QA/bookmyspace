@@ -2,6 +2,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/errors/app_exceptions.dart'
     show NotFoundException, mapError;
+import '../../../core/firebase/error_logger.dart';
+import '../../home/domain/customer_section_catalog.dart';
 import '../domain/venue.dart';
 import '../domain/venue_repository.dart';
 
@@ -143,10 +145,23 @@ class SupabaseVenueRepository implements VenueRepository {
       final rows = await builder
           .order(orderColumn, ascending: ascending)
           .limit(50);
-      return rows
+      var venues = rows
           .whereType<Map<String, dynamic>>()
           .map(Venue.fromJson)
           .toList();
+      final section = CustomerSection.fromId(query.sectionId);
+      if (section != null) {
+        venues = venues
+            .where(
+              (v) => CustomerSectionCatalog.matchesVenue(
+                v,
+                section,
+                query.categorySlug,
+              ),
+            )
+            .toList();
+      }
+      return venues;
     } catch (e) {
       throw mapError(e);
     }

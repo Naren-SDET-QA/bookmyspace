@@ -100,5 +100,18 @@ class MockAuthRepository implements AuthRepository {
   @override
   Future<void> refreshSession() async {}
 
+  @override
+  Future<AuthUser> updateProfile({String? fullName, String? avatarUrl}) async {
+    final current = _user ?? const AuthUser(id: 'mock-user', email: 'mock@test.com');
+    _user = AuthUser(
+      id: current.id,
+      email: current.email,
+      fullName: fullName ?? current.fullName,
+      avatarUrl: avatarUrl ?? current.avatarUrl,
+    );
+    _controller.add(_user);
+    return _user!;
+  }
+
   void dispose() => _controller.close();
 }
