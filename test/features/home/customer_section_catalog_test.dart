@@ -79,17 +79,24 @@ void main() {
       CustomerSectionCatalog.requiredCustomerFields(
         CustomerSection.functionHalls,
       ),
-      containsAll([
+      [
         CustomerDetailField.fullName,
         CustomerDetailField.phone,
         CustomerDetailField.eventType,
-      ]),
+      ],
     );
     expect(
-      CustomerSectionCatalog.requiredCustomerFields(
-        CustomerSection.pgHostels,
-      ),
-      contains(CustomerDetailField.idNumber),
+      CustomerSectionCatalog.requiredCustomerFields(CustomerSection.lodgeRooms),
+      [CustomerDetailField.fullName, CustomerDetailField.phone],
+    );
+    expect(
+      CustomerSectionCatalog.requiredCustomerFields(CustomerSection.pgHostels),
+      [
+        CustomerDetailField.fullName,
+        CustomerDetailField.phone,
+        CustomerDetailField.idNumber,
+        CustomerDetailField.address,
+      ],
     );
     expect(
       CustomerSectionCatalog.requiredCustomerFields(

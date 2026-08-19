@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/validators/app_validators.dart';
 import '../../../home/domain/customer_section_catalog.dart';
 
@@ -20,6 +21,12 @@ class SectionCustomerDetailsForm extends StatelessWidget {
   Widget build(BuildContext context) {
     final fields = CustomerSectionCatalog.requiredCustomerFields(section);
     if (fields.isEmpty) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context);
+    final nameLabel = section == CustomerSection.pgHostels
+        ? l10n.tenantName
+        : section == CustomerSection.lodgeRooms
+            ? l10n.guestName
+            : l10n.name;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
@@ -27,7 +34,7 @@ class SectionCustomerDetailsForm extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Your details for this booking',
+            l10n.bookingDetails,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w700,
             ),
@@ -37,8 +44,8 @@ class SectionCustomerDetailsForm extends StatelessWidget {
             TextFormField(
               initialValue: details.fullName,
               textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
-                labelText: 'Full name',
+              decoration: InputDecoration(
+                labelText: nameLabel,
                 isDense: true,
               ),
               validator: AppValidators.name,
@@ -50,8 +57,8 @@ class SectionCustomerDetailsForm extends StatelessWidget {
               initialValue: details.phone,
               keyboardType: TextInputType.phone,
               textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
-                labelText: 'Phone',
+                decoration: InputDecoration(
+                  labelText: l10n.phone,
                 isDense: true,
               ),
               validator: AppValidators.phone,
@@ -63,8 +70,8 @@ class SectionCustomerDetailsForm extends StatelessWidget {
             TextFormField(
               initialValue: details.eventType,
               textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
-                labelText: 'Event type (wedding, birthday, meeting…)',
+              decoration: InputDecoration(
+                labelText: l10n.eventType,
                 isDense: true,
               ),
               validator: (v) =>
@@ -77,8 +84,8 @@ class SectionCustomerDetailsForm extends StatelessWidget {
             TextFormField(
               initialValue: details.idNumber,
               textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
-                labelText: 'ID number (Aadhaar / Passport)',
+              decoration: InputDecoration(
+                labelText: l10n.idNumber,
                 isDense: true,
               ),
               validator: (v) => AppValidators.required(
@@ -94,8 +101,8 @@ class SectionCustomerDetailsForm extends StatelessWidget {
             TextFormField(
               initialValue: details.address,
               textInputAction: TextInputAction.done,
-              decoration: const InputDecoration(
-                labelText: 'Current address',
+              decoration: InputDecoration(
+                labelText: l10n.address,
                 isDense: true,
               ),
               validator: (v) => AppValidators.required(

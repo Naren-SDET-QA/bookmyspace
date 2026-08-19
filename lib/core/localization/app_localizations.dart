@@ -150,6 +150,11 @@ class AppLocalizations {
   String get availability => _t('availability');
   String get confirmBooking => _t('confirmBooking');
   String get bookingSummary => _t('bookingSummary');
+  String get bookingDetails => _t('bookingDetails');
+  String get eventType => _t('eventType');
+  String get guestName => _t('guestName');
+  String get tenantName => _t('tenantName');
+  String get idNumber => _t('idNumber');
   String get payment => _t('payment');
   String get payNow => _t('payNow');
   String get paymentSuccess => _t('paymentSuccess');
@@ -423,6 +428,11 @@ class AppLocalizations {
       'availability': 'Availability',
       'confirmBooking': 'Confirm booking',
       'bookingSummary': 'Booking summary',
+      'bookingDetails': 'Your details for this booking',
+      'eventType': 'Event type (wedding, birthday, meeting…)',
+      'guestName': 'Guest name',
+      'tenantName': 'Tenant name',
+      'idNumber': 'ID number (Aadhaar / Passport)',
       'payment': 'Payment',
       'payNow': 'Pay now',
       'paymentSuccess': 'Payment successful',
@@ -688,6 +698,11 @@ class AppLocalizations {
       'availability': 'అందుబాటు',
       'confirmBooking': 'బుకింగ్ నిర్ధారించండి',
       'bookingSummary': 'బుకింగ్ సారాంశం',
+      'bookingDetails': 'ఈ బుకింగ్ కోసం మీ వివరాలు',
+      'eventType': 'ఈవెంట్ రకం',
+      'guestName': 'అతిథి పేరు',
+      'tenantName': 'అద్దెదారు పేరు',
+      'idNumber': 'ఐడి నంబర్ (ఆధార్ / పాస్‌పోర్ట్)',
       'payment': 'చెల్లింపు',
       'payNow': 'ఇప్పుడే చెల్లించండి',
       'paymentSuccess': 'చెల్లింపు విజయవంతమైంది',

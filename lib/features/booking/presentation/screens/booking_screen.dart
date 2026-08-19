@@ -264,6 +264,8 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
   /// booking's `metadata` jsonb column for the invoice and owner records.
   Map<String, dynamic> _bookingMetadata(DateTime date, CustomerSection? section) {
     return {
+      'customer_name': _details.fullName,
+      'customer_phone': _details.phone,
       'full_name': _details.fullName,
       'phone': _details.phone,
       if (section == CustomerSection.functionHalls) 'guests': _guestCount,
