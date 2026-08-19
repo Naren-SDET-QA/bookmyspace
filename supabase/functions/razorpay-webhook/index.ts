@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
   }
 
   const event = JSON.parse(rawBody);
-  const eventId: string = event.payload?.payment?.entity?.id ?? event.id;
+  const eventId: string = event.id ?? event.payload?.payment?.entity?.id ?? crypto.randomUUID();
   const eventType: string = event.event ?? 'unknown';
 
   const supabase: SupabaseClient = createClient(
@@ -83,14 +83,35 @@ Deno.serve(async (req) => {
     }
 
     // Confirm the booking (guarded to status='pending' in SQL).
-    await supabase.rpc('confirm_booking', {
+    const { error: confirmError } = await supabase.rpc('confirm_booking', {
       p_booking_id: payment.booking_id,
       p_payment_ref: paymentId,
     });
+    if (confirmError) {
+      return new Response(JSON.stringify({ error: 'booking_confirmation_failed' }), {
+        status: 409,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     await supabase
       .from('payments')
       .update({ status: 'captured', provider_payment_id: paymentId })
       .eq('id', payment.id);
+
+    const { data: booking } = await supabase
+      .from('bookings')
+      .select('user_id, venue_id, booking_ref')
+      .eq('id', payment.booking_id)
+      .maybeSingle();
+    if (booking?.user_id) {
+      await supabase.from('notifications').insert({
+        user_id: booking.user_id,
+        title: 'Booking confirmed',
+        body: `Your booking ${booking.booking_ref ?? ''} is confirmed.`,
+        type: 'booking_confirmed',
+        data: { booking_id: payment.booking_id },
+      });
+    }
 
     return new Response(JSON.stringify({ status: 'confirmed' }), {
       status: 200,

@@ -131,6 +131,9 @@ async function createOfflineBooking(
   if (Math.abs(Number(tax_amount) - expectedTax) > 0.01) {
     return json({ error: 'amount_mismatch' }, 400);
   }
+  if (Math.abs(Number(total_amount) - (Number(amount) + Number(tax_amount))) > 0.01) {
+    return json({ error: 'amount_mismatch' }, 400);
+  }
 
   const metadata = {
     offline_booking: true,
@@ -183,7 +186,20 @@ async function createOfflineBooking(
       metadata: { offline: true, customer_name: String(customer_name) },
     });
   if (paymentError) {
+    await supabase.from('bookings').delete().eq('id', booking.id);
     return json({ error: 'payment_create_failed', detail: paymentError.message }, 500);
+  }
+
+  try {
+    await supabase.from('notifications').insert({
+      user_id: userId,
+      title: 'Offline booking recorded',
+      body: `Walk-in booking ${booking.booking_ref} was added to your venue inventory.`,
+      type: 'booking_confirmed',
+      data: { booking_id: booking.id, offline: true },
+    });
+  } catch (_) {
+    // Offline booking/payment state is authoritative; notification is best-effort.
   }
 
   const { data: full } = await supabase

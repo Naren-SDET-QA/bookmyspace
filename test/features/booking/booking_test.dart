@@ -129,6 +129,24 @@ void main() {
       });
       expect(booking.canViewInvoice, isFalse);
     });
+
+    test('lifecycle status flags match payment and invoice boundaries', () {
+      final statuses = <BookingStatus, ({bool active, bool invoice, bool refund})>{
+        BookingStatus.held: (active: true, invoice: false, refund: false),
+        BookingStatus.pending: (active: true, invoice: false, refund: false),
+        BookingStatus.confirmed: (active: true, invoice: true, refund: true),
+        BookingStatus.completed: (active: false, invoice: true, refund: false),
+        BookingStatus.cancelled: (active: false, invoice: false, refund: false),
+        BookingStatus.refunded: (active: false, invoice: true, refund: false),
+        BookingStatus.noShow: (active: false, invoice: true, refund: false),
+      };
+      for (final entry in statuses.entries) {
+        final booking = _mockBooking(entry.key);
+        expect(booking.isActive, entry.value.active, reason: entry.key.name);
+        expect(booking.canViewInvoice, entry.value.invoice, reason: entry.key.name);
+        expect(booking.canRefund, entry.value.refund, reason: entry.key.name);
+      }
+    });
   });
 
   group('BookingHold', () {
@@ -142,3 +160,17 @@ void main() {
     });
   });
 }
+
+Booking _mockBooking(BookingStatus status) => Booking(
+  id: 'lifecycle-${status.name}',
+  bookingRef: 'BMS-LIFE',
+  venueId: 'v1',
+  slotId: 's1',
+  bookDate: DateTime(2026, 9, 1),
+  startTime: '09:00:00',
+  endTime: '10:00:00',
+  status: status,
+  amount: 100,
+  taxAmount: 18,
+  totalAmount: 118,
+);

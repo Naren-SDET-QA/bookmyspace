@@ -102,12 +102,18 @@ Deno.serve(async (req) => {
     // Find the captured payment for this booking.
     const { data: payment, error: paymentError } = await supabase
       .from('payments')
-      .select('id, provider_payment_id, amount, status')
+      .select('id, provider_payment_id, amount, status, method')
       .eq('booking_id', booking_id)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (paymentError || !payment || payment.status !== 'captured') {
+    if (
+      paymentError ||
+      !payment ||
+      payment.status !== 'captured' ||
+      payment.method === 'offline' ||
+      !payment.provider_payment_id
+    ) {
       return new Response(JSON.stringify({ error: 'no_captured_payment' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -172,14 +178,32 @@ Deno.serve(async (req) => {
     }
 
     // Move the booking + payment to their refunded states.
-    await supabase
+    const { error: bookingUpdateError } = await supabase
       .from('bookings')
       .update({ status: 'refunded' })
       .eq('id', booking.id);
-    await supabase
+    const { error: paymentUpdateError } = await supabase
       .from('payments')
       .update({ status: 'refunded' })
       .eq('id', payment.id);
+    if (bookingUpdateError || paymentUpdateError) {
+      return new Response(JSON.stringify({ error: 'refund_state_update_failed' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    try {
+      await supabase.from('notifications').insert({
+        user_id: booking.user_id,
+        title: 'Refund processed',
+        body: `Your refund of ₹${refundAmount.toFixed(2)} has been processed.`,
+        type: 'refund_processed',
+        data: { booking_id: booking.id, refund_id: refundRow.id },
+      });
+    } catch (_) {
+      // Refund state is authoritative; notification delivery is best-effort.
+    }
 
     return new Response(JSON.stringify(refundRow), {
       status: 200,

@@ -217,6 +217,19 @@ class SupabaseBookingRepository implements BookingRepository {
           code: 'cannot_cancel',
         );
       }
+      // Keep the existing cancellation contract, while recording a durable
+      // notification for the signed-in customer.
+      try {
+        await _client.from('notifications').insert({
+          'user_id': user.id,
+          'title': 'Booking cancelled',
+          'body': 'Your pending booking has been cancelled.',
+          'type': 'booking_cancelled',
+          'data': {'booking_id': bookingId},
+        });
+      } catch (_) {
+        // Notification delivery is best-effort; cancellation already won.
+      }
     } catch (e) {
       if (e is app_errors.BookingConflictException) rethrow;
       throw app_errors.mapError(e);

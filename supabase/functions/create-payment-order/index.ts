@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
 
   try {
     const { booking_id, amount } = await req.json();
-    if (!booking_id || !amount) {
+    if (!booking_id) {
       return new Response(JSON.stringify({ error: 'missing_fields' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -86,7 +86,9 @@ Deno.serve(async (req) => {
       });
     }
     // The amount is always taken from the DB (never from the client).
-    if (Math.abs(Number(amount) - Number(booking.total_amount)) > 0.01) {
+    // The server remains authoritative. Older clients may omit amount because
+    // the repository contract only sends booking_id; when supplied, validate it.
+    if (amount != null && Math.abs(Number(amount) - Number(booking.total_amount)) > 0.01) {
       return new Response(JSON.stringify({ error: 'amount_mismatch' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
