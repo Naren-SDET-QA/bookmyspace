@@ -116,10 +116,20 @@ class MockBookingRepository implements BookingRepository {
     required double amount,
     required double taxAmount,
     required double totalAmount,
+    Map<String, dynamic> metadata = const {},
   }) async {
     if (failCreate) throw Exception('create failed');
     createdBooking = sampleBooking();
     return createdBooking!;
+  }
+
+  @override
+  Future<Booking> bookingById(String bookingId) async {
+    final match = _bookings.where((b) => b.id == bookingId).firstOrNull;
+    if (match == null) {
+      throw Exception('Booking not found: $bookingId');
+    }
+    return match;
   }
 
   @override

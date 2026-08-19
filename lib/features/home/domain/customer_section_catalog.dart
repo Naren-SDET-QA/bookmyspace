@@ -353,6 +353,188 @@ class CustomerSectionCatalog {
     });
   }
 
+  /// Evaluates the section-specific fields of [query] against a single
+  /// [venue]. Text fields use the same keyword haystack as amenities, so
+  /// listings tagged via name/description/facilities stay matched without
+  /// any schema change. Date fields (date/checkIn/checkOut) are booking
+  /// context and never exclude listings here — availability is validated
+  /// at booking time by the slot RPCs.
+  static bool matchesFilters(Venue venue, VenueSearchQuery query) {
+    if (query.minCapacity != null && venue.capacity < query.minCapacity!) {
+      return false;
+    }
+    if (query.minRating != null && venue.avgRating < query.minRating!) {
+      return false;
+    }
+    if (query.minPrice != null &&
+        venue.pricingBaseAmount < query.minPrice!) {
+      return false;
+    }
+    if (query.maxPrice != null &&
+        venue.pricingBaseAmount > query.maxPrice!) {
+      return false;
+    }
+    if (query.roomType != null && query.roomType!.isNotEmpty) {
+      if (!_haystack(venue).contains(query.roomType!.toLowerCase())) {
+        return false;
+      }
+    }
+    if (query.gender != null) {
+      final hay = _haystack(venue);
+      final wantsGents = query.gender!.toLowerCase() == 'gents';
+      final hasGents =
+          hay.contains('gent') || hay.contains('men') || hay.contains('male');
+      final hasLadies =
+          hay.contains('lad') || hay.contains('women') || hay.contains('female');
+      if (wantsGents && !hasGents) return false;
+      if (!wantsGents && !hasLadies) return false;
+    }
+    if (query.sharing != null && query.sharing!.isNotEmpty) {
+      final hay = _haystack(venue);
+      final sharing = query.sharing!.toLowerCase();
+      final matches = switch (sharing) {
+        'single' => hay.contains('single') || hay.contains('one sharing'),
+        'double' => hay.contains('double') || hay.contains('twin'),
+        'triple' =>
+          hay.contains('triple') ||
+              hay.contains('3 sharing') ||
+              hay.contains('three sharing'),
+        _ => hay.contains(sharing),
+      };
+      if (!matches) return false;
+    }
+    if (query.foodIncluded == true) {
+      const foodKeywords = ['meal', 'food', 'mess', 'dining', 'canteen'];
+      if (!foodKeywords.any(_haystack(venue).contains)) return false;
+    }
+    if (query.maxDeposit != null && query.maxDeposit! > 0) {
+      if (!_haystack(venue).contains('deposit')) return false;
+    }
+    if (query.classType != null && query.classType!.isNotEmpty) {
+      final hay = _haystack(venue);
+      final tokens = query.classType!.toLowerCase().split(RegExp(r'[\s_]+'));
+      if (!tokens.every(hay.contains)) return false;
+    }
+    if (query.mode != null && query.mode!.isNotEmpty) {
+      if (!_haystack(venue).contains(query.mode!.toLowerCase())) {
+        return false;
+      }
+    }
+    if (query.amenities.isNotEmpty &&
+        !matchesAmenities(venue, query.amenities)) {
+      return false;
+    }
+    return true;
+  }
+
+  /// Section-specific filter descriptor list used by the search filter
+  /// sheet. Keeps filters configurable per section (halls = date/guests/
+  /// price/amenities, stays = check-in/out/room type/rating/price, PG =
+  /// gender/sharing/food/rent/deposit, institutes = class type/mode/fee).
+  static List<SectionFilterSpec> filterSpecs(CustomerSection section) {
+    return switch (section) {
+      CustomerSection.functionHalls => const [
+        SectionFilterSpec(SectionFilterField.date, 'Event Date', '📅', []),
+        SectionFilterSpec(
+          SectionFilterField.guests,
+          'Guests',
+          '👥',
+          ['100', '200', '500', '1000'],
+        ),
+        SectionFilterSpec(
+          SectionFilterField.priceRange,
+          'Price Range',
+          '💰',
+          ['under 20k', '20k - 50k', '50k - 1L', 'above 1L'],
+        ),
+        SectionFilterSpec(
+          SectionFilterField.amenities,
+          'Amenities',
+          '✨',
+          ['parking', 'catering', 'ac', 'power_backup'],
+        ),
+      ],
+      CustomerSection.lodgeRooms => const [
+        SectionFilterSpec(
+          SectionFilterField.checkInOut,
+          'Check-in / Check-out',
+          '🗓️',
+          [],
+        ),
+        SectionFilterSpec(
+          SectionFilterField.roomType,
+          'Room Type',
+          '🛏️',
+          ['single', 'double', 'family', 'deluxe'],
+        ),
+        SectionFilterSpec(
+          SectionFilterField.minRating,
+          'Rating',
+          '⭐',
+          ['4.0', '4.5', '4.8'],
+        ),
+        SectionFilterSpec(
+          SectionFilterField.priceRange,
+          'Price / Night',
+          '💰',
+          ['under 1k', '1k - 3k', '3k - 5k', 'above 5k'],
+        ),
+      ],
+      CustomerSection.pgHostels => const [
+        SectionFilterSpec(
+          SectionFilterField.gender,
+          'Gender',
+          '👤',
+          ['gents', 'ladies'],
+        ),
+        SectionFilterSpec(
+          SectionFilterField.sharing,
+          'Sharing',
+          '🚪',
+          ['single', 'double', 'triple'],
+        ),
+        SectionFilterSpec(
+          SectionFilterField.food,
+          'Food',
+          '🍽️',
+          ['included'],
+        ),
+        SectionFilterSpec(
+          SectionFilterField.priceRange,
+          'Rent / Month',
+          '💰',
+          ['under 5k', '5k - 10k', '10k - 15k', 'above 15k'],
+        ),
+        SectionFilterSpec(
+          SectionFilterField.deposit,
+          'Security Deposit',
+          '🔒',
+          ['up to 5k', 'up to 10k'],
+        ),
+      ],
+      CustomerSection.institutesClasses => const [
+        SectionFilterSpec(
+          SectionFilterField.classType,
+          'Class Type',
+          '📚',
+          ['coaching', 'computer', 'dance', 'music', 'sports'],
+        ),
+        SectionFilterSpec(
+          SectionFilterField.mode,
+          'Mode / Batch',
+          '🕒',
+          ['online', 'offline', 'hybrid'],
+        ),
+        SectionFilterSpec(
+          SectionFilterField.priceRange,
+          'Course Fee',
+          '💰',
+          ['under 5k', '5k - 20k', '20k - 50k', 'above 50k'],
+        ),
+      ],
+    };
+  }
+
   static bool _matchesCategory(
     Venue venue,
     CustomerSection section,
@@ -560,4 +742,39 @@ class CustomerBookingDetails {
       address: address ?? this.address,
     );
   }
+}
+
+/// Identifiers of the section-specific search filters. Each id maps to a
+/// dedicated field on [VenueSearchQuery].
+enum SectionFilterField {
+  date,
+  guests,
+  priceRange,
+  amenities,
+  checkInOut,
+  roomType,
+  minRating,
+  gender,
+  sharing,
+  food,
+  deposit,
+  classType,
+  mode,
+}
+
+/// Descriptor of one configurable filter inside a section's filter sheet.
+class SectionFilterSpec {
+  const SectionFilterSpec(
+    this.field,
+    this.label,
+    this.icon, [
+    this.options = const [],
+  ]);
+
+  final SectionFilterField field;
+  final String label;
+  final String icon;
+
+  /// Predefined quick choices shown as chips (empty = free-form input).
+  final List<String> options;
 }

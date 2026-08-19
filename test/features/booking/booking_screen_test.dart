@@ -7,6 +7,8 @@ import 'package:bookmyspace/features/booking/presentation/booking_providers.dart
 import 'package:bookmyspace/features/booking/presentation/screens/my_bookings_screen.dart';
 import 'package:bookmyspace/features/courses/presentation/course_providers.dart';
 import 'package:bookmyspace/features/events/presentation/event_providers.dart';
+import 'package:bookmyspace/features/notifications/domain/notification.dart';
+import 'package:bookmyspace/features/notifications/presentation/notification_providers.dart';
 import 'package:bookmyspace/features/payments/presentation/payment_providers.dart';
 import 'package:bookmyspace/features/venues/presentation/venue_providers.dart';
 import 'package:flutter/material.dart';
@@ -17,6 +19,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../auth/mock_auth_repository.dart';
 import '../courses/mock_course_repository.dart';
 import '../events/mock_event_repository.dart';
+import '../notifications/mock_notification_repository.dart';
 import '../payments/mock_payment_repository.dart';
 import '../venues/mock_venue_repository.dart';
 import 'mock_booking_repository.dart';
@@ -24,6 +27,7 @@ import 'mock_booking_repository.dart';
 Widget _app(
   MockBookingRepository bookingRepo, {
   MockVenueRepository? venueRepo,
+  MockNotificationRepository? notificationRepo,
   String initialLocation = AppRoutes.home,
 }) {
   final venue = venueRepo ?? MockVenueRepository();
@@ -43,6 +47,9 @@ Widget _app(
       ),
       eventRepositoryProvider.overrideWithValue(MockEventRepository()),
       courseRepositoryProvider.overrideWithValue(MockCourseRepository()),
+      notificationRepositoryProvider.overrideWithValue(
+        notificationRepo ?? MockNotificationRepository(),
+      ),
     ],
     child: MaterialApp.router(
       routerConfig: createAppRouter(
@@ -150,6 +157,7 @@ void main() {
         ),
       ],
     );
+    final notificationRepo = MockNotificationRepository();
 
     await tester.pumpWidget(
       ProviderScope(
@@ -160,6 +168,7 @@ void main() {
               initialUser: const AuthUser(id: 'u1', email: 'a@b.com'),
             ),
           ),
+          notificationRepositoryProvider.overrideWithValue(notificationRepo),
         ],
         child: const MaterialApp(
           home: MyBookingsScreen(),
@@ -189,6 +198,14 @@ void main() {
     final remaining = await bookingRepo.myBookings();
     expect(remaining.length, 1);
     expect(remaining.first.id, 'b2');
+
+    // Cancelling a booking records a notification.
+    await tester.pump();
+    expect(notificationRepo.created, hasLength(1));
+    expect(
+      notificationRepo.created.single.type,
+      NotificationType.bookingCancelled,
+    );
   });
 
   testWidgets('confirmed bookings show a refund action that requests one', (
@@ -200,6 +217,7 @@ void main() {
       ],
     );
     final paymentRepo = MockPaymentRepository();
+    final notificationRepo = MockNotificationRepository();
 
     await tester.pumpWidget(
       ProviderScope(
@@ -211,6 +229,7 @@ void main() {
               initialUser: const AuthUser(id: 'u1', email: 'a@b.com'),
             ),
           ),
+          notificationRepositoryProvider.overrideWithValue(notificationRepo),
         ],
         child: const MaterialApp(
           home: MyBookingsScreen(),
@@ -240,6 +259,14 @@ void main() {
     expect(paymentRepo.lastRefundBookingId, 'b1');
     expect(paymentRepo.lastRefundAmount, 41300);
     expect(find.textContaining('Refund requested'), findsOneWidget);
+
+    // Requesting a refund records a notification.
+    await tester.pump();
+    expect(notificationRepo.created, hasLength(1));
+    expect(
+      notificationRepo.created.single.type,
+      NotificationType.refundProcessed,
+    );
   });
 
   testWidgets('confirmed bookings show digital entry pass modal with QR', (

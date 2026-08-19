@@ -24,6 +24,14 @@ final myBookingsProvider = FutureProvider<List<Booking>>((ref) {
   return ref.watch(bookingRepositoryProvider).myBookings();
 });
 
+/// A single booking by id (used by the invoice screen).
+final bookingByIdProvider = FutureProvider.autoDispose.family<Booking, String>((
+  ref,
+  bookingId,
+) {
+  return ref.watch(bookingRepositoryProvider).bookingById(bookingId);
+});
+
 /// The currently selected booking date (reset per screen visit).
 final selectedBookingDateProvider = StateProvider<DateTime?>((ref) => null);
 

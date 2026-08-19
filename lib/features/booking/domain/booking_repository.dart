@@ -26,6 +26,9 @@ abstract interface class BookingRepository {
   });
 
   /// Creates a pending booking tied to an acquired hold.
+  ///
+  /// [metadata] (e.g. guests, sharing option, check-out) is stored on the
+  /// booking row's `metadata` jsonb column.
   Future<Booking> createBooking({
     required BookingHold hold,
     required String venueId,
@@ -34,7 +37,11 @@ abstract interface class BookingRepository {
     required double amount,
     required double taxAmount,
     required double totalAmount,
+    Map<String, dynamic> metadata = const {},
   });
+
+  /// A single booking by id (joined venue/slot/payment embeds).
+  Future<Booking> bookingById(String bookingId);
 
   /// Bookings for the signed-in user, newest first.
   Future<List<Booking>> myBookings();

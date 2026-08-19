@@ -32,6 +32,8 @@
 	<string>BookMySpace uses the camera so you can take photos of your listing.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>BookMySpace does not save photos to your library; this is required by the photo picker on some iOS versions.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>BookMySpace uses your location to find halls, stays, PGs and institutes near you.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

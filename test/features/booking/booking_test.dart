@@ -81,6 +81,54 @@ void main() {
       expect(Booking.fromJson({'status': 'pending'}).canCancel, isTrue);
       expect(Booking.fromJson({'status': 'confirmed'}).canCancel, isFalse);
     });
+
+    test('parses metadata and payment embed for offline bookings', () {
+      final booking = Booking.fromJson({
+        'id': 'b2',
+        'booking_ref': 'BMS-ABCDEF',
+        'status': 'confirmed',
+        'metadata': {
+          'offline_booking': true,
+          'customer_name': 'Ravi Kumar',
+          'customer_phone': '9876543210',
+        },
+        'payments': {
+          'method': 'offline',
+          'provider_payment_id': 'OFF-001',
+          'status': 'captured',
+          'created_at': '2026-08-18T10:30:00Z',
+        },
+      });
+
+      expect(booking.isOffline, isTrue);
+      expect(booking.customerName, 'Ravi Kumar');
+      expect(booking.customerPhone, '9876543210');
+      expect(booking.paymentMethod, 'offline');
+      expect(booking.paymentRef, 'OFF-001');
+      expect(booking.paidAt, DateTime.parse('2026-08-18T10:30:00Z'));
+      expect(booking.canViewInvoice, isTrue);
+    });
+
+    test('online bookings with no payment embed are not marked paid', () {
+      final booking = Booking.fromJson({'id': 'b3', 'status': 'confirmed'});
+      expect(booking.isOffline, isFalse);
+      expect(booking.paymentMethod, isEmpty);
+      expect(booking.paidAt, isNull);
+      expect(booking.canViewInvoice, isTrue);
+    });
+
+    test('pending bookings cannot view an invoice', () {
+      final booking = Booking.fromJson({
+        'id': 'b4',
+        'status': 'pending',
+        'payments': {
+          'method': 'offline',
+          'provider_payment_id': 'OFF-002',
+          'status': 'pending',
+        },
+      });
+      expect(booking.canViewInvoice, isFalse);
+    });
   });
 
   group('BookingHold', () {

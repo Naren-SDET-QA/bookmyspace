@@ -93,6 +93,8 @@ class AppLocalizations {
   String get maxPrice => _t('maxPrice');
   String get allCategories => _t('allCategories');
   String get apply => _t('apply');
+  String get nearest => _t('nearest');
+  String get useMyLocation => _t('useMyLocation');
   String get resultsCount => _t('resultsCount');
   String get aboutThisVenue => _t('aboutThisVenue');
   String get details => _t('details');
@@ -169,6 +171,64 @@ class AppLocalizations {
   String get cancelBookingConfirm => _t('cancelBookingConfirm');
   String get keep => _t('keep');
 
+  // Booking details / invoice
+  String get invoice => _t('invoice');
+  String get viewInvoice => _t('viewInvoice');
+  String get invoiceFor => _t('invoiceFor');
+  String get bookingRef => _t('bookingRef');
+  String get bookingStatus => _t('bookingStatus');
+  String get dateOfBooking => _t('dateOfBooking');
+  String get customer => _t('customer');
+  String get guestCount => _t('guestCount');
+  String get checkIn => _t('checkIn');
+  String get checkOut => _t('checkOut');
+  String get moveIn => _t('moveIn');
+  String get sharingOption => _t('sharingOption');
+  String get rent => _t('rent');
+  String get deposit => _t('deposit');
+  String get changeSharing => _t('changeSharing');
+  String get slotHeld => _t('slotHeld');
+  String get payMethod => _t('payMethod');
+  String get onlinePayment => _t('onlinePayment');
+  String get offlinePayment => _t('offlinePayment');
+  String get paidOn => _t('paidOn');
+  String get paymentRef => _t('paymentRef');
+  String get walkIn => _t('walkIn');
+  String get statusHeld => _t('statusHeld');
+  String get statusPending => _t('statusPending');
+  String get statusConfirmed => _t('statusConfirmed');
+  String get statusCompleted => _t('statusCompleted');
+  String get statusCancelled => _t('statusCancelled');
+  String get statusRefunded => _t('statusRefunded');
+  String get statusNoShow => _t('statusNoShow');
+  String get slotBooked => _t('slotBooked');
+  String get slotUnavailable => _t('slotUnavailable');
+  String get slotBlocked => _t('slotBlocked');
+  String get slotClosed => _t('slotClosed');
+  String get listingOnly => _t('listingOnly');
+  String get listingOnlyMessage => _t('listingOnlyMessage');
+  String get call => _t('call');
+  String get whatsapp => _t('whatsapp');
+  String get callingVenue => _t('callingVenue');
+  String get openingWhatsApp => _t('openingWhatsApp');
+  String get digitalEntryPass => _t('digitalEntryPass');
+  String get viewEntryPass => _t('viewEntryPass');
+  String get entryPassHint => _t('entryPassHint');
+  String get openInGoogleMaps => _t('openInGoogleMaps');
+
+  // Owner bookings / offline
+  String get ownerBookings => _t('ownerBookings');
+  String get newOfflineBooking => _t('newOfflineBooking');
+  String get offlineBooking => _t('offlineBooking');
+  String get createOfflineBooking => _t('createOfflineBooking');
+  String get customerName => _t('customerName');
+  String get customerPhone => _t('customerPhone');
+  String get selectVenue => _t('selectVenue');
+  String get noOwnerBookings => _t('noOwnerBookings');
+  String get noOwnerVenuesMessage => _t('noOwnerVenuesMessage');
+  String get completeBooking => _t('completeBooking');
+  String get markNoShow => _t('markNoShow');
+
   // Profile / Auth
   String get login => _t('login');
   String get signUp => _t('signUp');
@@ -209,6 +269,7 @@ class AppLocalizations {
   String get auditLog => _t('auditLog');
    String get priority => _t('priority');
    String get noNotifications => _t('noNotifications');
+  String get noNotificationsMessage => _t('noNotificationsMessage');
   String get unread => _t('unread');
   String get noAnalyticsData => _t('noAnalyticsData');
   String get noSupportTickets => _t('noSupportTickets');
@@ -307,6 +368,8 @@ class AppLocalizations {
       'maxPrice': 'Max price',
       'allCategories': 'All categories',
       'apply': 'Apply',
+      'nearest': 'Nearest',
+      'useMyLocation': 'Use my location',
       'resultsCount': '{count} venues found',
       'aboutThisVenue': 'About this venue',
       'details': 'Details',
@@ -382,6 +445,63 @@ class AppLocalizations {
       'cancelBooking': 'Cancel booking',
       'cancelBookingConfirm': 'Are you sure you want to cancel this booking?',
       'keep': 'Keep booking',
+      'invoice': 'Invoice',
+      'viewInvoice': 'View invoice',
+      'invoiceFor': 'Booking invoice',
+      'bookingRef': 'Booking reference',
+      'bookingStatus': 'Status',
+      'dateOfBooking': 'Booking date',
+      'customer': 'Customer',
+      'guestCount': 'Guests',
+      'checkIn': 'Check-in',
+      'checkOut': 'Check-out',
+      'moveIn': 'Move-in',
+      'sharingOption': 'Sharing option',
+      'rent': 'Rent',
+      'deposit': 'Deposit',
+      'changeSharing': 'Change sharing',
+      'slotHeld': 'Slot held for 10 minutes. Complete the payment to confirm.',
+      'payMethod': 'Payment method',
+      'onlinePayment': 'Online (Razorpay)',
+      'offlinePayment': 'Offline (walk-in)',
+      'paidOn': 'Paid on',
+      'paymentRef': 'Payment reference',
+      'walkIn': 'Walk-in',
+      'statusHeld': 'Held',
+      'statusPending': 'Pending',
+      'statusConfirmed': 'Confirmed',
+      'statusCompleted': 'Completed',
+      'statusCancelled': 'Cancelled',
+      'statusRefunded': 'Refunded',
+      'statusNoShow': 'No show',
+      'slotBooked': 'Booked',
+      'slotUnavailable': 'Unavailable',
+      'slotBlocked': 'Blocked',
+      'slotClosed': 'Closed',
+      'listingOnly': 'Listing only',
+      'listingOnlyMessage':
+          'Institutes and classes are advertising listings. Use Call or WhatsApp from the details page.',
+      'call': 'Call',
+      'whatsapp': 'WhatsApp',
+      'callingVenue': 'Calling {name}…',
+      'openingWhatsApp': 'Opening WhatsApp for {name}…',
+      'digitalEntryPass': 'Digital Entry Pass',
+      'viewEntryPass': 'View Entry Pass / QR',
+      'entryPassHint':
+          'Show this QR pass at the venue entrance gate for instant check-in verification.',
+      'openInGoogleMaps': 'Open in Google Maps',
+      'ownerBookings': 'Owner bookings',
+      'newOfflineBooking': 'New offline booking',
+      'offlineBooking': 'Offline booking',
+      'createOfflineBooking': 'Create offline booking',
+      'customerName': 'Customer name',
+      'customerPhone': 'Customer phone',
+      'selectVenue': 'Select venue',
+      'noOwnerBookings': 'No bookings for your venues yet',
+      'noOwnerVenuesMessage':
+          'You need at least one venue before managing bookings.',
+      'completeBooking': 'Mark completed',
+      'markNoShow': 'Mark no-show',
       'login': 'Log in',
       'signUp': 'Sign up',
       'logout': 'Log out',
@@ -417,6 +537,8 @@ class AppLocalizations {
       'auditLog': 'Audit Log',
        'priority': 'Priority',
        'noNotifications': 'No notifications',
+       'noNotificationsMessage':
+           'You will see notifications here when they arrive.',
       'unread': 'Unread',
       'noAnalyticsData': 'No analytics data',
       'noSupportTickets': 'No support tickets',
@@ -511,6 +633,8 @@ class AppLocalizations {
       'maxPrice': 'గరిష్ట ధర',
       'allCategories': 'అన్ని వర్గాలు',
       'apply': 'వర్తించు',
+      'nearest': 'దగ్గరి',
+      'useMyLocation': 'నా లొకేషన్ ఉపయోగించండి',
       'resultsCount': '{count} వేదికలు దొరికాయి',
       'aboutThisVenue': 'ఈ వేదిక గురించి',
       'details': 'వివరాలు',
@@ -589,6 +713,64 @@ class AppLocalizations {
       'cancelBooking': 'బుకింగ్ రద్దు చేయండి',
       'cancelBookingConfirm': 'మీరు ఈ బుకింగ్‌ను రద్దు చేయాలనుకుంటున్నారా?',
       'keep': 'బుకింగ్ ఉంచండి',
+      'invoice': 'ఇన్వాయిస్',
+      'viewInvoice': 'ఇన్వాయిస్ చూడండి',
+      'invoiceFor': 'బుకింగ్ ఇన్వాయిస్',
+      'bookingRef': 'బుకింగ్ రిఫరెన్స్',
+      'bookingStatus': 'స్థితి',
+      'dateOfBooking': 'బుకింగ్ తేదీ',
+      'customer': 'కస్టమర్',
+      'guestCount': 'అతిథులు',
+      'checkIn': 'చెక్-ఇన్',
+      'checkOut': 'చెక్-అవుట్',
+      'moveIn': 'మూవ్-ఇన్',
+      'sharingOption': 'షేరింగ్ ఎంపిక',
+      'rent': 'అద్దె',
+      'deposit': 'డిపాజిట్',
+      'changeSharing': 'షేరింగ్ మార్చండి',
+      'slotHeld':
+          'స్లాట్ 10 నిమిషాలు రిజర్వ్ చేయబడింది. నిర్ధారించడానికి చెల్లించండి.',
+      'payMethod': 'చెల్లింపు విధానం',
+      'onlinePayment': 'ఆన్‌లైన్ (Razorpay)',
+      'offlinePayment': 'ఆఫ్‌లైన్ (వాక్-ఇన్)',
+      'paidOn': 'చెల్లించిన తేదీ',
+      'paymentRef': 'చెల్లింపు రిఫరెన్స్',
+      'walkIn': 'వాక్-ఇన్',
+      'statusHeld': 'రిజర్వ్ చేయబడింది',
+      'statusPending': 'పెండింగ్',
+      'statusConfirmed': 'నిర్ధారించబడింది',
+      'statusCompleted': 'పూర్తయింది',
+      'statusCancelled': 'రద్దు చేయబడింది',
+      'statusRefunded': 'వాపసు చేయబడింది',
+      'statusNoShow': 'నో-షో',
+      'slotBooked': 'బుక్ చేయబడింది',
+      'slotUnavailable': 'అందుబాటులో లేదు',
+      'slotBlocked': 'బ్లాక్ చేయబడింది',
+      'slotClosed': 'మూసివేయబడింది',
+      'listingOnly': 'లిస్టింగ్ మాత్రమే',
+      'listingOnlyMessage':
+          'ఇన్‌స్టిట్యూట్లు మరియు క్లాసులు ప్రకటనల లిస్టింగ్‌లు. వివరాల పేజీ నుండి కాల్ లేదా వాట్సాప్ ఉపయోగించండి.',
+      'call': 'కాల్',
+      'whatsapp': 'వాట్సాప్',
+      'callingVenue': '{name} కు కాల్ చేస్తోంది…',
+      'openingWhatsApp': '{name} కోసం వాట్సాప్ తెరుస్తోంది…',
+      'digitalEntryPass': 'డిజిటల్ ఎంట్రీ పాస్',
+      'viewEntryPass': 'ఎంట్రీ పాస్ / QR చూడండి',
+      'entryPassHint':
+          'తక్షణ చెక్-ఇన్ ధృవీకరణ కోసం వేదిక ప్రవేశ ద్వారం వద్ద ఈ QR పాస్ చూపించండి.',
+      'openInGoogleMaps': 'Google మ్యాప్స్‌లో తెరవండి',
+      'ownerBookings': 'యజమాని బుకింగ్స్',
+      'newOfflineBooking': 'కొత్త ఆఫ్‌లైన్ బుకింగ్',
+      'offlineBooking': 'ఆఫ్‌లైన్ బుకింగ్',
+      'createOfflineBooking': 'ఆఫ్‌లైన్ బుకింగ్ సృష్టించండి',
+      'customerName': 'కస్టమర్ పేరు',
+      'customerPhone': 'కస్టమర్ ఫోన్',
+      'selectVenue': 'వేదికను ఎంచుకోండి',
+      'noOwnerBookings': 'మీ వేదికలకు ఇంకా బుకింగ్స్ లేవు',
+      'noOwnerVenuesMessage':
+          'బుకింగ్స్ నిర్వహించడానికి మీకు కనీసం ఒక వేదిక అవసరం.',
+      'completeBooking': 'పూర్తి చేసినట్లు గుర్తించండి',
+      'markNoShow': 'నో-షో గుర్తించండి',
       'login': 'లాగిన్',
       'signUp': 'సైన్ అప్',
       'logout': 'లాగ్ అవుట్',
@@ -624,6 +806,8 @@ class AppLocalizations {
       'auditLog': 'ఆడిట్ లాగ్',
        'priority': 'ప్రాధాన్యత',
        'noNotifications': 'నోటిఫికేషన్లు లేవు',
+       'noNotificationsMessage':
+           'నోటిఫికేషన్లు వచ్చినప్పుడు ఇక్కడ కనిపిస్తాయి.',
       'unread': 'చదలపడలేదు',
       'noAnalyticsData': 'విశ్లేషణ డేటా లేదు',
       'noSupportTickets': 'సహాయ టికెట్లు లేవు',

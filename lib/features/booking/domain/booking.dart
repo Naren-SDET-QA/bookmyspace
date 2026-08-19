@@ -105,7 +105,7 @@ enum BookingStatus {
   };
 }
 
-/// A booking made by the user.
+/// A booking made by the user (or recorded offline by an owner).
 class Booking {
   const Booking({
     required this.id,
@@ -123,6 +123,13 @@ class Booking {
     this.venueCity = '',
     this.slotLabel = '',
     this.createdAt,
+    this.customerName = '',
+    this.customerPhone = '',
+    this.isOffline = false,
+    this.paymentMethod = '',
+    this.paymentRef = '',
+    this.paidAt,
+    this.metadata = const {},
   });
 
   final String id;
@@ -143,6 +150,19 @@ class Booking {
   final String slotLabel;
   final DateTime? createdAt;
 
+  /// Customer fields recorded on offline (walk-in) bookings.
+  final String customerName;
+  final String customerPhone;
+  final bool isOffline;
+
+  /// Payment details (hydrated from the `payments` embed).
+  final String paymentMethod;
+  final String paymentRef;
+  final DateTime? paidAt;
+
+  /// Raw `metadata` jsonb, e.g. guests / sharing / deposit info.
+  final Map<String, dynamic> metadata;
+
   bool get isActive =>
       status == BookingStatus.pending ||
       status == BookingStatus.confirmed ||
@@ -153,6 +173,13 @@ class Booking {
   /// Confirmed (captured) bookings can be refunded.
   bool get canRefund => status == BookingStatus.confirmed;
 
+  /// An invoice is available for paid/terminal bookings.
+  bool get canViewInvoice =>
+      status == BookingStatus.confirmed ||
+      status == BookingStatus.completed ||
+      status == BookingStatus.refunded ||
+      status == BookingStatus.noShow;
+
   String get displayStart =>
       startTime.length >= 5 ? startTime.substring(0, 5) : startTime;
   String get displayEnd =>
@@ -161,6 +188,18 @@ class Booking {
   factory Booking.fromJson(Map<String, dynamic> json) {
     final venueRaw = json['venues'];
     final slotRaw = json['time_slots'];
+    final paymentsRaw = json['payments'];
+    final payment = paymentsRaw is List && paymentsRaw.isNotEmpty
+        ? paymentsRaw.first is Map
+            ? Map<String, dynamic>.from(paymentsRaw.first as Map)
+            : null
+        : paymentsRaw is Map
+        ? Map<String, dynamic>.from(paymentsRaw as Map)
+        : null;
+    final metadataRaw = json['metadata'];
+    final metadata = metadataRaw is Map
+        ? Map<String, dynamic>.from(metadataRaw as Map)
+        : const <String, dynamic>{};
     return Booking(
       id: json['id'] as String? ?? '',
       bookingRef: json['booking_ref'] as String? ?? '',
@@ -185,6 +224,15 @@ class Booking {
       slotLabel: slotRaw is Map<String, dynamic>
           ? (slotRaw['label'] as String? ?? '')
           : '',
+      customerName: metadata['customer_name'] as String? ?? '',
+      customerPhone: metadata['customer_phone'] as String? ?? '',
+      isOffline: metadata['offline_booking'] == true,
+      paymentMethod: payment?['method'] as String? ?? '',
+      paymentRef: payment?['provider_payment_id'] as String? ?? '',
+      paidAt: payment?['created_at'] != null
+          ? DateTime.tryParse(payment!['created_at'] as String? ?? '')
+          : null,
+      metadata: metadata,
     );
   }
 }

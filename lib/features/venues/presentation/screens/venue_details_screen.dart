@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -12,6 +13,20 @@ import '../../../home/domain/customer_section_catalog.dart';
 import '../../domain/venue.dart';
 import '../venue_providers.dart';
 import '../widgets/venue_badges.dart';
+
+/// Opens the venue location in the device's Google Maps app (or web fallback).
+Future<void> _openInGoogleMaps(BuildContext context, Venue venue) async {
+  final uri = Uri.parse(
+    'https://www.google.com/maps/search/?api=1&query='
+    '${venue.latitude},${venue.longitude}',
+  );
+  final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+  if (!launched && context.mounted) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Could not open Google Maps.')));
+  }
+}
 
 /// Full venue details: gallery, about, amenities, hours, pricing and map.
 class VenueDetailsScreen extends ConsumerWidget {
@@ -241,6 +256,15 @@ class _VenueDetailsBody extends ConsumerWidget {
                   longitude: venue.longitude,
                   name: venue.name,
                 ),
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _openInGoogleMaps(context, venue),
+                    icon: const Icon(Icons.map_rounded, size: 18),
+                    label: Text(l10n.openInGoogleMaps),
+                  ),
+                ),
                 const SizedBox(height: 24),
               ],
             ),
@@ -448,6 +472,7 @@ class _BookingBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final section = CustomerSectionCatalog.sectionForVenue(venue);
     final cta = CustomerSectionCatalog.bookingCtaLabel(section);
+    final l10n = AppLocalizations.of(context);
 
     if (section == CustomerSection.institutesClasses) {
       return SafeArea(
@@ -460,11 +485,15 @@ class _BookingBar extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Calling ${venue.name}...')),
+                      SnackBar(
+                        content: Text(
+                          l10n.callingVenue.replaceFirst('{name}', venue.name),
+                        ),
+                      ),
                     );
                   },
                   icon: const Icon(Icons.call_rounded),
-                  label: const Text('Call'),
+                  label: Text(l10n.call),
                 ),
               ),
               const SizedBox(width: 8),
@@ -473,12 +502,15 @@ class _BookingBar extends StatelessWidget {
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Opening WhatsApp for ${venue.name}...'),
+                        content: Text(
+                          l10n.openingWhatsApp
+                              .replaceFirst('{name}', venue.name),
+                        ),
                       ),
                     );
                   },
                   icon: const Icon(Icons.chat_rounded),
-                  label: const Text('WhatsApp'),
+                  label: Text(l10n.whatsapp),
                 ),
               ),
             ],

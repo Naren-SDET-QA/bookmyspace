@@ -1,5 +1,7 @@
 import 'package:bookmyspace/core/localization/app_localizations.dart';
 import 'package:bookmyspace/features/booking/domain/booking.dart';
+import 'package:bookmyspace/features/notifications/domain/notification.dart';
+import 'package:bookmyspace/features/notifications/presentation/notification_providers.dart';
 import 'package:bookmyspace/features/payments/domain/checkout_service.dart';
 import 'package:bookmyspace/features/payments/presentation/payment_providers.dart';
 import 'package:bookmyspace/features/payments/presentation/screens/payment_screen.dart';
@@ -8,6 +10,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../notifications/mock_notification_repository.dart';
 import 'mock_payment_repository.dart';
 
 final _booking = Booking(
@@ -26,11 +29,18 @@ final _booking = Booking(
   slotLabel: 'Morning',
 );
 
-Widget _app(MockPaymentRepository paymentRepo, FakeCheckoutService checkout) {
+Widget _app(
+  MockPaymentRepository paymentRepo,
+  FakeCheckoutService checkout, {
+  MockNotificationRepository? notificationRepo,
+}) {
   return ProviderScope(
     overrides: [
       paymentRepositoryProvider.overrideWithValue(paymentRepo),
       checkoutServiceProvider.overrideWithValue(checkout),
+      notificationRepositoryProvider.overrideWithValue(
+        notificationRepo ?? MockNotificationRepository(),
+      ),
     ],
     child: MaterialApp(
       home: PaymentScreen(booking: _booking),
@@ -84,8 +94,13 @@ void main() {
 
   testWidgets('a successful checkout verifies and confirms', (tester) async {
     final paymentRepo = MockPaymentRepository();
+    final notificationRepo = MockNotificationRepository();
     await tester.pumpWidget(
-      _app(paymentRepo, FakeCheckoutService(CheckoutResult.paid)),
+      _app(
+        paymentRepo,
+        FakeCheckoutService(CheckoutResult.paid),
+        notificationRepo: notificationRepo,
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -94,6 +109,14 @@ void main() {
 
     expect(find.text('Payment successful'), findsOneWidget);
     expect(paymentRepo.statusCalls, greaterThan(0));
+
+    // The confirmed booking records an in-app notification.
+    await tester.pump();
+    expect(notificationRepo.created, hasLength(1));
+    expect(
+      notificationRepo.created.single.type,
+      NotificationType.bookingConfirmed,
+    );
   });
 
   testWidgets('a cancelled checkout returns to the pay screen', (tester) async {

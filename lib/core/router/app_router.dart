@@ -8,6 +8,7 @@ import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/profile_screen.dart';
 import '../../features/booking/domain/booking.dart';
 import '../../features/booking/presentation/screens/booking_screen.dart';
+import '../../features/booking/presentation/screens/invoice_screen.dart';
 import '../../features/booking/presentation/screens/my_bookings_screen.dart';
 import '../../features/courses/presentation/screens/course_detail_screen.dart';
 import '../../features/courses/presentation/screens/courses_list_screen.dart';
@@ -18,12 +19,15 @@ import '../../features/notifications/presentation/screens/notifications_screen.d
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/owner/presentation/screens/owner_dashboard_screen.dart';
 import '../../features/owner/presentation/screens/owner_registration_screen.dart';
-import '../../features/owner_venues/presentation/screens/owner_venues_screen.dart';
+import '../../features/owner_bookings/presentation/screens/create_offline_booking_screen.dart';
+import '../../features/owner_bookings/presentation/screens/owner_bookings_screen.dart';
 import '../../features/owner_venues/presentation/screens/create_venue_screen.dart';
+import '../../features/owner_venues/presentation/screens/owner_venues_screen.dart';
 import '../../features/legal/presentation/screens/privacy_policy_screen.dart';
 import '../../features/legal/presentation/screens/terms_of_service_screen.dart';
 import '../../features/payments/presentation/screens/payment_screen.dart';
 import '../../features/saved/presentation/screens/saved_screen.dart';
+import '../../features/search/presentation/screens/map_screen.dart';
 import '../../features/search/presentation/screens/search_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/support/presentation/screens/support_screen.dart';
@@ -37,6 +41,7 @@ abstract class AppRoutes {
   static const shell = '/home';
   static const home = '/home';
   static const search = '/search';
+  static const map = '/map';
   static const bookings = '/bookings';
   static const saved = '/saved';
   static const profile = '/profile';
@@ -58,6 +63,9 @@ abstract class AppRoutes {
   static const ownerVenues = '/owner/venues';
   static const ownerVenueCreate = '/owner/venues/create';
   static const ownerVenueEdit = '/owner/venues/:id/edit';
+  static const ownerBookings = '/owner/bookings';
+  static const ownerBookingCreate = '/owner/bookings/create';
+  static const bookingInvoice = '/bookings/:id/invoice';
 
   static String ownerVenueEditPath(String id) => '/owner/venues/$id/edit';
   static const privacyPolicy = '/privacy';
@@ -104,6 +112,11 @@ GoRouter createAppRouter({
         path: AppRoutes.settings,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.map,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const SearchMapScreen(),
       ),
       GoRoute(
         path: AppRoutes.venueDetails,
@@ -198,6 +211,16 @@ GoRouter createAppRouter({
         ),
       ),
       GoRoute(
+        path: AppRoutes.ownerBookings,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const OwnerBookingsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.ownerBookingCreate,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const CreateOfflineBookingScreen(),
+      ),
+      GoRoute(
         path: AppRoutes.privacyPolicy,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const PrivacyPolicyScreen(),
@@ -206,6 +229,17 @@ GoRouter createAppRouter({
         path: AppRoutes.termsOfService,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const TermsOfServiceScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.bookingInvoice,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) {
+          final extra = state.extra;
+          return InvoiceScreen(
+            bookingId: state.pathParameters['id'] ?? '',
+            initial: extra is Booking ? extra : null,
+          );
+        },
       ),
       GoRoute(
         path: AppRoutes.paymentFlow,

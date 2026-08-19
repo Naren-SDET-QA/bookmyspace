@@ -38,6 +38,11 @@ class OwnerDashboardScreen extends ConsumerWidget {
                   _OwnerCard(owner: ownerData),
                   const SizedBox(height: 24),
                   _QuickAction(
+                    icon: Icons.receipt_long_rounded,
+                    label: l10n.ownerBookings,
+                    onTap: () => context.push(AppRoutes.ownerBookings),
+                  ),
+                  _QuickAction(
                     icon: Icons.storefront_rounded,
                     label: l10n.myVenues,
                     onTap: () => context.push(AppRoutes.ownerVenues),

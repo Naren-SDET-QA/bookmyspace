@@ -18,7 +18,15 @@ enum NotificationType {
     _ => NotificationType.system,
   };
 
-  String get dbValue => name;
+  String get dbValue => switch (this) {
+    NotificationType.bookingConfirmed => 'booking_confirmed',
+    NotificationType.bookingCancelled => 'booking_cancelled',
+    NotificationType.paymentReceived => 'payment_received',
+    NotificationType.refundProcessed => 'refund_processed',
+    NotificationType.system => 'system',
+    NotificationType.supportReply => 'support_reply',
+    NotificationType.admin => 'admin',
+  };
 }
 
 class Notification {

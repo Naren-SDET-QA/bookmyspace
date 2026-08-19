@@ -161,6 +161,52 @@ class SupabaseVenueRepository implements VenueRepository {
             )
             .toList();
       }
+      // Section-specific fields (guests, rating, room type, gender,
+      // sharing, food, deposit, class type, mode) are evaluated client-side
+      // against the same keyword haystack used by the catalog, so no schema
+      // change is required.
+      venues = venues
+          .where((v) => CustomerSectionCatalog.matchesFilters(v, query))
+          .toList();
+
+      // Attach distance from the PostGIS RPC when the query is geolocated,
+      // and honour the distance sort without touching the schema.
+      if (query.hasLocation && venues.isNotEmpty) {
+        try {
+          final nearby = await _client.rpc<List<dynamic>>(
+            'nearby_venues',
+            params: {
+              'p_lat': query.latitude!,
+              'p_lng': query.longitude!,
+              'radius_km': query.maxDistanceKm ?? 50,
+              'max_rows': 200,
+            },
+          );
+          final distanceById = <String, double>{
+            for (final row in nearby.whereType<Map<String, dynamic>>())
+              if (row['id'] is String)
+                row['id'] as String:
+                    (row['distance_km'] as num?)?.toDouble() ?? 0,
+          };
+          venues = [
+            for (final v in venues)
+              v.copyWith(distanceKm: distanceById[v.id]),
+          ];
+        } catch (e) {
+          // Distance is an enhancement; a failing RPC must not break search.
+          ErrorLogger.logMessage(
+            'Distance lookup skipped: $e',
+            context: 'SupabaseVenueRepository.search.distance',
+          );
+        }
+      }
+      if (query.sortBy == VenueSortBy.distance) {
+        venues.sort((a, b) {
+          final da = a.distanceKm ?? double.maxFinite;
+          final db = b.distanceKm ?? double.maxFinite;
+          return da.compareTo(db);
+        });
+      }
       return venues;
     } catch (e) {
       throw mapError(e);

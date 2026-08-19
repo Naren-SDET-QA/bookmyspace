@@ -1,10 +1,15 @@
 import 'package:bookmyspace/core/localization/app_localizations.dart';
 import 'package:bookmyspace/core/router/app_router.dart';
 import 'package:bookmyspace/features/auth/domain/auth_user.dart';
+import 'package:bookmyspace/features/auth/presentation/auth_providers.dart';
+import 'package:bookmyspace/features/venues/presentation/venue_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../features/auth/mock_auth_repository.dart';
+import '../features/venues/mock_venue_repository.dart';
 
 Future<String> _redirectTo(
   WidgetTester tester, {
@@ -19,6 +24,16 @@ Future<String> _redirectTo(
   );
   await tester.pumpWidget(
     ProviderScope(
+      // HomeScreen (reached after the authenticated redirect) depends on
+      // these repositories; provide in-memory fakes instead of Supabase.
+      overrides: [
+        authRepositoryProvider.overrideWithValue(
+          MockAuthRepository(
+            initialUser: const AuthUser(id: 'u1', email: 'a@b.com'),
+          ),
+        ),
+        venueRepositoryProvider.overrideWithValue(MockVenueRepository()),
+      ],
       child: MaterialApp.router(
         routerConfig: router,
         localizationsDelegates: const [

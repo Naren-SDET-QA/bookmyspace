@@ -7,9 +7,9 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/validators/app_validators.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/error_view.dart';
-import '../../../../core/validators/app_validators.dart';
 import '../../../auth/presentation/auth_providers.dart';
 import '../../../home/domain/customer_section_catalog.dart';
 import '../../../venues/domain/venue.dart';
@@ -57,19 +57,19 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
   Widget build(BuildContext context) {
     final date = _selectedDate;
     final section = CustomerSectionCatalog.sectionForVenue(widget.venue);
+    final l10n = AppLocalizations.of(context);
 
     if (section == CustomerSection.institutesClasses) {
       return Scaffold(
         appBar: AppBar(
           title: Text(CustomerSectionCatalog.bookingScreenTitle(section)),
         ),
-        body: const Padding(
-          padding: EdgeInsets.all(24),
+        body: Padding(
+          padding: const EdgeInsets.all(24),
           child: EmptyState(
             icon: Icons.school_outlined,
-            title: 'Listing only',
-            message:
-                'Institutes and classes are advertising listings. Use Call or WhatsApp from the details page.',
+            title: l10n.listingOnly,
+            message: l10n.listingOnlyMessage,
           ),
         ),
       );
@@ -241,9 +241,13 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
         amount: amount,
         taxAmount: tax,
         totalAmount: total,
+        metadata: _bookingMetadata(date, section),
       );
       ref.invalidate(myBookingsProvider);
       if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.slotHeld)),
+      );
       // Enter the payment flow with the freshly created pending booking.
       unawaited(context.push('/bookings/${booking.id}/pay', extra: booking));
     } catch (e) {
@@ -254,6 +258,25 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
     } finally {
       if (mounted) setState(() => _confirming = false);
     }
+  }
+
+  /// Section-specific extras (guests, check-out, sharing) recorded on the
+  /// booking's `metadata` jsonb column for the invoice and owner records.
+  Map<String, dynamic> _bookingMetadata(DateTime date, CustomerSection? section) {
+    return {
+      'full_name': _details.fullName,
+      'phone': _details.phone,
+      if (section == CustomerSection.functionHalls) 'guests': _guestCount,
+      if (section == CustomerSection.lodgeRooms)
+        'checkout_date':
+            '${(_checkOutDate ?? date.add(const Duration(days: 1))).year.toString().padLeft(4, '0')}-'
+                '${(_checkOutDate ?? date.add(const Duration(days: 1))).month.toString().padLeft(2, '0')}-'
+                '${(_checkOutDate ?? date.add(const Duration(days: 1))).day.toString().padLeft(2, '0')}',
+      if (section == CustomerSection.pgHostels) ...{
+        'sharing': _sharingIndex,
+        'deposit': widget.venue.pricingBaseAmount,
+      },
+    };
   }
 }
 
@@ -489,6 +512,7 @@ class _SlotTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final enabled = slot.isAvailable;
 
     return Material(
@@ -530,7 +554,7 @@ class _SlotTile extends StatelessWidget {
               ),
               if (!enabled)
                 Text(
-                  _reasonLabel(slot.reason),
+                  _reasonLabel(slot.reason, l10n),
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: theme.colorScheme.outline,
                     fontWeight: FontWeight.w600,
@@ -571,14 +595,14 @@ class _SlotTile extends StatelessWidget {
     );
   }
 
-  String _reasonLabel(String reason) {
+  String _reasonLabel(String reason, AppLocalizations l10n) {
     return switch (reason) {
-      'booked' => 'Booked',
-      'held' => 'Unavailable',
-      'blocked' => 'Blocked',
-      'closed' => 'Closed',
-      'inactive' => 'Closed',
-      _ => 'Unavailable',
+      'booked' => l10n.slotBooked,
+      'held' => l10n.slotUnavailable,
+      'blocked' => l10n.slotBlocked,
+      'closed' => l10n.slotClosed,
+      'inactive' => l10n.slotClosed,
+      _ => l10n.slotUnavailable,
     };
   }
 }
@@ -715,12 +739,13 @@ class _SectionBookingFields extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     if (section == null || section == CustomerSection.functionHalls) {
       return Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
         child: Row(
           children: [
-            const Text('Guests'),
+            Text(l10n.guestCount),
             const Spacer(),
             IconButton(
               onPressed: guestCount > 10
@@ -745,7 +770,7 @@ class _SectionBookingFields extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                'Check-in ${DateFormat.MMMd().format(checkIn)}',
+                '${l10n.checkIn} ${DateFormat.MMMd().format(checkIn)}',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ),
@@ -759,7 +784,9 @@ class _SectionBookingFields extends StatelessWidget {
                 );
                 if (picked != null) onCheckOutChanged(picked);
               },
-              child: Text('Check-out ${DateFormat.MMMd().format(checkOut)}'),
+              child: Text(
+                '${l10n.checkOut} ${DateFormat.MMMd().format(checkOut)}',
+              ),
             ),
           ],
         ),
@@ -775,19 +802,21 @@ class _SectionBookingFields extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Move-in ${DateFormat.yMMMd().format(checkIn)} · Sharing option ${sharingIndex + 1}',
+              '${l10n.moveIn} ${DateFormat.yMMMd().format(checkIn)} · '
+              '${l10n.sharingOption} ${sharingIndex + 1}',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 4),
             Text(
-              'Rent ${formatInr(venue.pricingBaseAmount)} + deposit ${formatInr(deposit)} = ${formatInr(totalMoveIn)}',
+              '${l10n.rent} ${formatInr(venue.pricingBaseAmount)} + '
+              '${l10n.deposit} ${formatInr(deposit)} = ${formatInr(totalMoveIn)}',
               style: Theme.of(context).textTheme.bodySmall,
             ),
             Align(
               alignment: Alignment.centerLeft,
               child: TextButton(
                 onPressed: () => onSharingChanged((sharingIndex + 1) % 3),
-                child: const Text('Change sharing'),
+                child: Text(l10n.changeSharing),
               ),
             ),
           ],

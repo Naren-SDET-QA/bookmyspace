@@ -296,6 +296,12 @@ class Venue {
 }
 
 /// A search query describing the filters applied to venue listings.
+///
+/// Fields marked "section-specific" are driven by the active customer
+/// section (see [SectionFilterSpec] in `customer_section_catalog.dart`):
+/// halls carry date/guests, stays carry check-in/out/room type/rating,
+/// PG carries gender/sharing/food/deposit and institutes carry
+/// class type/mode. Unused fields are simply `null`.
 class VenueSearchQuery {
   const VenueSearchQuery({
     this.query = '',
@@ -308,6 +314,19 @@ class VenueSearchQuery {
     this.latitude,
     this.longitude,
     this.maxDistanceKm,
+    this.minCapacity,
+    this.date,
+    this.checkIn,
+    this.checkOut,
+    this.roomType,
+    this.minRating,
+    this.gender,
+    this.sharing,
+    this.foodIncluded,
+    this.maxDeposit,
+    this.classType,
+    this.mode,
+    this.amenities = const {},
   });
 
   final String query;
@@ -321,13 +340,77 @@ class VenueSearchQuery {
   final double? longitude;
   final double? maxDistanceKm;
 
+  // -- Section-specific filters (Phase 5) ------------------------------
+
+  /// Halls: minimum guest capacity.
+  final int? minCapacity;
+
+  /// Halls: event date (booking context; availability is validated at
+  /// booking time, so this never excludes listings by itself).
+  final DateTime? date;
+
+  /// Stays: check-in date (booking context, not a listing filter).
+  final DateTime? checkIn;
+
+  /// Stays: check-out date (booking context, not a listing filter).
+  final DateTime? checkOut;
+
+  /// Stays: room type keyword (single / double / family / deluxe...).
+  final String? roomType;
+
+  /// Stays: minimum average rating (1.0 - 5.0).
+  final double? minRating;
+
+  /// PG: gender preference (`gents` / `ladies`).
+  final String? gender;
+
+  /// PG: sharing preference (`single` / `double` / `triple`).
+  final String? sharing;
+
+  /// PG: food included (true = venue must offer food/mess).
+  final bool? foodIncluded;
+
+  /// PG: maximum security deposit. When set, the venue must disclose a
+  /// deposit in its facilities.
+  final double? maxDeposit;
+
+  /// Institutes: class type keyword (coaching / computer / dance / music /
+  /// sports). Also reflected in the category chips.
+  final String? classType;
+
+  /// Institutes: delivery mode keyword (`online` / `offline` / `hybrid`).
+  final String? mode;
+
+  /// Amenity ids selected in the filter sheet (parking, ac, catering,
+  /// generator...). Evaluated against the facility keyword haystack.
+  final Set<String> amenities;
+
   bool get hasFilters =>
       query.isNotEmpty ||
       categorySlug != null ||
       sectionId != null ||
       city != null ||
       minPrice != null ||
-      maxPrice != null;
+      maxPrice != null ||
+      latitude != null ||
+      longitude != null ||
+      maxDistanceKm != null ||
+      minCapacity != null ||
+      date != null ||
+      checkIn != null ||
+      checkOut != null ||
+      roomType != null ||
+      minRating != null ||
+      gender != null ||
+      sharing != null ||
+      foodIncluded != null ||
+      maxDeposit != null ||
+      classType != null ||
+      mode != null ||
+      amenities.isNotEmpty;
+
+  /// True when a location (lat/lng + radius) is part of the query.
+  bool get hasLocation => latitude != null && longitude != null;
 
   VenueSearchQuery copyWith({
     String? query,
@@ -340,6 +423,19 @@ class VenueSearchQuery {
     double? Function()? latitude,
     double? Function()? longitude,
     double? Function()? maxDistanceKm,
+    int? Function()? minCapacity,
+    DateTime? Function()? date,
+    DateTime? Function()? checkIn,
+    DateTime? Function()? checkOut,
+    String? Function()? roomType,
+    double? Function()? minRating,
+    String? Function()? gender,
+    String? Function()? sharing,
+    bool? Function()? foodIncluded,
+    double? Function()? maxDeposit,
+    String? Function()? classType,
+    String? Function()? mode,
+    Set<String>? amenities,
   }) {
     return VenueSearchQuery(
       query: query ?? this.query,
@@ -354,6 +450,19 @@ class VenueSearchQuery {
       maxDistanceKm: maxDistanceKm != null
           ? maxDistanceKm()
           : this.maxDistanceKm,
+      minCapacity: minCapacity != null ? minCapacity() : this.minCapacity,
+      date: date != null ? date() : this.date,
+      checkIn: checkIn != null ? checkIn() : this.checkIn,
+      checkOut: checkOut != null ? checkOut() : this.checkOut,
+      roomType: roomType != null ? roomType() : this.roomType,
+      minRating: minRating != null ? minRating() : this.minRating,
+      gender: gender != null ? gender() : this.gender,
+      sharing: sharing != null ? sharing() : this.sharing,
+      foodIncluded: foodIncluded != null ? foodIncluded() : this.foodIncluded,
+      maxDeposit: maxDeposit != null ? maxDeposit() : this.maxDeposit,
+      classType: classType != null ? classType() : this.classType,
+      mode: mode != null ? mode() : this.mode,
+      amenities: amenities ?? this.amenities,
     );
   }
 }

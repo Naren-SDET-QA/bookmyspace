@@ -10,6 +10,8 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../booking/domain/booking.dart';
 import '../../../booking/presentation/booking_providers.dart';
+import '../../../notifications/domain/notification.dart';
+import '../../../notifications/presentation/notification_providers.dart';
 import '../../../venues/presentation/widgets/venue_badges.dart';
 import '../../domain/checkout_service.dart';
 import '../payment_providers.dart';
@@ -108,6 +110,9 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
             _phase = _PaymentPhase.done;
             _confirmed = status == BookingStatus.confirmed;
           });
+          if (status == BookingStatus.confirmed) {
+            unawaited(_recordConfirmedNotification());
+          }
         } else if (attempts > 10) {
           // The webhook may be delayed; hand control back to the user.
           timer.cancel();
@@ -120,6 +125,23 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         // Ignore transient polling errors; keep trying.
       }
     });
+  }
+
+  /// In-app notification when the webhook confirms the booking.
+  Future<void> _recordConfirmedNotification() async {
+    final l10n = AppLocalizations.of(context);
+    try {
+      await ref.read(notificationRepositoryProvider).create(
+        type: NotificationType.bookingConfirmed,
+        title: l10n.statusConfirmed,
+        body:
+            '${widget.booking.venueName} · ${DateFormat.yMMMd().format(widget.booking.bookDate)}',
+        data: {'booking_id': widget.booking.id},
+      );
+      ref.invalidate(unreadNotificationsCountProvider);
+    } catch (_) {
+      // Best-effort; never block the payment flow.
+    }
   }
 
   @override

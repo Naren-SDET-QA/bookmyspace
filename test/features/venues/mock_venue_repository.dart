@@ -201,11 +201,13 @@ class MockVenueRepository implements VenueRepository {
           query.minPrice == null || v.pricingBaseAmount >= query.minPrice!;
       final matchesMax =
           query.maxPrice == null || v.pricingBaseAmount <= query.maxPrice!;
+      final matchesFilters = CustomerSectionCatalog.matchesFilters(v, query);
       return matchesQuery &&
           matchesCategory &&
           matchesSection &&
           matchesMin &&
-          matchesMax;
+          matchesMax &&
+          matchesFilters;
     }).toList();
 
     switch (query.sortBy) {
@@ -220,6 +222,9 @@ class MockVenueRepository implements VenueRepository {
       case VenueSortBy.rating:
         results.sort((a, b) => b.avgRating.compareTo(a.avgRating));
       case VenueSortBy.distance:
+        results.sort(
+          (a, b) => (a.distanceKm ?? 0).compareTo(b.distanceKm ?? 0),
+        );
       case VenueSortBy.relevance:
         results.sort((a, b) => b.ratingCount.compareTo(a.ratingCount));
     }

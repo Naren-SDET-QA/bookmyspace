@@ -23,7 +23,8 @@ class SupabaseBookingRepository implements BookingRepository {
   static const String _slotSelect = '''
     *,
     venues (id, name, city),
-    time_slots (id, label)
+    time_slots (id, label),
+    payments (method, provider_payment_id, status, created_at)
   ''';
 
   @override
@@ -100,6 +101,7 @@ class SupabaseBookingRepository implements BookingRepository {
     required double amount,
     required double taxAmount,
     required double totalAmount,
+    Map<String, dynamic> metadata = const {},
   }) async {
     try {
       final user = _client.auth.currentUser;
@@ -132,6 +134,7 @@ class SupabaseBookingRepository implements BookingRepository {
             'tax_amount': taxAmount,
             'total_amount': totalAmount,
             'currency': 'INR',
+            if (metadata.isNotEmpty) 'metadata': metadata,
           })
           .select(_slotSelect)
           .single();
@@ -145,6 +148,27 @@ class SupabaseBookingRepository implements BookingRepository {
         );
       }
       throw app_errors.mapError(e);
+    } catch (e) {
+      throw app_errors.mapError(e);
+    }
+  }
+
+  @override
+  Future<Booking> bookingById(String bookingId) async {
+    try {
+      final user = _client.auth.currentUser;
+      if (user == null) {
+        throw const app_errors.AuthException('You must be signed in to book.');
+      }
+      final row = await _client
+          .from('bookings')
+          .select(_slotSelect)
+          .eq('id', bookingId)
+          .maybeSingle();
+      if (row == null) {
+        throw const app_errors.NotFoundException('Booking not found.');
+      }
+      return Booking.fromJson(row);
     } catch (e) {
       throw app_errors.mapError(e);
     }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -12,6 +13,9 @@ import '../../../../core/widgets/skeleton.dart';
 import '../../../auth/presentation/auth_providers.dart';
 import '../../../booking/domain/booking.dart';
 import '../../../booking/presentation/booking_providers.dart';
+import '../../../location/presentation/location_providers.dart';
+import '../../../location/presentation/widgets/location_bar.dart';
+import '../../../location/presentation/widgets/location_picker_sheet.dart';
 import '../../../venues/domain/venue.dart';
 import '../../../venues/presentation/venue_providers.dart';
 import '../../../venues/presentation/widgets/venue_badges.dart';
@@ -132,8 +136,6 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  String _currentLocation = 'Hyderabad (Madhapur)';
-  String _searchRadius = 'Within 10 km';
   final Set<String> _selectedAmenities = {};
 
   @override
@@ -156,6 +158,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final popularVenuesAsync = ref.watch(popularVenuesProvider);
     final selectedCatalog = ref.watch(selectedCustomerSectionProvider);
     final selectedCategorySlug = ref.watch(selectedCustomerCategoryProvider);
+    final area = ref.watch(searchAreaProvider);
     final selectedSection = selectedCatalog == null
         ? null
         : MainHomeSection.values.firstWhere(
@@ -258,9 +261,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           horizontal: responsive.horizontalPadding,
                           vertical: 24,
                         ),
-                        child: _LocationFooterCard(
-                          currentLocation: _currentLocation,
-                          searchRadius: _searchRadius,
+                        child: LocationFooterCard(
+                          area: area,
                           onTap: _showLocationPickerModal,
                         ),
                       ),
@@ -347,10 +349,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             const SizedBox(height: 12),
 
                             // Location selector
-                            _LocationSelectorBar(
-                              location: _currentLocation,
-                              radius: _searchRadius,
+                            LocationBar(
+                              area: area,
                               onTap: _showLocationPickerModal,
+                            ),
+                            const SizedBox(height: 8),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: TextButton.icon(
+                                onPressed: () => _showHelpDialog(context),
+                                icon: const Icon(Icons.help_outline_rounded, size: 16),
+                                label: Text(
+                                  'Help · How ${selectedSection.title} booking works',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -464,7 +477,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     const SizedBox(width: 10),
                                     Expanded(
                                       child: Text(
-                                        'Search ${selectedSection.title} in $_currentLocation...',
+                                        'Search ${selectedSection.title} in ${area.label}...',
                                         style: TextStyle(
                                           color: theme.colorScheme.onSurfaceVariant,
                                           fontSize: 13.5,
@@ -512,15 +525,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   );
                                   return;
                                 }
-                                final match = popularVenuesAsync.value
-                                    ?.where(
-                                      (v) => CustomerSectionCatalog.matchesVenue(
-                                        v,
-                                        section,
-                                        selectedCategorySlug,
-                                      ),
-                                    )
-                                    .firstOrNull;
+                                final match = _scopedVenues(
+                                  popularVenuesAsync.value ?? const [],
+                                ).firstOrNull;
                                 if (match == null) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
@@ -580,12 +587,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               child: ListView.separated(
                                 scrollDirection: Axis.horizontal,
                                 itemCount: _amenitiesFor(
-                                  selectedSection?.catalog,
+                                  selectedSection.catalog,
                                 ).length,
                                 separatorBuilder: (_, __) => const SizedBox(width: 8),
                                 itemBuilder: (context, index) {
                                   final amenity = _amenitiesFor(
-                                    selectedSection?.catalog,
+                                    selectedSection.catalog,
                                   )[index];
                                   final isSelected = _selectedAmenities.contains(amenity.id);
                                   return FilterChip(
@@ -625,19 +632,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     // 4. Venues List / Grid in Responsive Layout
                     popularVenuesAsync.when(
                       data: (venues) {
-                        final scoped = venues.where((v) {
-                          final section = selectedSection?.catalog;
-                          if (section == null) return false;
-                          return CustomerSectionCatalog.matchesVenue(
-                                v,
-                                section,
-                                selectedCategorySlug,
-                              ) &&
-                              CustomerSectionCatalog.matchesAmenities(
-                                v,
-                                _selectedAmenities,
-                              );
-                        }).toList();
+                        final scoped = _scopedVenues(venues);
                         if (scoped.isEmpty) {
                           return const SliverToBoxAdapter(
                             child: Padding(
@@ -667,12 +662,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               (context, index) {
                                 final venue = scoped[index];
                                 final bookable =
-                                    selectedSection?.catalog.isBookable ??
-                                    false;
+                                    selectedSection.catalog.isBookable;
                                 return _SectionVenueCard(
                                   venue: venue,
                                   bookLabel: CustomerSectionCatalog.bookingCtaLabel(
-                                    selectedSection?.catalog,
+                                    selectedSection.catalog,
                                   ),
                                   onTap: () => context.push(
                                     AppRoutes.venueDetails.replaceAll(':id', venue.id),
@@ -732,90 +726,99 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  void _showLocationPickerModal() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        final cities = [
-          'Hyderabad (Madhapur / Hitec City)',
-          'Hyderabad (Gachibowli)',
-          'Hyderabad (Kukatpally)',
-          'Hyderabad (Secunderabad)',
-          'Bengaluru (Koramangala)',
-          'Bengaluru (Whitefield)',
-          'Mumbai (Andheri)',
-          'Delhi NCR (Cyber Hub)',
-        ];
-        final radii = ['Within 5 km', 'Within 10 km', 'Within 25 km', 'Entire City'];
+  /// Venues matching the active section, category, amenities and the
+  /// selected search area (distance within radius, when coordinates exist).
+  List<Venue> _scopedVenues(List<Venue> venues) {
+    final catalog = ref.read(selectedCustomerSectionProvider);
+    if (catalog == null) return const [];
+    final categorySlug = ref.read(selectedCustomerCategoryProvider);
+    final area = ref.read(searchAreaProvider);
+    final point = LatLng(area.latitude, area.longitude);
+    const distance = Distance();
+    return venues
+        .where(
+          (v) =>
+              CustomerSectionCatalog.matchesVenue(v, catalog, categorySlug) &&
+              CustomerSectionCatalog.matchesAmenities(v, _selectedAmenities),
+        )
+        .map(
+          (v) {
+            final d = distance(point, LatLng(v.latitude, v.longitude));
+            return v.copyWith(distanceKm: d / 1000);
+          },
+        )
+        .where((v) => (v.distanceKm ?? 0) <= area.radiusKm)
+        .toList();
+  }
 
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Select Location & Search Area',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                const Text('Search Radius:', style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  children: radii.map((r) {
-                    final isSelected = _searchRadius == r;
-                    return ChoiceChip(
-                      selected: isSelected,
-                      label: Text(r),
-                      onSelected: (selected) {
-                        if (selected) {
-                          setState(() => _searchRadius = r);
-                          Navigator.pop(context);
-                        }
-                      },
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 16),
-                const Text('Popular Areas:', style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                ...cities.map((city) {
-                  final isSelected = _currentLocation.contains(city.split(' ')[0]);
-                  return ListTile(
-                    leading: const Icon(Icons.location_on_outlined),
-                    title: Text(city),
-                    trailing: isSelected ? const Icon(Icons.check_circle, color: AppTheme.brand) : null,
-                    onTap: () {
-                      setState(() => _currentLocation = city);
-                      Navigator.pop(context);
-                    },
-                  );
-                }),
-              ],
-            ),
+  Future<void> _showLocationPickerModal() async {
+    final area = await LocationPickerSheet.show(
+      context,
+      initial: ref.read(searchAreaProvider),
+    );
+    if (area == null || !mounted) return;
+    ref.read(searchAreaProvider.notifier).state = area;
+  }
+
+  void _showHelpDialog(BuildContext context) {
+    final section = ref.read(selectedCustomerSectionProvider);
+    final title = section?.title ?? 'BookMySpace';
+    final steps = switch (section) {
+      CustomerSection.functionHalls => [
+        '1. Pick your event date and guest count in the filters.',
+        '2. Compare halls by price, parking, catering, AC and generator.',
+        '3. Select a time slot, pay a small advance and confirm instantly.',
+        '4. Owner contact unlocks automatically after your confirmed payment.',
+      ],
+      CustomerSection.lodgeRooms => [
+        '1. Choose check-in / check-out dates and your room type.',
+        '2. Compare stays by rating and price per night.',
+        '3. Book your stay and pay the advance to confirm.',
+        '4. Owner contact unlocks automatically after your confirmed payment.',
+      ],
+      CustomerSection.pgHostels => [
+        '1. Filter by gender, sharing and food preference.',
+        '2. Compare rent per month and security deposit.',
+        '3. Reserve your bed with a small advance payment.',
+        '4. Owner contact unlocks automatically after your confirmed payment.',
+      ],
+      CustomerSection.institutesClasses => [
+        '1. Filter by class type (coaching, computer, dance, music, sports).',
+        '2. Check the mode (online / offline / hybrid) and course fee.',
+        '3. Institutes are listing-only — call or WhatsApp the academy directly.',
+      ],
+      _ => [
+        'Select a section, set your location and search radius, then filter by what matters to you.',
+      ],
+    };
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Help · $title'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final step in steps)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(step, style: const TextStyle(fontSize: 13.5)),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Got it'),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
   void _showVoiceBookingDialog(BuildContext context) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) {
         return AlertDialog(
@@ -858,8 +861,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             FilledButton(
               onPressed: () {
                 Navigator.pop(context);
+                final section = ref.read(selectedCustomerSectionProvider);
+                if (section == null) return;
+                context.push(
+                  AppRoutes.search,
+                  extra: {
+                    'section': section.id,
+                    'category': ref.read(selectedCustomerCategoryProvider) == 'all'
+                        ? null
+                        : ref.read(selectedCustomerCategoryProvider),
+                  },
+                );
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Processing voice request...')),
+                  const SnackBar(
+                    content: Text(
+                      'Voice search is section-scoped — search started for your selected section.',
+                    ),
+                  ),
                 );
               },
               child: const Text('Start Listening'),
@@ -1150,127 +1168,6 @@ class _MainSectionHeroCard extends StatelessWidget {
                     ),
                   ),
                 ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Location Footer Card at the bottom of the first screen
-class _LocationFooterCard extends StatelessWidget {
-  const _LocationFooterCard({
-    required this.currentLocation,
-    required this.searchRadius,
-    required this.onTap,
-  });
-
-  final String currentLocation;
-  final String searchRadius;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
-          ),
-        ),
-        child: Row(
-          children: [
-            const Text('📍', style: TextStyle(fontSize: 20)),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Current City: $currentLocation',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                  ),
-                  Text(
-                    'Tap to change search area ($searchRadius)',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.edit_location_alt_rounded,
-              color: theme.colorScheme.primary,
-              size: 20,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Location Selector Bar inside Section Drill-Down
-class _LocationSelectorBar extends StatelessWidget {
-  const _LocationSelectorBar({
-    required this.location,
-    required this.radius,
-    required this.onTap,
-  });
-
-  final String location;
-  final String radius;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.primaryContainer.withValues(alpha: 0.4),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: theme.colorScheme.primary.withValues(alpha: 0.2),
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.location_on, color: theme.colorScheme.primary, size: 18),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                '$location • $radius',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12.5,
-                  color: theme.colorScheme.primary,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            Text(
-              'Change',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-                color: theme.colorScheme.primary,
               ),
             ),
           ],

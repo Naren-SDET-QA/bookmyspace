@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/error_view.dart';
+import '../../../notifications/domain/notification.dart';
+import '../../../notifications/presentation/notification_providers.dart';
 import '../../../payments/presentation/payment_providers.dart';
 import '../../../venues/presentation/widgets/venue_badges.dart';
 import '../../domain/booking.dart';
 import '../booking_providers.dart';
+import '../widgets/booking_status_badge.dart';
 
 /// Lists the signed-in user's bookings with status and cancel action.
 class MyBookingsScreen extends ConsumerStatefulWidget {
@@ -23,6 +27,22 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
   Future<void> _refresh() async {
     ref.invalidate(myBookingsProvider);
     await ref.read(myBookingsProvider.future);
+  }
+
+  Future<void> _notify(
+    NotificationType type,
+    String title,
+    String body, {
+    Map<String, dynamic> data = const {},
+  }) async {
+    try {
+      await ref
+          .read(notificationRepositoryProvider)
+          .create(type: type, title: title, body: body, data: data);
+      ref.invalidate(unreadNotificationsCountProvider);
+    } catch (_) {
+      // Notification delivery is best-effort and must never block the action.
+    }
   }
 
   Future<void> _cancelBooking(Booking booking) async {
@@ -49,6 +69,12 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
     try {
       await ref.read(bookingRepositoryProvider).cancelBooking(booking.id);
       ref.invalidate(myBookingsProvider);
+      await _notify(
+        NotificationType.bookingCancelled,
+        l10n.cancelBooking,
+        '${booking.venueName} · ${DateFormat.yMMMd().format(booking.bookDate)}',
+        data: {'booking_id': booking.id},
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -87,6 +113,12 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(l10n.refundRequested)));
+      await _notify(
+        NotificationType.refundProcessed,
+        l10n.requestRefund,
+        '${booking.venueName} · ${formatInr(booking.totalAmount)}',
+        data: {'booking_id': booking.id},
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -127,6 +159,12 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                           list[i].status == BookingStatus.completed)
                       ? () => _showEntryPass(list[i])
                       : null,
+                  onInvoice: list[i].canViewInvoice
+                      ? () => context.push(
+                          '/bookings/${list[i].id}/invoice',
+                          extra: list[i],
+                        )
+                      : null,
                   onCancel: list[i].canCancel
                       ? () => _cancelBooking(list[i])
                       : null,
@@ -153,7 +191,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
             const Icon(Icons.qr_code_2_rounded, color: AppTheme.brand),
             const SizedBox(width: 8),
             Text(
-              'Digital Entry Pass',
+              l10n.digitalEntryPass,
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w700,
               ),
@@ -240,7 +278,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Show this QR pass at the venue entrance gate for instant check-in verification.',
+              l10n.entryPassHint,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -263,12 +301,14 @@ class _BookingCard extends StatelessWidget {
   const _BookingCard({
     required this.booking,
     this.onShowPass,
+    this.onInvoice,
     this.onCancel,
     this.onRefund,
   });
 
   final Booking booking;
   final VoidCallback? onShowPass;
+  final VoidCallback? onInvoice;
   final VoidCallback? onCancel;
   final VoidCallback? onRefund;
 
@@ -311,7 +351,7 @@ class _BookingCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                _StatusBadge(status: booking.status),
+                BookingStatusBadge(status: booking.status),
               ],
             ),
             const SizedBox(height: 12),
@@ -356,7 +396,18 @@ class _BookingCard extends StatelessWidget {
                 child: FilledButton.tonalIcon(
                   onPressed: onShowPass,
                   icon: const Icon(Icons.qr_code_2_rounded, size: 18),
-                  label: const Text('View Entry Pass / QR'),
+                  label: Text(l10n.viewEntryPass),
+                ),
+              ),
+            ],
+            if (onInvoice != null) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: onInvoice,
+                  icon: const Icon(Icons.receipt_long_rounded, size: 18),
+                  label: Text(l10n.viewInvoice),
                 ),
               ),
             ],
@@ -383,40 +434,6 @@ class _BookingCard extends StatelessWidget {
               ),
             ],
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.status});
-
-  final BookingStatus status;
-
-  @override
-  Widget build(BuildContext context) {
-    final (label, color) = switch (status) {
-      BookingStatus.held => ('Held', Colors.orange),
-      BookingStatus.pending => ('Pending', Colors.orange),
-      BookingStatus.confirmed => ('Confirmed', Colors.green),
-      BookingStatus.completed => ('Completed', Colors.blue),
-      BookingStatus.cancelled => ('Cancelled', Colors.grey),
-      BookingStatus.refunded => ('Refunded', Colors.teal),
-      BookingStatus.noShow => ('No show', Colors.red),
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
         ),
       ),
     );

@@ -43,10 +43,10 @@ class NotificationsScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(myNotificationsProvider),
         ),
         data: (items) => items.isEmpty
-            ? const EmptyState(
+            ? EmptyState(
                 icon: Icons.notifications_none_rounded,
-                title: 'No notifications',
-                message: 'You will see notifications here when they arrive.',
+                title: l10n.noNotifications,
+                message: l10n.noNotificationsMessage,
               )
             : ListView.builder(
                 padding: const EdgeInsets.all(16),
@@ -72,6 +72,7 @@ class _NotificationTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       color: notification.read
@@ -99,7 +100,7 @@ class _NotificationTile extends ConsumerWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                notification.read ? '' : 'Unread',
+                notification.read ? '' : l10n.unread,
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: AppTheme.brand,
                   fontWeight: FontWeight.w600,
