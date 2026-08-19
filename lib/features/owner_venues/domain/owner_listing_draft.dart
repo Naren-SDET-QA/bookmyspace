@@ -64,4 +64,16 @@ class OwnerListingDraft {
 
   static const maxPhotos = 6;
   static const storageBucket = 'venue-images';
+
+  void validate() {
+    if (!CustomerSectionCatalog.slugBelongsToSection(
+      section,
+      catalogCategoryId,
+    )) {
+      throw StateError('Listing category does not belong to its section.');
+    }
+    if (photos.length > maxPhotos) {
+      throw StateError('A listing can have at most $maxPhotos photos.');
+    }
+  }
 }

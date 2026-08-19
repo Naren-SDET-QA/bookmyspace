@@ -13,7 +13,9 @@ void main() {
   test('owner categories never include the customer All chip', () {
     for (final section in CustomerSection.values) {
       expect(
-        CustomerSectionCatalog.ownerCategories(section).any((c) => c.id == 'all'),
+        CustomerSectionCatalog.ownerCategories(
+          section,
+        ).any((c) => c.id == 'all'),
         isFalse,
       );
     }
@@ -180,86 +182,104 @@ void main() {
     expect(repo.venues.where((v) => v.id == created.id), isEmpty);
   });
 
-  test('lodge and pg map onto 0002 meeting_room without leaving their section', () {
-    const baseOnly = [
-      VenueCategory(id: 'fh', slug: 'function_hall', name: 'Function Hall'),
-      VenueCategory(id: 'mr', slug: 'meeting_room', name: 'Meeting Room'),
-      VenueCategory(id: 'sg', slug: 'sports_ground', name: 'Sports Ground'),
-    ];
-    final lodgeCat = CustomerSectionCatalog.resolveDbCategory(
-      dbCategories: baseOnly,
-      section: CustomerSection.lodgeRooms,
-      catalogCategoryId: 'hotel',
-    );
-    expect(lodgeCat.slug, 'meeting_room');
-    expect(CustomerSectionCatalog.fromAny(lodgeCat.slug), isNull);
+  test(
+    'lodge and pg map onto 0002 meeting_room without leaving their section',
+    () {
+      const baseOnly = [
+        VenueCategory(id: 'fh', slug: 'function_hall', name: 'Function Hall'),
+        VenueCategory(id: 'mr', slug: 'meeting_room', name: 'Meeting Room'),
+        VenueCategory(id: 'sg', slug: 'sports_ground', name: 'Sports Ground'),
+      ];
+      final lodgeCat = CustomerSectionCatalog.resolveDbCategory(
+        dbCategories: baseOnly,
+        section: CustomerSection.lodgeRooms,
+        catalogCategoryId: 'hotel',
+      );
+      expect(lodgeCat.slug, 'meeting_room');
+      expect(CustomerSectionCatalog.fromAny(lodgeCat.slug), isNull);
 
-    const lodge = Venue(
-      id: 'l1',
-      name: 'Crown Lodge',
-      latitude: 17.4,
-      longitude: 78.5,
-      category: VenueCategory(id: 'mr', slug: 'meeting_room', name: 'Meeting Room'),
-      facilities: [
-        VenueFacility(facility: 'Lodge'),
-        VenueFacility(facility: 'Lodge / Rooms'),
-      ],
-    );
-    expect(
-      CustomerSectionCatalog.sectionForVenue(lodge),
-      CustomerSection.lodgeRooms,
-    );
-    expect(
-      CustomerSectionCatalog.sectionForVenue(lodge),
-      isNot(CustomerSection.functionHalls),
-    );
+      const lodge = Venue(
+        id: 'l1',
+        name: 'Crown Lodge',
+        latitude: 17.4,
+        longitude: 78.5,
+        category: VenueCategory(
+          id: 'mr',
+          slug: 'meeting_room',
+          name: 'Meeting Room',
+        ),
+        facilities: [
+          VenueFacility(facility: 'Lodge'),
+          VenueFacility(facility: 'Lodge / Rooms'),
+        ],
+      );
+      expect(
+        CustomerSectionCatalog.sectionForVenue(lodge),
+        CustomerSection.lodgeRooms,
+      );
+      expect(
+        CustomerSectionCatalog.sectionForVenue(lodge),
+        isNot(CustomerSection.functionHalls),
+      );
 
-    final pgCat = CustomerSectionCatalog.resolveDbCategory(
-      dbCategories: baseOnly,
-      section: CustomerSection.pgHostels,
-      catalogCategoryId: 'ladies_pg',
-    );
-    expect(pgCat.slug, 'meeting_room');
-    const pg = Venue(
-      id: 'p1',
-      name: 'Starlight Ladies PG',
-      latitude: 17.4,
-      longitude: 78.5,
-      category: VenueCategory(id: 'mr', slug: 'meeting_room', name: 'Meeting Room'),
-      facilities: [
-        VenueFacility(facility: 'Ladies PG'),
-        VenueFacility(facility: 'PG / Hostels'),
-      ],
-    );
-    expect(CustomerSectionCatalog.sectionForVenue(pg), CustomerSection.pgHostels);
+      final pgCat = CustomerSectionCatalog.resolveDbCategory(
+        dbCategories: baseOnly,
+        section: CustomerSection.pgHostels,
+        catalogCategoryId: 'ladies_pg',
+      );
+      expect(pgCat.slug, 'meeting_room');
+      const pg = Venue(
+        id: 'p1',
+        name: 'Starlight Ladies PG',
+        latitude: 17.4,
+        longitude: 78.5,
+        category: VenueCategory(
+          id: 'mr',
+          slug: 'meeting_room',
+          name: 'Meeting Room',
+        ),
+        facilities: [
+          VenueFacility(facility: 'Ladies PG'),
+          VenueFacility(facility: 'PG / Hostels'),
+        ],
+      );
+      expect(
+        CustomerSectionCatalog.sectionForVenue(pg),
+        CustomerSection.pgHostels,
+      );
 
-    const boardroom = Venue(
-      id: 'b1',
-      name: 'The Boardroom',
-      description: 'Modern meeting rooms for teams.',
-      latitude: 17.4,
-      longitude: 78.5,
-      category: VenueCategory(id: 'mr', slug: 'meeting_room', name: 'Meeting Room'),
-    );
-    expect(CustomerSectionCatalog.sectionForVenue(boardroom), isNull);
+      const boardroom = Venue(
+        id: 'b1',
+        name: 'The Boardroom',
+        description: 'Modern meeting rooms for teams.',
+        latitude: 17.4,
+        longitude: 78.5,
+        category: VenueCategory(
+          id: 'mr',
+          slug: 'meeting_room',
+          name: 'Meeting Room',
+        ),
+      );
+      expect(CustomerSectionCatalog.sectionForVenue(boardroom), isNull);
 
-    const hall = Venue(
-      id: 'h1',
-      name: 'Royal Grand',
-      description: 'Hotel-style luxury wedding hall',
-      latitude: 17.4,
-      longitude: 78.5,
-      category: VenueCategory(
-        id: 'fh',
-        slug: 'function_hall',
-        name: 'Function Hall',
-      ),
-    );
-    expect(
-      CustomerSectionCatalog.sectionForVenue(hall),
-      CustomerSection.functionHalls,
-    );
-  });
+      const hall = Venue(
+        id: 'h1',
+        name: 'Royal Grand',
+        description: 'Hotel-style luxury wedding hall',
+        latitude: 17.4,
+        longitude: 78.5,
+        category: VenueCategory(
+          id: 'fh',
+          slug: 'function_hall',
+          name: 'Function Hall',
+        ),
+      );
+      expect(
+        CustomerSectionCatalog.sectionForVenue(hall),
+        CustomerSection.functionHalls,
+      );
+    },
+  );
 
   test('lodge and pg persistable slugs live in migration 0019', () {
     final sql = File(
@@ -301,6 +321,28 @@ void main() {
     expect(venue.images.single.isCover, isTrue);
   });
 
+  test('owner listing photo limit is six', () {
+    expect(OwnerListingDraft.maxPhotos, 6);
+    final draft = OwnerListingDraft(
+      name: 'Too many photos',
+      section: CustomerSection.functionHalls,
+      catalogCategoryId: 'marriage_hall',
+      categoryId: 'cat-mh',
+      description: 'Listing',
+      city: 'Hyderabad',
+      state: 'Telangana',
+      latitude: 17.4,
+      longitude: 78.5,
+      capacity: 100,
+      pricingBaseAmount: 10000,
+      photos: List.generate(
+        OwnerListingDraft.maxPhotos + 1,
+        (_) => const OwnerListingPhoto(remoteUrl: 'https://example.com/a.jpg'),
+      ),
+    );
+    expect(draft.validate, throwsStateError);
+  });
+
   test('institute listings stay advertising-only', () {
     expect(CustomerSection.institutesClasses.isBookable, isFalse);
     const venue = Venue(
@@ -308,20 +350,14 @@ void main() {
       name: 'CodeLab',
       latitude: 17.4,
       longitude: 78.5,
-      category: VenueCategory(
-        id: 'c',
-        slug: 'sports_ground',
-        name: 'Sports',
-      ),
+      category: VenueCategory(id: 'c', slug: 'sports_ground', name: 'Sports'),
     );
     expect(
       CustomerSectionCatalog.sectionForVenue(venue),
       CustomerSection.institutesClasses,
     );
     expect(
-      CustomerSectionCatalog.bookingCtaLabel(
-        CustomerSection.institutesClasses,
-      ),
+      CustomerSectionCatalog.bookingCtaLabel(CustomerSection.institutesClasses),
       'Enquire',
     );
   });

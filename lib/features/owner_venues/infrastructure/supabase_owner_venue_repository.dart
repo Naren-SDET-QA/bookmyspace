@@ -96,7 +96,8 @@ class SupabaseOwnerVenueRepository implements OwnerVenueRepository {
           if (latitude != null) 'p_latitude': latitude,
           if (longitude != null) 'p_longitude': longitude,
           if (capacity != null) 'p_capacity': capacity,
-          if (pricingBaseAmount != null) 'p_pricing_base_amount': pricingBaseAmount,
+          if (pricingBaseAmount != null)
+            'p_pricing_base_amount': pricingBaseAmount,
           if (isActive != null) 'p_is_active': isActive,
         },
       );
@@ -109,7 +110,10 @@ class SupabaseOwnerVenueRepository implements OwnerVenueRepository {
   @override
   Future<void> deleteVenue(String venueId) async {
     try {
-      await _client.rpc<void>('delete_owner_venue', params: {'p_venue_id': venueId});
+      await _client.rpc<void>(
+        'delete_owner_venue',
+        params: {'p_venue_id': venueId},
+      );
     } catch (e) {
       throw mapError(e);
     }
@@ -121,6 +125,7 @@ class SupabaseOwnerVenueRepository implements OwnerVenueRepository {
     required OwnerListingDraft draft,
   }) async {
     try {
+      draft.validate();
       Venue venue;
       if (venueId == null) {
         venue = await createVenue(
@@ -219,14 +224,13 @@ class SupabaseOwnerVenueRepository implements OwnerVenueRepository {
       }
       final path =
           '$uid/$venueId/${DateTime.now().microsecondsSinceEpoch}_$safeName';
-      await _client.storage.from(OwnerListingDraft.storageBucket).uploadBinary(
-        path,
-        bytes is Uint8List ? bytes : Uint8List.fromList(bytes),
-        fileOptions: FileOptions(
-          contentType: contentType,
-          upsert: true,
-        ),
-      );
+      await _client.storage
+          .from(OwnerListingDraft.storageBucket)
+          .uploadBinary(
+            path,
+            bytes is Uint8List ? bytes : Uint8List.fromList(bytes),
+            fileOptions: FileOptions(contentType: contentType, upsert: true),
+          );
       return _client.storage
           .from(OwnerListingDraft.storageBucket)
           .getPublicUrl(path);
@@ -261,7 +265,10 @@ class SupabaseOwnerVenueRepository implements OwnerVenueRepository {
   }
 
   @override
-  Future<void> replaceFacilities(String venueId, List<String> facilities) async {
+  Future<void> replaceFacilities(
+    String venueId,
+    List<String> facilities,
+  ) async {
     try {
       await _client.from('venue_facilities').delete().eq('venue_id', venueId);
       final unique = <String>{};
@@ -272,11 +279,7 @@ class SupabaseOwnerVenueRepository implements OwnerVenueRepository {
       if (unique.isEmpty) return;
       await _client.from('venue_facilities').insert([
         for (final facility in unique)
-          {
-            'venue_id': venueId,
-            'facility': facility,
-            'is_available': true,
-          },
+          {'venue_id': venueId, 'facility': facility, 'is_available': true},
       ]);
     } catch (e) {
       throw mapError(e);
@@ -286,7 +289,10 @@ class SupabaseOwnerVenueRepository implements OwnerVenueRepository {
   Future<void> _patchAddress(String venueId, String addressLine1) async {
     final address = addressLine1.trim();
     if (address.isEmpty) return;
-    await _client.from('venues').update({'address_line1': address}).eq('id', venueId);
+    await _client
+        .from('venues')
+        .update({'address_line1': address})
+        .eq('id', venueId);
   }
 
   Future<List<Venue>> _hydrateByIds(List<String> ids) async {
