@@ -19,6 +19,7 @@ import '../../../location/presentation/widgets/location_picker_sheet.dart';
 import '../../../venues/domain/venue.dart';
 import '../../../venues/presentation/venue_providers.dart';
 import '../../../venues/presentation/widgets/venue_badges.dart';
+import '../../domain/context_aware_help.dart';
 import '../../domain/customer_section_catalog.dart';
 import '../customer_section_providers.dart';
 
@@ -357,7 +358,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             Align(
                               alignment: Alignment.centerLeft,
                               child: TextButton.icon(
-                                onPressed: () => _showHelpDialog(context),
+                                onPressed: () => _showContextAwareHelpDialog(context),
                                 icon: const Icon(Icons.help_outline_rounded, size: 16),
                                 label: Text(
                                   'Help · How ${selectedSection.title} booking works',
@@ -760,6 +761,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ref.read(searchAreaProvider.notifier).state = area;
   }
 
+  // Retained as the simple Help fallback for callers that do not need chat.
+  // ignore: unused_element
   void _showHelpDialog(BuildContext context) {
     final section = ref.read(selectedCustomerSectionProvider);
     final title = section?.title ?? 'BookMySpace';
@@ -815,6 +818,81 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ],
       ),
     );
+  }
+
+  void _showContextAwareHelpDialog(BuildContext context) {
+    final section = ref.read(selectedCustomerSectionProvider);
+    final area = ref.read(searchAreaProvider);
+    final controller = TextEditingController();
+    var reply = ContextAwareHelp.answer(section: section, question: '');
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text('AI Help · ${section?.title ?? 'BookMySpace'}'),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(reply.message),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: controller,
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (_) => setState(() {
+                    reply = ContextAwareHelp.answer(
+                      section: section,
+                      question: controller.text,
+                      location: area.label,
+                    );
+                  }),
+                  decoration: const InputDecoration(
+                    labelText: 'Ask about search, availability or booking',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Close'),
+            ),
+            if (reply.action != null)
+              FilledButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                  final action = reply.action;
+                  if (action == HelpAction.booking && section != null) {
+                    final match = _scopedVenues(
+                      ref.read(popularVenuesProvider).asData?.value ?? const [],
+                    ).firstOrNull;
+                    if (match != null) {
+                      context.push(
+                        AppRoutes.bookingFlow.replaceAll(':id', match.id),
+                        extra: match,
+                      );
+                    } else {
+                      context.push(AppRoutes.search, extra: {'section': section.id});
+                    }
+                  } else if (action == HelpAction.instituteEnquiry ||
+                      action == HelpAction.search) {
+                    if (section != null) {
+                      context.push(AppRoutes.search, extra: {'section': section.id});
+                    }
+                  }
+                },
+                child: Text(
+                  reply.action == HelpAction.booking ? 'Continue' : 'Search',
+                ),
+              ),
+          ],
+        ),
+      ),
+    ).then((_) => controller.dispose());
   }
 
   void _showVoiceBookingDialog(BuildContext context) {
