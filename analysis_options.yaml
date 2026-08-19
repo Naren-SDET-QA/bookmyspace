@@ -12,6 +12,9 @@ analyzer:
     - "**/*.freezed.dart"
     - build/**
     - lib/**.g.dart
+    # The legacy owner demo has no standalone pubspec and is not part of the
+    # production Flutter target.
+    - example/**
 
 linter:
   rules:
