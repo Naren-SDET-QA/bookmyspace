@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/errors/app_exceptions.dart' as app_errors;
@@ -66,10 +68,17 @@ class SupabaseOwnerBookingRepository implements OwnerBookingRepository {
           'amount': amount,
           'tax_amount': taxAmount,
           'total_amount': totalAmount,
+          'idempotency_key': offlineIdempotencyKey(
+            venueId: venueId,
+            slotId: slotId,
+            bookDate: bookDate,
+            customerPhone: customerPhone,
+          ),
         },
       );
       final data = response.data;
-      if (data is! Map<String, dynamic> || data['booking'] is! Map<String, dynamic>) {
+      if (data is! Map<String, dynamic> ||
+          data['booking'] is! Map<String, dynamic>) {
         throw const app_errors.ServerException(
           'Owner booking service returned an empty response.',
           code: 'empty_owner_booking_response',
@@ -100,7 +109,8 @@ class SupabaseOwnerBookingRepository implements OwnerBookingRepository {
         },
       );
       final data = response.data;
-      if (data is! Map<String, dynamic> || data['booking'] is! Map<String, dynamic>) {
+      if (data is! Map<String, dynamic> ||
+          data['booking'] is! Map<String, dynamic>) {
         throw const app_errors.ServerException(
           'Owner booking service returned an empty response.',
           code: 'empty_owner_booking_response',
@@ -164,5 +174,20 @@ class SupabaseOwnerBookingRepository implements OwnerBookingRepository {
     final m = date.month.toString().padLeft(2, '0');
     final d = date.day.toString().padLeft(2, '0');
     return '$y-$m-$d';
+  }
+
+  static String offlineIdempotencyKey({
+    required String venueId,
+    required String slotId,
+    required DateTime bookDate,
+    required String customerPhone,
+  }) {
+    final raw = [
+      venueId,
+      slotId,
+      _formatDate(bookDate),
+      customerPhone.trim(),
+    ].join('|');
+    return base64Url.encode(utf8.encode(raw)).replaceAll('=', '');
   }
 }

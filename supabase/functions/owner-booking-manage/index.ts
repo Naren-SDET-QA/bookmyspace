@@ -8,7 +8,7 @@
 // {
 //   action: 'create_offline',
 //   venue_id, slot_id, book_date,
-//   customer_name, customer_phone,
+//   customer_name, customer_phone, idempotency_key (optional)
 //   amount, tax_amount, total_amount
 // }
 // or
@@ -102,7 +102,7 @@ async function createOfflineBooking(
   userId: string,
   body: Record<string, unknown>,
 ): Promise<Response> {
-  const { venue_id, slot_id, book_date, customer_name, customer_phone, amount, tax_amount, total_amount } = body;
+  const { venue_id, slot_id, book_date, customer_name, customer_phone, amount, tax_amount, total_amount, idempotency_key } = body;
   if (
     !venue_id || !slot_id || !book_date ||
     !customer_name || !customer_phone ||
@@ -135,10 +135,25 @@ async function createOfflineBooking(
     return json({ error: 'amount_mismatch' }, 400);
   }
 
+  // A lost response must be safe to retry. Metadata keeps this extension
+  // backward-compatible with the existing booking schema and RLS contract.
+  const idempotencyKey = String(idempotency_key ?? '').trim();
+  if (idempotencyKey) {
+    const { data: existing } = await supabase
+      .from('bookings')
+      .select('*, venues(id, name, city), time_slots(id, label), payments(method, provider_payment_id, status, created_at)')
+      .eq('venue_id', String(venue_id))
+      .not('status', 'in', '(cancelled,refunded)')
+      .contains('metadata', { offline_idempotency_key: idempotencyKey })
+      .maybeSingle();
+    if (existing) return json({ booking: existing, idempotent: true }, 200);
+  }
+
   const metadata = {
     offline_booking: true,
     customer_name: String(customer_name),
     customer_phone: String(customer_phone),
+    ...(idempotencyKey ? { offline_idempotency_key: idempotencyKey } : {}),
   };
 
   // Insert the booking (the exclusion constraint rejects overlaps).
