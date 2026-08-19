@@ -7,6 +7,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 class OwnerListingTest {
 
@@ -19,6 +20,29 @@ class OwnerListingTest {
                 assertEquals(section, CustomerSection.fromAny(category.id) ?: section)
             }
         }
+    }
+
+    @Test
+    fun lodgeAndPgUseMeetingRoomWhenOnlyBaseCategoriesExist() {
+        val baseOnly = listOf(
+            com.bookmyspace.bookmyspace.data.model.VenueCategory("fh", "function_hall", "Function Hall"),
+            com.bookmyspace.bookmyspace.data.model.VenueCategory("mr", "meeting_room", "Meeting Room"),
+            com.bookmyspace.bookmyspace.data.model.VenueCategory("sg", "sports_ground", "Sports Ground")
+        )
+        val lodgeSlug = CustomerSectionCatalog.resolveOwnerCategorySlug(
+            baseOnly,
+            CustomerSection.LODGE_ROOMS,
+            "hotel"
+        )
+        assertEquals("meeting_room", lodgeSlug)
+        assertEquals(null, CustomerSection.fromAny(lodgeSlug))
+
+        val pgSlug = CustomerSectionCatalog.resolveOwnerCategorySlug(
+            baseOnly,
+            CustomerSection.PG_HOSTELS,
+            "ladies_pg"
+        )
+        assertEquals("meeting_room", pgSlug)
     }
 
     @Test
@@ -96,6 +120,18 @@ class OwnerListingTest {
             BookMySpaceRepository.venuesForCustomerSection(CustomerSection.PG_HOSTELS)
                 .any { it.id == created.id }
         )
+    }
+
+    @Test
+    fun persistPhotoStreamWritesLocalFileUri() {
+        val dest = File.createTempFile("owner-photo", ".jpg")
+        dest.deleteOnExit()
+        val uri = BookMySpaceRepository.copyOwnerPhotoStream(
+            "gallery-bytes".byteInputStream(),
+            dest
+        )
+        assertTrue(uri.startsWith("file:"))
+        assertEquals("gallery-bytes", dest.readText())
     }
 
     @Test

@@ -180,6 +180,87 @@ void main() {
     expect(repo.venues.where((v) => v.id == created.id), isEmpty);
   });
 
+  test('lodge and pg map onto 0002 meeting_room without leaving their section', () {
+    const baseOnly = [
+      VenueCategory(id: 'fh', slug: 'function_hall', name: 'Function Hall'),
+      VenueCategory(id: 'mr', slug: 'meeting_room', name: 'Meeting Room'),
+      VenueCategory(id: 'sg', slug: 'sports_ground', name: 'Sports Ground'),
+    ];
+    final lodgeCat = CustomerSectionCatalog.resolveDbCategory(
+      dbCategories: baseOnly,
+      section: CustomerSection.lodgeRooms,
+      catalogCategoryId: 'hotel',
+    );
+    expect(lodgeCat.slug, 'meeting_room');
+    expect(CustomerSectionCatalog.fromAny(lodgeCat.slug), isNull);
+
+    const lodge = Venue(
+      id: 'l1',
+      name: 'Crown Lodge',
+      latitude: 17.4,
+      longitude: 78.5,
+      category: VenueCategory(id: 'mr', slug: 'meeting_room', name: 'Meeting Room'),
+      facilities: [
+        VenueFacility(facility: 'Lodge'),
+        VenueFacility(facility: 'Lodge / Rooms'),
+      ],
+    );
+    expect(
+      CustomerSectionCatalog.sectionForVenue(lodge),
+      CustomerSection.lodgeRooms,
+    );
+    expect(
+      CustomerSectionCatalog.sectionForVenue(lodge),
+      isNot(CustomerSection.functionHalls),
+    );
+
+    final pgCat = CustomerSectionCatalog.resolveDbCategory(
+      dbCategories: baseOnly,
+      section: CustomerSection.pgHostels,
+      catalogCategoryId: 'ladies_pg',
+    );
+    expect(pgCat.slug, 'meeting_room');
+    const pg = Venue(
+      id: 'p1',
+      name: 'Starlight Ladies PG',
+      latitude: 17.4,
+      longitude: 78.5,
+      category: VenueCategory(id: 'mr', slug: 'meeting_room', name: 'Meeting Room'),
+      facilities: [
+        VenueFacility(facility: 'Ladies PG'),
+        VenueFacility(facility: 'PG / Hostels'),
+      ],
+    );
+    expect(CustomerSectionCatalog.sectionForVenue(pg), CustomerSection.pgHostels);
+
+    const boardroom = Venue(
+      id: 'b1',
+      name: 'The Boardroom',
+      description: 'Modern meeting rooms for teams.',
+      latitude: 17.4,
+      longitude: 78.5,
+      category: VenueCategory(id: 'mr', slug: 'meeting_room', name: 'Meeting Room'),
+    );
+    expect(CustomerSectionCatalog.sectionForVenue(boardroom), isNull);
+
+    const hall = Venue(
+      id: 'h1',
+      name: 'Royal Grand',
+      description: 'Hotel-style luxury wedding hall',
+      latitude: 17.4,
+      longitude: 78.5,
+      category: VenueCategory(
+        id: 'fh',
+        slug: 'function_hall',
+        name: 'Function Hall',
+      ),
+    );
+    expect(
+      CustomerSectionCatalog.sectionForVenue(hall),
+      CustomerSection.functionHalls,
+    );
+  });
+
   test('lodge and pg persistable slugs live in migration 0019', () {
     final sql = File(
       'supabase/migrations/0019_owner_listing_categories_and_photos.sql',

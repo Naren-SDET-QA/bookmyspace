@@ -194,6 +194,40 @@ class CustomerSectionCatalog {
     if (CustomerSection.functionHalls.categorySlugs.contains(slug)) {
       return CustomerSection.functionHalls;
     }
+    // 0002-only DBs have no lodge/PG slugs. Owner listings still tag
+    // the section in name/facilities so they do not land in halls.
+    return sectionFromListingText(_haystack(venue));
+  }
+
+  static CustomerSection? sectionFromListingText(String haystack) {
+    final hay = haystack.toLowerCase();
+    bool has(List<String> tokens) => tokens.any(hay.contains);
+    if (has(const [
+      'ladies pg',
+      'gents pg',
+      'pg / hostels',
+      'pg hostel',
+      'pg_coliving',
+      'paying guest',
+      'co-living',
+      'coliving',
+      'student hostel',
+      'hostel',
+    ])) {
+      return CustomerSection.pgHostels;
+    }
+    if (has(const [
+      'lodge / rooms',
+      'hotel stay',
+      'guest house',
+      'hourly /',
+      'homestay',
+      ' lodge',
+      'resort',
+      'hotel',
+    ])) {
+      return CustomerSection.lodgeRooms;
+    }
     return null;
   }
 
@@ -477,6 +511,15 @@ class CustomerSectionCatalog {
       final match = find(key);
       if (match != null && fromAny(match.slug) == section) {
         return match;
+      }
+    }
+    // Base migration 0002 has meeting_room but no lodge/PG slugs.
+    // Never reuse a Function Hall / Institute slug.
+    if (section == CustomerSection.lodgeRooms ||
+        section == CustomerSection.pgHostels) {
+      final unmapped = find('meeting_room');
+      if (unmapped != null && fromAny(unmapped.slug) == null) {
+        return unmapped;
       }
     }
     throw StateError(

@@ -2632,6 +2632,31 @@ object BookMySpaceRepository {
         addAuditLog("OWNER_DELETE_VENUE", "Deleted listing ${current.name}")
     }
 
+    /** Copies a picked gallery stream into app files so the listing photo is not a transient content URI. */
+    fun copyOwnerPhotoStream(input: java.io.InputStream, dest: java.io.File): String {
+        dest.parentFile?.mkdirs()
+        dest.outputStream().use { output -> input.copyTo(output) }
+        return dest.toURI().toString()
+    }
+
+    fun persistPickedVenuePhoto(context: android.content.Context, uri: android.net.Uri): String? {
+        val mime = context.contentResolver.getType(uri) ?: "image/jpeg"
+        val ext = when (mime) {
+            "image/png" -> "png"
+            "image/webp" -> "webp"
+            else -> "jpg"
+        }
+        val dest = java.io.File(
+            java.io.File(context.filesDir, "owner_listing_photos"),
+            "img_${System.currentTimeMillis()}.$ext"
+        )
+        return try {
+            context.contentResolver.openInputStream(uri)?.use { copyOwnerPhotoStream(it, dest) }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     // Dynamic Pricing Engine Methods
     fun updateVenueContactSettings(venueId: String, newSettings: ContactSettings) {
         val currentUser = authUser.value

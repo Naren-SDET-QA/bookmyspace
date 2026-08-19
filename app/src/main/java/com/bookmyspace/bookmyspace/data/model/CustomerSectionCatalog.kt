@@ -148,7 +148,44 @@ object CustomerSectionCatalog {
         if (slug in CustomerSection.FUNCTION_HALLS.categorySlugs) {
             return CustomerSection.FUNCTION_HALLS
         }
+        return sectionFromListingText(listingHaystack(venue))
+    }
+
+    fun sectionFromListingText(haystack: String): CustomerSection? {
+        val hay = haystack.lowercase()
+        fun has(tokens: List<String>) = tokens.any { hay.contains(it) }
+        if (has(
+                listOf(
+                    "ladies pg", "gents pg", "pg / hostels", "pg hostel",
+                    "pg_coliving", "paying guest", "co-living", "coliving",
+                    "student hostel", "hostel"
+                )
+            )
+        ) {
+            return CustomerSection.PG_HOSTELS
+        }
+        if (has(
+                listOf(
+                    "lodge / rooms", "hotel stay", "guest house", "hourly /",
+                    "homestay", " lodge", "resort", "hotel"
+                )
+            )
+        ) {
+            return CustomerSection.LODGE_ROOMS
+        }
         return null
+    }
+
+    private fun listingHaystack(venue: Venue): String {
+        return listOf(
+            venue.name,
+            venue.description,
+            venue.category?.slug.orEmpty(),
+            venue.category?.name.orEmpty(),
+            venue.facilities.joinToString(" ") { it.facility },
+            venue.pgDetails?.pgType.orEmpty(),
+            venue.hotelDetails?.propertyType.orEmpty()
+        ).joinToString(" ").lowercase()
     }
 
     fun matchesVenue(
@@ -391,6 +428,12 @@ object CustomerSectionCatalog {
             val match = available.find { it.slug.equals(slug, ignoreCase = true) }
             if (match != null && CustomerSection.fromAny(match.slug) == section) {
                 return match.slug
+            }
+        }
+        if (section == CustomerSection.LODGE_ROOMS || section == CustomerSection.PG_HOSTELS) {
+            val unmapped = available.find { it.slug.equals("meeting_room", ignoreCase = true) }
+            if (unmapped != null && CustomerSection.fromAny(unmapped.slug) == null) {
+                return unmapped.slug
             }
         }
         error("No ${section.title} category is configured. Pick a category from this section.")

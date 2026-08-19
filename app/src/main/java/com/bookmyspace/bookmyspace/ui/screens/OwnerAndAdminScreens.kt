@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -451,6 +452,7 @@ fun CreateVenueScreen(
         mutableIntStateOf(existing?.images?.indexOfFirst { it.isCover }?.coerceAtLeast(0) ?: 0)
     }
     var storageNotice by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
     val photoPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia(6)
     ) { uris ->
@@ -460,8 +462,15 @@ fun CreateVenueScreen(
             storageNotice = "PHOTO LIMIT: Maximum 6 photos limit reached for this venue property."
             return@rememberLauncherForActivityResult
         }
-        imageList = imageList + uris.take(remaining).map { it.toString() }
-        storageNotice = "PHOTO UPLOADED (${imageList.size}/6): Added from your gallery (JPG, PNG, WEBP)."
+        val stored = uris.take(remaining).mapNotNull { uri ->
+            BookMySpaceRepository.persistPickedVenuePhoto(context, uri)
+        }
+        if (stored.isEmpty()) {
+            storageNotice = "PHOTO ERROR: Could not save the selected gallery images."
+            return@rememberLauncherForActivityResult
+        }
+        imageList = imageList + stored
+        storageNotice = "PHOTO UPLOADED (${imageList.size}/6): Saved from your gallery (JPG, PNG, WEBP)."
     }
     var selectedAmenities by remember {
         mutableStateOf(
@@ -904,7 +913,7 @@ fun CreateVenueScreen(
                                 .filter { it.id in selectedAmenities }
                                 .map { it.label }
                             val categoryLabel = ownerCategories.firstOrNull { it.id == selectedCatalogCategory }?.label
-                            val facilities = listOfNotNull(categoryLabel) + amenityLabels
+                            val facilities = listOfNotNull(categoryLabel, selectedSection.title) + amenityLabels
                             val safeSlug = CustomerSectionCatalog.resolveOwnerCategorySlug(
                                 BookMySpaceRepository.categories,
                                 selectedSection,

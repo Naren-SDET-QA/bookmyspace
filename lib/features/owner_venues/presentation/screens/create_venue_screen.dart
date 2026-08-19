@@ -303,6 +303,7 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
         .toList();
     final facilities = [
       if (categoryLabel != null) categoryLabel,
+      _section.title,
       ...amenityLabels,
     ];
 
