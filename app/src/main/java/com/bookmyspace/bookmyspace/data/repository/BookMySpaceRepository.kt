@@ -3076,6 +3076,10 @@ object BookMySpaceRepository {
         return if (sub != null && sub.isActive && !sub.isExpired) sub else null
     }
 
+    /** Raw subscription for owner dashboards, including expired plans. */
+    fun getOwnerSubscriptionForDashboard(ownerId: String): InstituteListingSubscription? =
+        _instituteSubscriptions.value[ownerId]
+
     /** A listing may be edited before payment, but discovery is always payment-gated. */
     fun getOwnerListingStatus(ownerId: String): String {
         val subscription = _instituteSubscriptions.value[ownerId]

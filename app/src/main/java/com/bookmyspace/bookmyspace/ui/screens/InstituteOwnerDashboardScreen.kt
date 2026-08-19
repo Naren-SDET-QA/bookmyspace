@@ -30,6 +30,9 @@ import com.bookmyspace.bookmyspace.data.repository.BookMySpaceRepository
 import com.bookmyspace.bookmyspace.ui.components.DynamicConfigurableFieldsForm
 import com.bookmyspace.bookmyspace.util.RazorpayHelper
 import com.bookmyspace.bookmyspace.util.RazorpayPaymentListener
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,6 +51,11 @@ fun InstituteOwnerDashboardScreen(
     val currentUserId = authUser?.id ?: "usr_dev_owner_002"
     val isOwnerSubscribed = BookMySpaceRepository.hasActiveListingPlan(currentUserId)
     val currentSubscription = BookMySpaceRepository.getOwnerSubscription(currentUserId)
+    val dashboardSubscription = BookMySpaceRepository.getOwnerSubscriptionForDashboard(currentUserId)
+    val listingStatus = BookMySpaceRepository.getOwnerListingStatus(currentUserId)
+    val expiryText = dashboardSubscription?.let {
+        SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(it.expiryDate))
+    }
 
     // Current owner's institute profile and classes
     val ownerInstitute = institutes.find { it.ownerId == currentUserId }
@@ -69,7 +77,8 @@ fun InstituteOwnerDashboardScreen(
                     Column {
                         Text("Institute Owner Portal", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                         Text(
-                            if (isOwnerSubscribed) "Active Plan: ${currentSubscription?.planTier?.title ?: "Pro"}" else "Subscription Required",
+                            if (isOwnerSubscribed) "Active Plan: ${currentSubscription?.planTier?.title ?: "Pro"} · Expires $expiryText"
+                            else "$listingStatus${expiryText?.let { " · Expired $it" } ?: ""}",
                             fontSize = 12.sp,
                             color = if (isOwnerSubscribed) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error,
                             fontWeight = FontWeight.Medium
@@ -85,14 +94,14 @@ fun InstituteOwnerDashboardScreen(
                     }
                 },
                 actions = {
-                    if (isOwnerSubscribed) {
+                    if (dashboardSubscription != null) {
                         TextButton(
                             onClick = { showPlanSelectionModal = true },
                             modifier = Modifier.testTag("upgrade_plan_top_btn")
                         ) {
                             Icon(Icons.Default.Star, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Plan Details")
+                            Text(if (isOwnerSubscribed) "Plan Details" else "Renew Plan")
                         }
                     }
                 }
