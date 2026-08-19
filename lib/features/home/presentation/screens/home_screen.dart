@@ -955,7 +955,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   return;
                 }
                 String transcript = '';
+                final localeId = Localizations.localeOf(context).languageCode == 'te'
+                    ? 'te_IN'
+                    : 'en_IN';
                 await speech.listen(
+                  localeId: localeId,
                   onResult: (result) => transcript = result.recognizedWords,
                 );
                 await Future<void>.delayed(const Duration(seconds: 5));
