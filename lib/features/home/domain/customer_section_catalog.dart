@@ -86,6 +86,7 @@ enum CustomerSection {
       'student_hostel',
       'pg_hostels',
       'pg',
+      'pg_coliving',
     },
     CustomerSection.institutesClasses => {
       'institute',
@@ -98,6 +99,10 @@ enum CustomerSection {
       'dance',
       'music',
       'institutes_classes',
+      'computer_it',
+      'dance_academy',
+      'music_class',
+      'sports_academy',
     },
   };
 
@@ -385,6 +390,98 @@ class CustomerSectionCatalog {
       venue.category?.slug ?? '',
       ...venue.facilities.map((f) => f.facility),
     ].join(' ').toLowerCase();
+  }
+
+  /// Categories an owner may pick (excludes the customer "All" chip).
+  static List<CustomerSectionCategory> ownerCategories(
+    CustomerSection section,
+  ) {
+    return section.categories.where((c) => c.id != 'all').toList();
+  }
+
+  /// DB slug that keeps the listing inside [section].
+  ///
+  /// Exact catalog ids are tried first by [resolveDbCategory]. These
+  /// fallbacks are rows from migrations `0002` and `0019` — not seed_dev.
+  static String persistableCategorySlug(
+    CustomerSection section,
+    String catalogCategoryId,
+  ) {
+    final selected = catalogCategoryId.toLowerCase();
+    return switch (section) {
+      CustomerSection.functionHalls => switch (selected) {
+        'marriage_hall' => 'marriage_hall',
+        'convention_center' => 'convention_center',
+        'banquet_hall' => 'banquet_hall',
+        'community_hall' => 'community_hall',
+        'govt_hall' => 'govt_hall',
+        'party_lawn' => 'party_lawn',
+        _ => 'function_hall',
+      },
+      CustomerSection.lodgeRooms => switch (selected) {
+        'lodge' => 'lodge',
+        'guest_house' => 'guest_house',
+        'hourly_room' => 'hourly_room',
+        'resort' => 'resort',
+        _ => 'hotel_stay',
+      },
+      CustomerSection.pgHostels => switch (selected) {
+        'gents_pg' => 'gents_pg',
+        'ladies_pg' => 'ladies_pg',
+        'student_hostel' => 'student_hostel',
+        'co_living' => 'co_living',
+        _ => 'pg_coliving',
+      },
+      CustomerSection.institutesClasses => switch (selected) {
+        'coaching' => 'coaching',
+        'computer_it' => 'computer_it',
+        'dance_academy' => 'dance_academy',
+        'music_class' => 'music_class',
+        'sports_academy' => 'sports_academy',
+        _ => 'sports_ground',
+      },
+    };
+  }
+
+  static bool slugBelongsToSection(CustomerSection section, String? slug) {
+    if (slug == null || slug.isEmpty) return false;
+    return fromAny(slug) == section;
+  }
+
+  /// Picks a `venue_categories` row that belongs to [section].
+  ///
+  /// Throws if the database has no compatible slug — never falls back
+  /// to a different customer section.
+  static VenueCategory resolveDbCategory({
+    required List<VenueCategory> dbCategories,
+    required CustomerSection section,
+    required String catalogCategoryId,
+  }) {
+    VenueCategory? find(String slug) {
+      final lower = slug.toLowerCase();
+      for (final category in dbCategories) {
+        if (category.slug.toLowerCase() == lower) return category;
+      }
+      return null;
+    }
+
+    final candidates = <String>[
+      catalogCategoryId,
+      persistableCategorySlug(section, catalogCategoryId),
+      ...section.categorySlugs,
+    ];
+    final seen = <String>{};
+    for (final slug in candidates) {
+      final key = slug.toLowerCase();
+      if (!seen.add(key)) continue;
+      final match = find(key);
+      if (match != null && fromAny(match.slug) == section) {
+        return match;
+      }
+    }
+    throw StateError(
+      'No ${section.title} category is configured. Pick a category from this section.',
+    );
   }
 }
 

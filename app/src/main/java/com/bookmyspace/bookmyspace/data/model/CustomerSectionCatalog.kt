@@ -68,7 +68,7 @@ enum class CustomerSection(
         listingTarget = ListingTargetCategory.PG_HOSTEL,
         categorySlugs = setOf(
             "pg_hostel", "hostel", "co_living", "gents_pg", "ladies_pg",
-            "student_hostel", "pg_hostels", "pg"
+            "student_hostel", "pg_hostels", "pg", "pg_coliving"
         ),
         categories = listOf(
             CustomerSectionCategory("all", "All PG & Hostels", "✨", "Every PG option"),
@@ -88,7 +88,8 @@ enum class CustomerSection(
         listingTarget = ListingTargetCategory.INSTITUTE,
         categorySlugs = setOf(
             "institute", "class", "coaching", "academy", "badminton",
-            "sports_turf", "sports_ground", "dance", "music", "institutes_classes"
+            "sports_turf", "sports_ground", "dance", "music", "institutes_classes",
+            "computer_it", "dance_academy", "music_class", "sports_academy"
         ),
         categories = listOf(
             CustomerSectionCategory("all", "All Classes", "✨", "Every class & academy"),
@@ -99,6 +100,9 @@ enum class CustomerSection(
             CustomerSectionCategory("sports_academy", "Sports Academy & Turfs", "🏸", "Badminton, Cricket & Fitness")
         )
     );
+
+    val isBookable: Boolean
+        get() = this != INSTITUTES_CLASSES
 
     companion object {
         fun fromId(id: String?): CustomerSection? {
@@ -325,6 +329,71 @@ object CustomerSectionCatalog {
             CustomerSection.INSTITUTES_CLASSES to "sports_academy" -> listOf("sport", "badminton", "cricket", "turf", "fitness", "football")
             else -> listOf(categoryId.replace('_', ' '))
         }
+    }
+
+    fun ownerCategories(section: CustomerSection): List<CustomerSectionCategory> {
+        return section.categories.filter { it.id != "all" }
+    }
+
+    fun persistableCategorySlug(section: CustomerSection, catalogCategoryId: String): String {
+        val selected = catalogCategoryId.lowercase()
+        return when (section) {
+            CustomerSection.FUNCTION_HALLS -> when (selected) {
+                "marriage_hall" -> "marriage_hall"
+                "convention_center" -> "convention_center"
+                "banquet_hall" -> "banquet_hall"
+                "community_hall" -> "community_hall"
+                "govt_hall" -> "govt_hall"
+                "party_lawn" -> "party_lawn"
+                else -> "function_hall"
+            }
+            CustomerSection.LODGE_ROOMS -> when (selected) {
+                "lodge" -> "lodge"
+                "guest_house" -> "guest_house"
+                "hourly_room" -> "hourly_room"
+                "resort" -> "resort"
+                else -> "hotel_stay"
+            }
+            CustomerSection.PG_HOSTELS -> when (selected) {
+                "gents_pg" -> "gents_pg"
+                "ladies_pg" -> "ladies_pg"
+                "student_hostel" -> "student_hostel"
+                "co_living" -> "co_living"
+                else -> "pg_coliving"
+            }
+            CustomerSection.INSTITUTES_CLASSES -> when (selected) {
+                "coaching" -> "coaching"
+                "computer_it" -> "computer_it"
+                "dance_academy" -> "dance_academy"
+                "music_class" -> "music_class"
+                "sports_academy" -> "sports_academy"
+                else -> "badminton"
+            }
+        }
+    }
+
+    fun slugBelongsToSection(section: CustomerSection, slug: String?): Boolean {
+        if (slug.isNullOrBlank()) return false
+        return CustomerSection.fromAny(slug) == section
+    }
+
+    fun resolveOwnerCategorySlug(
+        available: List<VenueCategory>,
+        section: CustomerSection,
+        catalogCategoryId: String
+    ): String {
+        val candidates = linkedSetOf(
+            catalogCategoryId.lowercase(),
+            persistableCategorySlug(section, catalogCategoryId).lowercase()
+        )
+        candidates.addAll(section.categorySlugs.map { it.lowercase() })
+        for (slug in candidates) {
+            val match = available.find { it.slug.equals(slug, ignoreCase = true) }
+            if (match != null && CustomerSection.fromAny(match.slug) == section) {
+                return match.slug
+            }
+        }
+        error("No ${section.title} category is configured. Pick a category from this section.")
     }
 }
 

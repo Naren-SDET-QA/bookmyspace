@@ -57,6 +57,9 @@ abstract class AppRoutes {
   static const ownerDashboard = '/owner';
   static const ownerVenues = '/owner/venues';
   static const ownerVenueCreate = '/owner/venues/create';
+  static const ownerVenueEdit = '/owner/venues/:id/edit';
+
+  static String ownerVenueEditPath(String id) => '/owner/venues/$id/edit';
   static const privacyPolicy = '/privacy';
   static const termsOfService = '/terms';
 }
@@ -186,6 +189,13 @@ GoRouter createAppRouter({
         path: AppRoutes.ownerVenueCreate,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const CreateVenueScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.ownerVenueEdit,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => CreateVenueScreen(
+          venueId: state.pathParameters['id'],
+        ),
       ),
       GoRoute(
         path: AppRoutes.privacyPolicy,

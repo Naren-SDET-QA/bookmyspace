@@ -48,6 +48,9 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
     object AdminAudit : Screen("admin/audit", "Admin Audit")
     object OwnerDashboard : Screen("owner", "Owner Dashboard")
     object CreateVenue : Screen("owner/create", "Create Venue")
+    object EditVenue : Screen("owner/edit/{venueId}", "Edit Venue") {
+        fun createRoute(venueId: String) = "owner/edit/$venueId"
+    }
     object Privacy : Screen("privacy", "Privacy Policy")
     object Terms : Screen("terms", "Terms of Service")
     object Login : Screen("login", "Login")
@@ -334,14 +337,29 @@ fun AppNavigation() {
 
             composable(Screen.OwnerDashboard.route) {
                 OwnerDashboardScreen(
-                    onCreateVenue = { navController.navigate(Screen.CreateVenue.route) }
+                    onCreateVenue = { navController.navigate(Screen.CreateVenue.route) },
+                    onEditVenue = { id -> navController.navigate(Screen.EditVenue.createRoute(id)) },
+                    onPreviewVenue = { id -> navController.navigate(Screen.VenueDetails.createRoute(id)) }
                 )
             }
 
             composable(Screen.CreateVenue.route) {
                 CreateVenueScreen(
                     onVenueCreated = { navController.popBackStack() },
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
+                    onPreview = { id -> navController.navigate(Screen.VenueDetails.createRoute(id)) }
+                )
+            }
+
+            composable(
+                route = Screen.EditVenue.route,
+                arguments = listOf(navArgument("venueId") { type = NavType.StringType })
+            ) { entry ->
+                CreateVenueScreen(
+                    existingVenueId = entry.arguments?.getString("venueId"),
+                    onVenueCreated = { navController.popBackStack() },
+                    onBack = { navController.popBackStack() },
+                    onPreview = { id -> navController.navigate(Screen.VenueDetails.createRoute(id)) }
                 )
             }
 

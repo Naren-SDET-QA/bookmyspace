@@ -9,15 +9,22 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.*
 import com.bookmyspace.bookmyspace.ui.components.GoogleMapLocationPicker
 import androidx.compose.runtime.*
@@ -30,6 +37,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bookmyspace.bookmyspace.data.model.ContactSettings
+import com.bookmyspace.bookmyspace.data.model.CustomerSection
+import com.bookmyspace.bookmyspace.data.model.CustomerSectionCatalog
 import com.bookmyspace.bookmyspace.data.model.ListingTargetCategory
 import com.bookmyspace.bookmyspace.data.model.UserRole
 import com.bookmyspace.bookmyspace.data.model.Venue
@@ -38,11 +47,15 @@ import com.bookmyspace.bookmyspace.ui.components.DynamicConfigurableFieldsForm
 
 import com.bookmyspace.bookmyspace.ui.components.OwnerWeeklyCalendarComponent
 import com.bookmyspace.bookmyspace.ui.components.VenueOptimizerDashboard
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OwnerDashboardScreen(
-    onCreateVenue: () -> Unit
+    onCreateVenue: () -> Unit,
+    onEditVenue: (String) -> Unit = {},
+    onPreviewVenue: (String) -> Unit = {}
 ) {
     val venues by BookMySpaceRepository.venues.collectAsState()
     val bookings by BookMySpaceRepository.bookings.collectAsState()
@@ -216,6 +229,29 @@ fun OwnerDashboardScreen(
 
                     items(venues) { venue ->
                         var showContactSettingsDialog by remember { mutableStateOf(false) }
+                        var showDeleteConfirm by remember { mutableStateOf(false) }
+                        val listingSection = CustomerSectionCatalog.sectionForVenue(venue)
+                        val isInstitute = listingSection == CustomerSection.INSTITUTES_CLASSES
+
+                        if (showDeleteConfirm) {
+                            AlertDialog(
+                                onDismissRequest = { showDeleteConfirm = false },
+                                title = { Text("Delete listing?") },
+                                text = { Text("Remove ${venue.name} from your listings.") },
+                                confirmButton = {
+                                    TextButton(
+                                        onClick = {
+                                            BookMySpaceRepository.deleteOwnerVenue(venue.id)
+                                            showDeleteConfirm = false
+                                        },
+                                        modifier = Modifier.testTag("owner_delete_confirm_${venue.id}")
+                                    ) { Text("Delete") }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
+                                }
+                            )
+                        }
 
                         if (showContactSettingsDialog) {
                             AdminVenueContactSettingsDialog(
@@ -225,7 +261,7 @@ fun OwnerDashboardScreen(
                         }
 
                         Card(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().testTag("owner_listed_venue_${venue.id}"),
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
@@ -236,19 +272,50 @@ fun OwnerDashboardScreen(
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(venue.name, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                                        Text("Base Price: ₹${venue.pricingBaseAmount.toInt()}/hr", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
-                                    Surface(
-                                        color = if (venue.isVerified) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-                                        shape = RoundedCornerShape(8.dp)
-                                    ) {
                                         Text(
-                                            if (venue.isVerified) "Verified" else "Pending Review",
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.Bold
+                                            listOfNotNull(
+                                                listingSection?.let { "${it.emoji} ${it.title}" },
+                                                if (isInstitute) "Fee from ₹${venue.pricingBaseAmount.toInt()}"
+                                                else "Base Price: ₹${venue.pricingBaseAmount.toInt()}"
+                                            ).joinToString(" · "),
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        Surface(
+                                            color = if (venue.isActive) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Text(
+                                                if (venue.isActive) "Published" else "Draft",
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Surface(
+                                            color = if (venue.isVerified) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Text(
+                                                if (venue.isVerified) "Verified" else "Pending Review",
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
+
+                                if (isInstitute) {
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        "Advertising listing only — customers cannot book hall slots.",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.tertiary
+                                    )
                                 }
 
                                 Spacer(modifier = Modifier.height(10.dp))
@@ -287,6 +354,46 @@ fun OwnerDashboardScreen(
                                         Text("Contact Settings", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                     }
                                 }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    OutlinedButton(
+                                        onClick = { onEditVenue(venue.id) },
+                                        modifier = Modifier.weight(1f).testTag("owner_edit_${venue.id}"),
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Edit", fontSize = 11.sp)
+                                    }
+                                    OutlinedButton(
+                                        onClick = { onPreviewVenue(venue.id) },
+                                        modifier = Modifier.weight(1f).testTag("owner_preview_${venue.id}"),
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Icon(Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Preview", fontSize = 11.sp)
+                                    }
+                                    Button(
+                                        onClick = { BookMySpaceRepository.setVenuePublished(venue.id, !venue.isActive) },
+                                        modifier = Modifier.weight(1f).testTag("owner_publish_${venue.id}"),
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(if (venue.isActive) "Unpublish" else "Publish", fontSize = 11.sp)
+                                    }
+                                }
+                                TextButton(
+                                    onClick = { showDeleteConfirm = true },
+                                    modifier = Modifier.testTag("owner_delete_${venue.id}")
+                                ) {
+                                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Delete listing", fontSize = 11.sp, color = MaterialTheme.colorScheme.error)
+                                }
                             }
                         }
                     }
@@ -301,33 +408,92 @@ fun OwnerDashboardScreen(
 @Composable
 fun CreateVenueScreen(
     onVenueCreated: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    existingVenueId: String? = null,
+    onPreview: (String) -> Unit = {}
 ) {
-    var name by remember { mutableStateOf("") }
-    var selectedCategorySlug by remember { mutableStateOf("function_hall") }
-    var description by remember { mutableStateOf("") }
-    var address by remember { mutableStateOf("") }
-    var city by remember { mutableStateOf("Hyderabad") }
-    var priceStr by remember { mutableStateOf("25000") }
-    var customVenueFieldValues by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
-
-    val dynamicTargetCategory = remember(selectedCategorySlug) {
-        when (selectedCategorySlug) {
-            "pg_hostel", "hostel" -> ListingTargetCategory.PG_HOSTEL
-            "function_hall" -> ListingTargetCategory.FUNCTION_HALL
-            "classroom", "meeting_room" -> ListingTargetCategory.ROOM
-            else -> ListingTargetCategory.VENUE
-        }
+    val existing = remember(existingVenueId) {
+        existingVenueId?.let { id -> BookMySpaceRepository.venues.value.find { it.id == id } }
     }
+    val initialSection = remember(existing) {
+        existing?.let { CustomerSectionCatalog.sectionForVenue(it) } ?: CustomerSection.FUNCTION_HALLS
+    }
+    var selectedSection by remember { mutableStateOf(initialSection) }
+    var selectedCatalogCategory by remember {
+        mutableStateOf(
+            existing?.let { venue ->
+                CustomerSectionCatalog.ownerCategories(initialSection).firstOrNull { cat ->
+                    CustomerSectionCatalog.matchesVenue(venue, initialSection, cat.id)
+                }?.id ?: CustomerSectionCatalog.ownerCategories(initialSection).first().id
+            } ?: CustomerSectionCatalog.ownerCategories(CustomerSection.FUNCTION_HALLS).first().id
+        )
+    }
+    var name by remember { mutableStateOf(existing?.name ?: "") }
+    var description by remember { mutableStateOf(existing?.description ?: "") }
+    var address by remember { mutableStateOf(existing?.addressLine1 ?: "") }
+    var city by remember { mutableStateOf(existing?.city ?: "Hyderabad") }
+    var priceStr by remember { mutableStateOf(existing?.pricingBaseAmount?.toInt()?.toString() ?: "25000") }
+    var capacityStr by remember { mutableStateOf(existing?.capacity?.toString() ?: "50") }
+    var latitude by remember { mutableDoubleStateOf(existing?.latitude ?: 17.3850) }
+    var longitude by remember { mutableDoubleStateOf(existing?.longitude ?: 78.4866) }
+    var publishListing by remember { mutableStateOf(existing?.isActive ?: false) }
+    var customVenueFieldValues by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    val ownerCategories = CustomerSectionCatalog.ownerCategories(selectedSection)
+    val dynamicTargetCategory = selectedSection.listingTarget
+    val isInstitute = !selectedSection.isBookable
 
     // Image Upload State
     var imageUrlInput by remember { mutableStateOf("") }
-    var imageList by remember { mutableStateOf(listOf("https://images.unsplash.com/photo-1519167758481-83f550bb49b3")) }
-    var coverIndex by remember { mutableIntStateOf(0) }
+    var imageList by remember {
+        mutableStateOf<List<String>>(existing?.images?.map { it.url } ?: emptyList())
+    }
+    var coverIndex by remember {
+        mutableIntStateOf(existing?.images?.indexOfFirst { it.isCover }?.coerceAtLeast(0) ?: 0)
+    }
     var storageNotice by remember { mutableStateOf<String?>(null) }
+    val photoPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickMultipleVisualMedia(6)
+    ) { uris ->
+        if (uris.isEmpty()) return@rememberLauncherForActivityResult
+        val remaining = 6 - imageList.size
+        if (remaining <= 0) {
+            storageNotice = "PHOTO LIMIT: Maximum 6 photos limit reached for this venue property."
+            return@rememberLauncherForActivityResult
+        }
+        imageList = imageList + uris.take(remaining).map { it.toString() }
+        storageNotice = "PHOTO UPLOADED (${imageList.size}/6): Added from your gallery (JPG, PNG, WEBP)."
+    }
+    var selectedAmenities by remember {
+        mutableStateOf(
+            CustomerSectionCatalog.amenityFilters(initialSection)
+                .filter { spec ->
+                    existing?.facilities?.any { fac ->
+                        spec.keywords.any { keyword -> fac.facility.contains(keyword, ignoreCase = true) }
+                    } == true
+                }
+                .map { it.id }
+                .toSet()
+        )
+    }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("List New Venue / Property", fontWeight = FontWeight.Bold) }) }
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        if (existing != null) "Edit listing" else "Create listing",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                actions = {
+                    if (existing != null) {
+                        IconButton(onClick = { onPreview(existing.id) }) {
+                            Icon(Icons.Default.Visibility, contentDescription = "Preview")
+                        }
+                    }
+                }
+            )
+        }
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier
@@ -340,19 +506,51 @@ fun CreateVenueScreen(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Venue Name") },
+                    label = { Text(if (isInstitute) "Institute / class name" else "Listing name") },
                     modifier = Modifier.fillMaxWidth().testTag("venue_name_input")
                 )
             }
             item {
-                Text("Category / Property Type", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text("Section", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 Spacer(modifier = Modifier.height(4.dp))
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(BookMySpaceRepository.getEnabledCategories()) { cat ->
+                    items(CustomerSection.entries) { section ->
                         FilterChip(
-                            selected = selectedCategorySlug == cat.slug,
-                            onClick = { selectedCategorySlug = cat.slug },
-                            label = { Text(cat.name) }
+                            selected = selectedSection == section,
+                            onClick = {
+                                selectedSection = section
+                                selectedCatalogCategory = CustomerSectionCatalog.ownerCategories(section).first().id
+                                selectedAmenities = emptySet()
+                            },
+                            label = { Text("${section.emoji} ${section.title}") },
+                            modifier = Modifier.testTag("owner_section_${section.id}")
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                Text("Category", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Spacer(modifier = Modifier.height(4.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(ownerCategories) { cat ->
+                        FilterChip(
+                            selected = selectedCatalogCategory == cat.id,
+                            onClick = { selectedCatalogCategory = cat.id },
+                            label = { Text("${cat.emoji} ${cat.label}") },
+                            modifier = Modifier.testTag("owner_category_${cat.id}")
+                        )
+                    }
+                }
+            }
+            if (isInstitute) {
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            "Institutes / Classes are advertising listings only. Customers can call, WhatsApp or open the map — they cannot book hall slots.",
+                            modifier = Modifier.padding(12.dp),
+                            fontSize = 12.sp
                         )
                     }
                 }
@@ -383,21 +581,60 @@ fun CreateVenueScreen(
                 }
             }
             item {
-                OutlinedTextField(
-                    value = priceStr,
-                    onValueChange = { priceStr = it },
-                    label = { Text("Base Price (₹)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = capacityStr,
+                        onValueChange = { capacityStr = it },
+                        label = {
+                            Text(
+                                when (selectedSection) {
+                                    CustomerSection.INSTITUTES_CLASSES -> "Batch size"
+                                    CustomerSection.LODGE_ROOMS -> "Rooms / occupancy"
+                                    CustomerSection.PG_HOSTELS -> "Beds / occupancy"
+                                    else -> "Capacity"
+                                }
+                            )
+                        },
+                        modifier = Modifier.weight(1f).testTag("owner_listing_capacity")
+                    )
+                    OutlinedTextField(
+                        value = priceStr,
+                        onValueChange = { priceStr = it },
+                        label = { Text(if (isInstitute) "Fee from (₹)" else "Base Price (₹)") },
+                        modifier = Modifier.weight(1f).testTag("owner_listing_price")
+                    )
+                }
+            }
+
+            item {
+                Text("Available fields", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Spacer(modifier = Modifier.height(6.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(CustomerSectionCatalog.amenityFilters(selectedSection)) { spec ->
+                        FilterChip(
+                            selected = spec.id in selectedAmenities,
+                            onClick = {
+                                selectedAmenities = if (spec.id in selectedAmenities) {
+                                    selectedAmenities - spec.id
+                                } else {
+                                    selectedAmenities + spec.id
+                                }
+                            },
+                            label = { Text("${spec.emoji} ${spec.label}") }
+                        )
+                    }
+                }
             }
 
             // REAL OPENSTREETMAP LOCATION PICKER
             item {
                 com.bookmyspace.bookmyspace.ui.components.RealLocationPickerMap(
-                    initialLat = 17.3850,
-                    initialLng = 78.4866,
+                    initialLat = latitude,
+                    initialLng = longitude,
                     initialAddress = address,
                     onLocationSelected = { lat, lng, locAddress ->
+                        latitude = lat
+                        longitude = lng
                         if (locAddress.isNotBlank()) address = locAddress
                     }
                 )
@@ -413,13 +650,33 @@ fun CreateVenueScreen(
                     Column(modifier = Modifier.padding(14.dp)) {
                         Text("Venue Photos & Cover Image (${imageList.size}/6 Max)", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         Text(
-                            "Owner photo upload: allow 5–6 photos max (supports JPG, PNG, WEBP formats). Select 1 as Cover Photo.",
+                            "Choose up to 6 photos from your gallery (JPG, PNG, WEBP). Select 1 as Cover Photo.",
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(10.dp))
 
-                        // Photo Input & Upload Trigger
+                        Button(
+                            onClick = {
+                                if (imageList.size >= 6) {
+                                    storageNotice = "PHOTO LIMIT: Maximum 6 photos limit reached for this venue property."
+                                    return@Button
+                                }
+                                photoPicker.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            },
+                            enabled = imageList.size < 6,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.testTag("owner_photo_pick")
+                        ) {
+                            Icon(Icons.Default.AddAPhoto, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Choose photos")
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Optional URL fallback
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -428,8 +685,8 @@ fun CreateVenueScreen(
                             OutlinedTextField(
                                 value = imageUrlInput,
                                 onValueChange = { imageUrlInput = it },
-                                label = { Text("Image URL or Storage Path") },
-                                leadingIcon = { Icon(Icons.Default.AddAPhoto, contentDescription = null) },
+                                label = { Text("Or paste image URL") },
+                                leadingIcon = { Icon(Icons.Default.CloudUpload, contentDescription = null) },
                                 modifier = Modifier.weight(1f),
                                 singleLine = true,
                                 enabled = imageList.size < 6
@@ -443,27 +700,12 @@ fun CreateVenueScreen(
                                     if (imageUrlInput.isNotBlank()) {
                                         imageList = imageList + imageUrlInput.trim()
                                         imageUrlInput = ""
-                                        storageNotice = "PHOTO UPLOADED (${imageList.size}/6): Image added to gallery. Common formats (JPG, PNG, WEBP) supported."
-                                    } else {
-                                        // Demo preset
-                                        val presets = listOf(
-                                            "https://images.unsplash.com/photo-1511578314322-379afb476865",
-                                            "https://images.unsplash.com/photo-1555396273-367ea4eb4db5",
-                                            "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af",
-                                            "https://images.unsplash.com/photo-1505691938895-1758d7feb511",
-                                            "https://images.unsplash.com/photo-1519167758481-83f550bb49b3",
-                                            "https://images.unsplash.com/photo-1566073771259-6a8506099945"
-                                        )
-                                        val nextPreset = presets.getOrNull(imageList.size) ?: presets.last()
-                                        imageList = imageList + nextPreset
-                                        storageNotice = "PHOTO UPLOADED (${imageList.size}/6): High-res JPG image added to venue gallery."
+                                        storageNotice = "PHOTO UPLOADED (${imageList.size}/6): Image URL added to gallery."
                                     }
                                 },
-                                enabled = imageList.size < 6,
+                                enabled = imageList.size < 6 && imageUrlInput.isNotBlank(),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
-                                Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
                                 Text("Add")
                             }
                         }
@@ -501,27 +743,12 @@ fun CreateVenueScreen(
                                             )
                                             .background(MaterialTheme.colorScheme.primaryContainer)
                                     ) {
-                                        Column(
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .padding(6.dp),
-                                            verticalArrangement = Arrangement.Center,
-                                            horizontalAlignment = Alignment.CenterHorizontally
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.AddAPhoto,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.primary,
-                                                modifier = Modifier.size(22.dp)
-                                            )
-                                            Spacer(modifier = Modifier.height(2.dp))
-                                            Text(
-                                                text = "Photo #${idx + 1}",
-                                                fontSize = 9.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                                            )
-                                        }
+                                        AsyncImage(
+                                            model = url,
+                                            contentDescription = "Photo ${idx + 1}",
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
 
                                         // Cover Badge / Toggle
                                         IconButton(
@@ -584,6 +811,49 @@ fun CreateVenueScreen(
                                                 )
                                             }
                                         }
+
+                                        Row(
+                                            modifier = Modifier
+                                                .align(Alignment.BottomStart)
+                                                .padding(bottom = if (isCover) 16.dp else 2.dp)
+                                        ) {
+                                            IconButton(
+                                                onClick = {
+                                                    if (idx > 0) {
+                                                        val mutable = imageList.toMutableList()
+                                                        val item = mutable.removeAt(idx)
+                                                        mutable.add(idx - 1, item)
+                                                        imageList = mutable
+                                                        coverIndex = when {
+                                                            coverIndex == idx -> idx - 1
+                                                            coverIndex == idx - 1 -> idx
+                                                            else -> coverIndex
+                                                        }
+                                                    }
+                                                },
+                                                modifier = Modifier.size(22.dp)
+                                            ) {
+                                                Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "Move left", tint = Color.White, modifier = Modifier.size(16.dp))
+                                            }
+                                            IconButton(
+                                                onClick = {
+                                                    if (idx < imageList.lastIndex) {
+                                                        val mutable = imageList.toMutableList()
+                                                        val item = mutable.removeAt(idx)
+                                                        mutable.add(idx + 1, item)
+                                                        imageList = mutable
+                                                        coverIndex = when {
+                                                            coverIndex == idx -> idx + 1
+                                                            coverIndex == idx + 1 -> idx
+                                                            else -> coverIndex
+                                                        }
+                                                    }
+                                                },
+                                                modifier = Modifier.size(22.dp)
+                                            ) {
+                                                Icon(Icons.Default.KeyboardArrowRight, contentDescription = "Move right", tint = Color.White, modifier = Modifier.size(16.dp))
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -602,28 +872,80 @@ fun CreateVenueScreen(
             }
 
             item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Switch(
+                        checked = publishListing,
+                        onCheckedChange = { publishListing = it },
+                        modifier = Modifier.testTag("owner_listing_publish_switch")
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        if (isInstitute) "Published as an advertising listing (Call / WhatsApp only)"
+                        else "Published — visible to customers in this section",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            item {
                 Spacer(modifier = Modifier.height(12.dp))
                 Button(
                     onClick = {
                         if (name.isNotBlank()) {
-                            // Reorder images so cover image is first
                             val orderedUrls = if (imageList.isNotEmpty()) {
                                 val coverUrl = imageList.getOrNull(coverIndex) ?: imageList[0]
                                 listOf(coverUrl) + imageList.filterIndexed { index, _ -> index != coverIndex }
                             } else emptyList()
-
-                            val newVenue = BookMySpaceRepository.createOwnerVenue(
-                                name = name,
-                                categorySlug = selectedCategorySlug,
-                                description = description,
-                                address = address,
-                                city = city,
-                                price = priceStr.toDoubleOrNull() ?: 25000.0,
-                                imageUrls = orderedUrls
+                            val amenityLabels = CustomerSectionCatalog.amenityFilters(selectedSection)
+                                .filter { it.id in selectedAmenities }
+                                .map { it.label }
+                            val categoryLabel = ownerCategories.firstOrNull { it.id == selectedCatalogCategory }?.label
+                            val facilities = listOfNotNull(categoryLabel) + amenityLabels
+                            val safeSlug = CustomerSectionCatalog.resolveOwnerCategorySlug(
+                                BookMySpaceRepository.categories,
+                                selectedSection,
+                                selectedCatalogCategory
                             )
 
+                            val saved = if (existing != null) {
+                                BookMySpaceRepository.updateOwnerVenue(
+                                    venueId = existing.id,
+                                    name = name,
+                                    categorySlug = safeSlug,
+                                    description = description,
+                                    address = address,
+                                    city = city,
+                                    price = priceStr.toDoubleOrNull() ?: 25000.0,
+                                    imageUrls = orderedUrls,
+                                    latitude = latitude,
+                                    longitude = longitude,
+                                    capacity = capacityStr.toIntOrNull() ?: 50,
+                                    isActive = publishListing,
+                                    facilities = facilities
+                                )
+                            } else {
+                                BookMySpaceRepository.createOwnerVenue(
+                                    name = name,
+                                    categorySlug = safeSlug,
+                                    description = description,
+                                    address = address,
+                                    city = city,
+                                    price = priceStr.toDoubleOrNull() ?: 25000.0,
+                                    imageUrls = orderedUrls,
+                                    latitude = latitude,
+                                    longitude = longitude,
+                                    capacity = capacityStr.toIntOrNull() ?: 50,
+                                    isActive = publishListing,
+                                    facilities = facilities
+                                )
+                            }
+
                             if (customVenueFieldValues.isNotEmpty()) {
-                                BookMySpaceRepository.saveCustomValuesForListing(newVenue.id, customVenueFieldValues)
+                                BookMySpaceRepository.saveCustomValuesForListing(saved.id, customVenueFieldValues)
                             }
 
                             onVenueCreated()
@@ -635,7 +957,13 @@ fun CreateVenueScreen(
                         .testTag("submit_venue_button"),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Submit Venue for Approval", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(
+                        if (existing != null) "Save listing"
+                        else if (publishListing) "Create & publish"
+                        else "Save draft",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
                 }
             }
         }

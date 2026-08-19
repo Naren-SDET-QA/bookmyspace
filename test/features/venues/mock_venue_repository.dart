@@ -148,6 +148,13 @@ class MockVenueRepository implements VenueRepository {
         slug: 'coworking_space',
         name: 'Coworking Space',
       ),
+      const VenueCategory(id: 'cat-hotel', slug: 'hotel_stay', name: 'Hotel / Stay'),
+      const VenueCategory(id: 'cat-lodge', slug: 'lodge', name: 'Lodge'),
+      const VenueCategory(id: 'cat-pg', slug: 'pg_coliving', name: 'PG / Co-Living'),
+      const VenueCategory(id: 'cat-ladies', slug: 'ladies_pg', name: 'Ladies PG'),
+      const VenueCategory(id: 'cat-sport', slug: 'sports_ground', name: 'Sports Ground'),
+      const VenueCategory(id: 'cat-mh', slug: 'marriage_hall', name: 'Marriage Hall'),
+      const VenueCategory(id: 'cat-dance', slug: 'dance_academy', name: 'Dance Academy'),
     ];
   }
 

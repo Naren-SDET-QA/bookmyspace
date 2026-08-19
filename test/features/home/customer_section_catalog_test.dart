@@ -99,6 +99,24 @@ void main() {
     );
   });
 
+  test('pg_coliving seed slug stays in the PG section', () {
+    const pg = Venue(
+      id: 'p',
+      name: 'Seed PG',
+      latitude: 0,
+      longitude: 0,
+      category: VenueCategory(
+        id: 'c',
+        slug: 'pg_coliving',
+        name: 'PG / Co-Living',
+      ),
+    );
+    expect(
+      CustomerSectionCatalog.sectionForVenue(pg),
+      CustomerSection.pgHostels,
+    );
+  });
+
   test('unknown slugs are excluded from all four sections', () {
     const coworking = Venue(
       id: 'x',

@@ -883,7 +883,21 @@ object BookMySpaceRepository {
         VenueCategory("cat_cc", "convention_center", "Convention Center", "domain"),
         VenueCategory("cat_cr", "conference_room", "Conference Hall", "groups"),
         VenueCategory("cat_mr", "meeting_room", "Meeting Space", "work"),
-        VenueCategory("cat_1", "badminton", "Sports Arena", "sports")
+        VenueCategory("cat_1", "badminton", "Sports Arena", "sports"),
+        VenueCategory("cat_lodge", "lodge", "Lodge", "bed"),
+        VenueCategory("cat_gh", "guest_house", "Guest House", "house"),
+        VenueCategory("cat_hr", "hourly_room", "Hourly / Day Room", "schedule"),
+        VenueCategory("cat_resort", "resort", "Resort / Homestay", "spa"),
+        VenueCategory("cat_pgc", "pg_coliving", "PG / Co-Living", "apartment"),
+        VenueCategory("cat_gents", "gents_pg", "Gents PG", "man"),
+        VenueCategory("cat_ladies", "ladies_pg", "Ladies PG", "woman"),
+        VenueCategory("cat_sh", "student_hostel", "Student Hostel", "school"),
+        VenueCategory("cat_colive", "co_living", "Co-living Spaces", "groups"),
+        VenueCategory("cat_govt", "govt_hall", "Government Hall", "account_balance"),
+        VenueCategory("cat_coach", "coaching", "Coaching & Tuition", "school"),
+        VenueCategory("cat_it", "computer_it", "Computer & IT Classes", "computer"),
+        VenueCategory("cat_dance", "dance_academy", "Dance Academy", "nightlife"),
+        VenueCategory("cat_music", "music_class", "Music & Singing", "music_note")
     )
 
     // Venues State
@@ -2488,15 +2502,27 @@ object BookMySpaceRepository {
         address: String,
         city: String,
         price: Double,
-        imageUrls: List<String> = emptyList()
+        imageUrls: List<String> = emptyList(),
+        latitude: Double = 17.3850,
+        longitude: Double = 78.4866,
+        capacity: Int = 50,
+        isActive: Boolean = false,
+        facilities: List<String> = emptyList()
     ): Venue {
-        val categoryObj = categories.firstOrNull { it.slug == categorySlug } ?: categories[0]
-        val venueImages = if (imageUrls.isNotEmpty()) {
-            imageUrls.mapIndexed { idx, url ->
-                VenueImage("img_${System.currentTimeMillis()}_$idx", url, isCover = idx == 0)
-            }
+        val section = CustomerSection.fromAny(categorySlug)
+        val safeSlug = if (section != null) {
+            CustomerSectionCatalog.resolveOwnerCategorySlug(categories, section, categorySlug)
         } else {
-            listOf(VenueImage("img_new", "https://images.unsplash.com/photo-1519167758481-83f550bb49b3", isCover = true))
+            error("Pick a Function Hall, Lodge, PG or Institute category.")
+        }
+        val categoryObj = categories.first { it.slug.equals(safeSlug, ignoreCase = true) }
+        val venueImages = imageUrls.mapIndexed { idx, url ->
+            VenueImage("img_${System.currentTimeMillis()}_$idx", url, isCover = idx == 0)
+        }
+        val facilityRows = if (facilities.isNotEmpty()) {
+            facilities.map { VenueFacility(it) }
+        } else {
+            listOf(VenueFacility("Parking"), VenueFacility("Restroom"))
         }
 
         val newVenue = Venue(
@@ -2506,19 +2532,104 @@ object BookMySpaceRepository {
             description = description,
             addressLine1 = address,
             city = city,
+            latitude = latitude,
+            longitude = longitude,
+            capacity = capacity,
             pricingBaseAmount = price,
             category = categoryObj,
             isVerified = false,
+            isActive = isActive,
             images = venueImages,
-            facilities = listOf(VenueFacility("Parking"), VenueFacility("Restroom")),
-            timeSlots = listOf(
+            facilities = facilityRows,
+            pgDetails = if (section == CustomerSection.PG_HOSTELS) {
+                PgDetails(pgType = categoryObj.name, preferredOccupants = name)
+            } else null,
+            hotelDetails = if (section == CustomerSection.LODGE_ROOMS) {
+                HotelDetails(propertyType = categoryObj.name)
+            } else null,
+            timeSlots = if (section?.isBookable == true) listOf(
                 TimeSlot("ts_new1", "v_new", "Standard Slot (09:00 - 11:00 AM)", "09:00", "11:00", price)
-            )
+            ) else emptyList()
         )
         _venues.value = listOf(newVenue) + _venues.value
-        addNotification("New Venue Submitted", "Your venue '$name' has been created and is pending admin verification.", "owner")
+        addNotification("New Venue Submitted", "Your listing '$name' has been created and is pending admin verification.", "owner")
         addAuditLog("OWNER_CREATE_VENUE", "Created new venue: $name with ${venueImages.size} image(s)")
         return newVenue
+    }
+
+    fun updateOwnerVenue(
+        venueId: String,
+        name: String,
+        categorySlug: String,
+        description: String,
+        address: String,
+        city: String,
+        price: Double,
+        imageUrls: List<String> = emptyList(),
+        latitude: Double = 17.3850,
+        longitude: Double = 78.4866,
+        capacity: Int = 50,
+        isActive: Boolean? = null,
+        facilities: List<String> = emptyList()
+    ): Venue {
+        val current = _venues.value.firstOrNull { it.id == venueId }
+            ?: error("Venue not found")
+        val section = CustomerSection.fromAny(categorySlug)
+            ?: error("Pick a Function Hall, Lodge, PG or Institute category.")
+        val safeSlug = CustomerSectionCatalog.resolveOwnerCategorySlug(categories, section, categorySlug)
+        val categoryObj = categories.first { it.slug.equals(safeSlug, ignoreCase = true) }
+        val venueImages = if (imageUrls.isNotEmpty()) {
+            imageUrls.mapIndexed { idx, url ->
+                VenueImage("img_${venueId}_$idx", url, isCover = idx == 0)
+            }
+        } else current.images
+        val facilityRows = if (facilities.isNotEmpty()) {
+            facilities.map { VenueFacility(it) }
+        } else current.facilities
+        val updated = current.copy(
+            name = name,
+            slug = name.lowercase().replace(" ", "-").replace(Regex("[^a-z0-9-]"), ""),
+            description = description,
+            addressLine1 = address,
+            city = city,
+            latitude = latitude,
+            longitude = longitude,
+            capacity = capacity,
+            pricingBaseAmount = price,
+            category = categoryObj,
+            isActive = isActive ?: current.isActive,
+            images = venueImages,
+            facilities = facilityRows,
+            pgDetails = if (section == CustomerSection.PG_HOSTELS) {
+                current.pgDetails?.copy(pgType = categoryObj.name) ?: PgDetails(pgType = categoryObj.name)
+            } else null,
+            hotelDetails = if (section == CustomerSection.LODGE_ROOMS) {
+                current.hotelDetails?.copy(propertyType = categoryObj.name)
+                    ?: HotelDetails(propertyType = categoryObj.name)
+            } else null
+        )
+        _venues.value = _venues.value.map { if (it.id == venueId) updated else it }
+        addAuditLog("OWNER_UPDATE_VENUE", "Updated listing: $name")
+        return updated
+    }
+
+    fun setVenuePublished(venueId: String, published: Boolean): Venue {
+        val updated = _venues.value.firstOrNull { it.id == venueId }
+            ?: error("Venue not found")
+        val next = updated.copy(isActive = published)
+        _venues.value = _venues.value.map { if (it.id == venueId) next else it }
+        addAuditLog(
+            if (published) "OWNER_PUBLISH_VENUE" else "OWNER_UNPUBLISH_VENUE",
+            "${if (published) "Published" else "Unpublished"} listing ${updated.name}"
+        )
+        return next
+    }
+
+    fun deleteOwnerVenue(venueId: String) {
+        val current = _venues.value.firstOrNull { it.id == venueId }
+            ?: error("Venue not found")
+        _venues.value = _venues.value.filterNot { it.id == venueId }
+        addAuditLog("OWNER_DELETE_VENUE", "Deleted listing ${current.name}")
     }
 
     // Dynamic Pricing Engine Methods
@@ -3679,7 +3790,9 @@ object BookMySpaceRepository {
         categorySlug: String = _selectedCustomerCategorySlug.value
     ): List<Venue> {
         if (section == null) return emptyList()
-        return _venues.value.filter { CustomerSectionCatalog.matchesVenue(it, section, categorySlug) }
+        return _venues.value.filter {
+            it.isActive && CustomerSectionCatalog.matchesVenue(it, section, categorySlug)
+        }
     }
 
     // =========================================================================
