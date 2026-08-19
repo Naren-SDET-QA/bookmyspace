@@ -46,7 +46,9 @@ class GeocodingService {
     final row = rows.first as Map<String, dynamic>;
     final lat = double.tryParse(row['lat'] as String? ?? '');
     final lng = double.tryParse(row['lon'] as String? ?? '');
-    if (lat == null || lng == null) return null;
+    if (lat == null || lng == null || !SearchArea.isValidCoordinate(lat, lng)) {
+      return null;
+    }
     return SearchArea(
       label: row['display_name'] as String? ?? trimmed,
       latitude: lat,
@@ -116,6 +118,11 @@ class GeocodingService {
         timeLimit: Duration(seconds: 15),
       ),
     );
+    if (!SearchArea.isValidCoordinate(position.latitude, position.longitude)) {
+      throw const LocationServiceDisabledException(
+        'The device returned an invalid location.',
+      );
+    }
     final label = await reverse(position.latitude, position.longitude);
     return SearchArea(
       label: label,

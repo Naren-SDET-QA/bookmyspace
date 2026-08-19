@@ -16,18 +16,32 @@ class SearchArea {
   final double longitude;
   final double radiusKm;
 
+  /// Valid latitude/longitude values that can safely be sent to maps or RPCs.
+  bool get hasValidCoordinates => isValidCoordinate(latitude, longitude);
+
+  static bool isValidCoordinate(double latitude, double longitude) {
+    return latitude.isFinite &&
+        longitude.isFinite &&
+        latitude >= -90 &&
+        latitude <= 90 &&
+        longitude >= -180 &&
+        longitude <= 180;
+  }
+
   SearchArea copyWith({
     String? label,
     double? latitude,
     double? longitude,
     double? radiusKm,
   }) {
-    return SearchArea(
+    final next = SearchArea(
       label: label ?? this.label,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       radiusKm: radiusKm ?? this.radiusKm,
     );
+    if (!next.hasValidCoordinates) return this;
+    return next;
   }
 
   /// Default development area (Hyderabad, Madhapur) so the app renders

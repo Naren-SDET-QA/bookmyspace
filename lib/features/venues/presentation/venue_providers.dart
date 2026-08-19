@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/presentation/auth_providers.dart';
+import '../../location/presentation/location_providers.dart';
 import '../domain/venue.dart';
 import '../domain/venue_repository.dart';
 import '../infrastructure/supabase_venue_repository.dart';
@@ -25,16 +26,13 @@ final popularVenuesProvider = FutureProvider<List<Venue>>((ref) {
 final nearbyVenuesProvider = FutureProvider.autoDispose<List<Venue>>((
   ref,
 ) async {
-  // Location permissions are wired in Milestone 4+; fall back to a default
-  // city so the section renders real data in dev.
-  const defaultLat = 17.385044;
-  const defaultLng = 78.486671;
+  final area = ref.watch(searchAreaProvider);
   return ref
       .watch(venueRepositoryProvider)
       .nearbyVenues(
-        latitude: defaultLat,
-        longitude: defaultLng,
-        maxDistanceKm: 50,
+        latitude: area.latitude,
+        longitude: area.longitude,
+        maxDistanceKm: area.radiusKm,
         limit: 10,
       );
 });

@@ -190,7 +190,9 @@ class SupabaseVenueRepository implements VenueRepository {
           };
           venues = [
             for (final v in venues)
-              v.copyWith(distanceKm: distanceById[v.id]),
+              if (distanceById[v.id] != null &&
+                  distanceById[v.id]! <= (query.maxDistanceKm ?? 50))
+                v.copyWith(distanceKm: distanceById[v.id]),
           ];
         } catch (e) {
           // Distance is an enhancement; a failing RPC must not break search.
