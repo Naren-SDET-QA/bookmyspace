@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -21,6 +22,7 @@ import '../../../venues/presentation/venue_providers.dart';
 import '../../../venues/presentation/widgets/venue_badges.dart';
 import '../../domain/context_aware_help.dart';
 import '../../domain/customer_section_catalog.dart';
+import '../../../search/domain/ai_search_intent.dart';
 import '../customer_section_providers.dart';
 
 /// The 4 primary sections of BookMySpace
@@ -937,25 +939,41 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: const Text('Cancel'),
             ),
             FilledButton(
-              onPressed: () {
-                Navigator.pop(context);
+              onPressed: () async {
                 final section = ref.read(selectedCustomerSectionProvider);
                 if (section == null) return;
+                final speech = SpeechToText();
+                final available = await speech.initialize();
+                if (!available) {
+                  if (context.mounted) Navigator.pop(context);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Voice is unavailable. Use normal search instead.')),
+                    );
+                    context.push(AppRoutes.search, extra: {'section': section.id});
+                  }
+                  return;
+                }
+                String transcript = '';
+                await speech.listen(
+                  onResult: (result) => transcript = result.recognizedWords,
+                );
+                await Future<void>.delayed(const Duration(seconds: 5));
+                await speech.stop();
+                if (!context.mounted) return;
+                Navigator.pop(context);
+                final intent = AiSearchIntent.parse(
+                  transcript,
+                  selectedSection: section,
+                );
                 context.push(
                   AppRoutes.search,
                   extra: {
                     'section': section.id,
-                    'category': ref.read(selectedCustomerCategoryProvider) == 'all'
-                        ? null
-                        : ref.read(selectedCustomerCategoryProvider),
+                    'category': intent.categorySlug,
+                    'query': transcript,
+                    'intent': intent,
                   },
-                );
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Voice search is section-scoped — search started for your selected section.',
-                    ),
-                  ),
                 );
               },
               child: const Text('Start Listening'),

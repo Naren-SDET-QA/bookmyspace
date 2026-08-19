@@ -18,16 +18,19 @@ import '../../../location/presentation/widgets/location_picker_sheet.dart';
 import '../../../venues/domain/venue.dart';
 import '../../../venues/presentation/venue_providers.dart';
 import '../../../venues/presentation/widgets/venue_card.dart';
+import '../../domain/ai_search_intent.dart';
 
 /// Search screen: text query + section category chips + location + a
 /// section-aware filter sheet. Results are always scoped to the selected
 /// customer section, and a map view (`/map`) renders the same results.
 class SearchScreen extends ConsumerStatefulWidget {
-  const SearchScreen({super.key, this.initialCategory, this.initialSection});
+  const SearchScreen({super.key, this.initialCategory, this.initialSection, this.initialQuery, this.initialIntent});
 
   /// Preselected category slug (set when navigating from home chips).
   final String? initialCategory;
   final String? initialSection;
+  final String? initialQuery;
+  final AiSearchIntent? initialIntent;
 
   @override
   ConsumerState<SearchScreen> createState() => _SearchScreenState();
@@ -55,7 +58,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           widget.initialCategory ?? ref.read(selectedCustomerCategoryProvider);
       final current = ref.read(searchQueryProvider);
       final area = ref.read(searchAreaProvider);
-      ref.read(searchQueryProvider.notifier).state = current.copyWith(
+      _controller.text = widget.initialQuery ?? '';
+      final interpreted = widget.initialIntent?.toQuery(
+        selectedSection: incomingSection ?? CustomerSection.functionHalls,
+        area: area,
+      );
+      ref.read(searchQueryProvider.notifier).state = interpreted ?? current.copyWith(
+        query: widget.initialQuery ?? current.query,
         sectionId: () => incomingSection?.id,
         categorySlug: () => category == 'all' || category == incomingSection?.id
             ? null

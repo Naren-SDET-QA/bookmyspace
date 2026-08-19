@@ -29,6 +29,7 @@ import '../../features/payments/presentation/screens/payment_screen.dart';
 import '../../features/saved/presentation/screens/saved_screen.dart';
 import '../../features/search/presentation/screens/map_screen.dart';
 import '../../features/search/presentation/screens/search_screen.dart';
+import '../../features/search/domain/ai_search_intent.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/support/presentation/screens/support_screen.dart';
 import '../../features/venues/domain/venue.dart';
@@ -279,9 +280,17 @@ GoRouter createAppRouter({
                   final section = extra is Map<String, dynamic>
                       ? extra['section'] as String?
                       : null;
+                  final query = extra is Map<String, dynamic>
+                      ? extra['query'] as String?
+                      : null;
+                  final intent = extra is Map<String, dynamic>
+                      ? extra['intent'] as AiSearchIntent?
+                      : null;
                   return SearchScreen(
                     initialCategory: category,
                     initialSection: section,
+                    initialQuery: query,
+                    initialIntent: intent,
                   );
                 },
               ),
