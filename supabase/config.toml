@@ -57,6 +57,13 @@ enabled = true
 policy = "oneshot"
 verify_jwt = true
 
+# Razorpay authenticates this endpoint with x-razorpay-signature. The function
+# performs its own raw-body HMAC verification before processing any event.
+# Keep JWT verification enabled globally and exempt only this server-to-server
+# webhook so the existing payment/webhook contract remains unchanged.
+[functions.razorpay-webhook]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327
