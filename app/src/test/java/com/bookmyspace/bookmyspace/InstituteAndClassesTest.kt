@@ -174,4 +174,33 @@ class InstituteAndClassesTest {
         val offlineOnly = BookMySpaceRepository.searchClasses("", "All", ClassDeliveryMode.OFFLINE)
         assertTrue(offlineOnly.all { it.deliveryMode == ClassDeliveryMode.OFFLINE })
     }
+
+    @Test
+    fun testCreatePayPublishExpiryAndRenewalLifecycle() {
+        val ownerId = "usr_lifecycle_${System.currentTimeMillis()}"
+        val draft = InstituteProfile(
+            id = "", ownerId = ownerId, name = "Lifecycle Academy",
+            phone = "+91 9000000000", whatsapp = "+91 9000000000", isPublished = true
+        )
+
+        val saved = BookMySpaceRepository.saveInstituteProfile(ownerId, draft).getOrThrow()
+        assertFalse("Unpaid listings must remain hidden", saved.isPublished)
+        assertFalse(BookMySpaceRepository.getPublishedInstitutes().any { it.id == saved.id })
+
+        BookMySpaceRepository.purchaseInstituteListingPlan(
+            ownerId, InstituteListingPlanTier.STARTER, "pay_lifecycle_1", "idem_lifecycle_1"
+        )
+        assertEquals("Active", BookMySpaceRepository.getOwnerListingStatus(ownerId))
+        assertTrue(BookMySpaceRepository.getPublishedInstitutes().any { it.id == saved.id })
+
+        BookMySpaceRepository.cancelOrExpireListingPlanForTesting(ownerId)
+        assertEquals("Expired", BookMySpaceRepository.getOwnerListingStatus(ownerId))
+        assertFalse(BookMySpaceRepository.getPublishedInstitutes().any { it.id == saved.id })
+
+        BookMySpaceRepository.purchaseInstituteListingPlan(
+            ownerId, InstituteListingPlanTier.GROWTH_PRO, "pay_lifecycle_2", "idem_lifecycle_2"
+        )
+        assertEquals("Active", BookMySpaceRepository.getOwnerListingStatus(ownerId))
+        assertTrue(BookMySpaceRepository.getPublishedInstitutes().any { it.id == saved.id })
+    }
 }

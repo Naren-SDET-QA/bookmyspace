@@ -3076,6 +3076,16 @@ object BookMySpaceRepository {
         return if (sub != null && sub.isActive && !sub.isExpired) sub else null
     }
 
+    /** A listing may be edited before payment, but discovery is always payment-gated. */
+    fun getOwnerListingStatus(ownerId: String): String {
+        val subscription = _instituteSubscriptions.value[ownerId]
+        return when {
+            subscription == null -> "Unpaid"
+            subscription.isExpired || !subscription.isActive -> "Expired"
+            else -> "Active"
+        }
+    }
+
     fun hasActiveListingPlan(ownerId: String): Boolean {
         val sub = _instituteSubscriptions.value[ownerId]
         return sub != null && sub.isActive && !sub.isExpired
@@ -3106,6 +3116,16 @@ object BookMySpaceRepository {
         val updatedMap = _instituteSubscriptions.value.toMutableMap()
         updatedMap[ownerId] = newSub
         _instituteSubscriptions.value = updatedMap
+        // Payment verification is the publication boundary for both the institute
+        // profile and its classes. Drafts remain editable before this point.
+        _institutes.value = _institutes.value.map {
+            if (it.ownerId == ownerId) it.copy(isPublished = true, updatedAt = System.currentTimeMillis()) else it
+        }
+        _instituteClasses.value = _instituteClasses.value.map {
+            if (it.ownerId == ownerId && it.status == ClassPublishStatus.DRAFT) {
+                it.copy(status = ClassPublishStatus.PUBLISHED, updatedAt = System.currentTimeMillis())
+            } else it
+        }
         return true
     }
 
@@ -3130,9 +3150,6 @@ object BookMySpaceRepository {
     }
 
     fun saveInstituteProfile(ownerId: String, profile: InstituteProfile): Result<InstituteProfile> {
-        if (!hasActiveListingPlan(ownerId)) {
-            return Result.failure(IllegalStateException("Active Institute Listing Plan is required before creating or publishing an institute."))
-        }
         if (profile.name.isBlank()) {
             return Result.failure(IllegalArgumentException("Institute Name is required."))
         }
@@ -3143,14 +3160,15 @@ object BookMySpaceRepository {
         val existingList = _institutes.value.toMutableList()
         val index = existingList.indexOfFirst { it.id == profile.id || (it.ownerId == ownerId && profile.id.isEmpty()) }
 
+        val paid = hasActiveListingPlan(ownerId)
         val finalizedProfile = if (profile.id.isBlank()) {
-            profile.copy(id = "inst_${System.currentTimeMillis()}", ownerId = ownerId, updatedAt = System.currentTimeMillis())
+            profile.copy(id = "inst_${System.currentTimeMillis()}", ownerId = ownerId, isPublished = paid, updatedAt = System.currentTimeMillis())
         } else {
             // RLS check
             if (profile.ownerId != ownerId) {
                 return Result.failure(SecurityException("Permission denied: You can only update your own institute."))
             }
-            profile.copy(updatedAt = System.currentTimeMillis())
+            profile.copy(isPublished = profile.isPublished && paid, updatedAt = System.currentTimeMillis())
         }
 
         if (index >= 0) {
@@ -3215,10 +3233,6 @@ object BookMySpaceRepository {
     }
 
     fun saveClass(ownerId: String, classItem: InstituteClass): Result<InstituteClass> {
-        if (!hasActiveListingPlan(ownerId)) {
-            return Result.failure(IllegalStateException("Active Institute Listing Plan is required to create or edit classes."))
-        }
-
         // Required Field Validations
         if (classItem.title.isBlank()) {
             return Result.failure(IllegalArgumentException("Class Title is required."))
@@ -3255,11 +3269,14 @@ object BookMySpaceRepository {
         val inst = _institutes.value.find { it.id == classItem.instituteId }
         val instituteName = if (classItem.instituteName.isNotBlank()) classItem.instituteName else (inst?.name ?: "Academy")
 
+        val paid = hasActiveListingPlan(ownerId)
+        val requestedStatus = if (paid) classItem.status else ClassPublishStatus.DRAFT
         val finalized = if (classItem.id.isBlank()) {
             classItem.copy(
                 id = "cls_${System.currentTimeMillis()}",
                 ownerId = ownerId,
                 instituteName = instituteName,
+                status = requestedStatus,
                 createdAt = System.currentTimeMillis(),
                 updatedAt = System.currentTimeMillis()
             )
@@ -3267,6 +3284,7 @@ object BookMySpaceRepository {
             classItem.copy(
                 ownerId = ownerId,
                 instituteName = instituteName,
+                status = requestedStatus,
                 updatedAt = System.currentTimeMillis()
             )
         }
@@ -3293,6 +3311,7 @@ object BookMySpaceRepository {
     fun toggleClassPublishStatus(ownerId: String, classId: String, newStatus: ClassPublishStatus): Boolean {
         val existing = _instituteClasses.value.find { it.id == classId } ?: return false
         if (existing.ownerId != ownerId) return false
+        if (newStatus == ClassPublishStatus.PUBLISHED && !hasActiveListingPlan(ownerId)) return false
 
         _instituteClasses.value = _instituteClasses.value.map {
             if (it.id == classId) it.copy(status = newStatus, updatedAt = System.currentTimeMillis()) else it
@@ -3310,11 +3329,11 @@ object BookMySpaceRepository {
 
     // Public / Student Queries
     fun getPublishedClasses(): List<InstituteClass> {
-        return _instituteClasses.value.filter { it.status == ClassPublishStatus.PUBLISHED }
+        return _instituteClasses.value.filter { it.status == ClassPublishStatus.PUBLISHED && hasActiveListingPlan(it.ownerId) }
     }
 
     fun getPublishedInstitutes(): List<InstituteProfile> {
-        return _institutes.value.filter { it.isPublished }
+        return _institutes.value.filter { it.isPublished && hasActiveListingPlan(it.ownerId) }
     }
 
     fun searchClasses(
