@@ -11,13 +11,16 @@ import '../domain/checkout_service.dart';
 /// caller should surface a friendly message instead of crashing.
 class RazorpayCheckoutService implements CheckoutService {
   @override
+  CheckoutSuccessDetails? get lastSuccessDetails => null;
+
+  @override
   Future<CheckoutResult> openCheckout({
     required String orderId,
     required double amount,
     required String currency,
     required String keyId,
   }) async {
-    if (keyId.contains('PLACEHOLDER')) {
+    if (keyId.trim().isEmpty || keyId.contains('PLACEHOLDER')) {
       throw const ConfigurationException(
         'Razorpay checkout is not configured. Add a test key to run payments.',
         code: 'razorpay_not_configured',
@@ -53,6 +56,12 @@ class RazorpayCheckoutService implements CheckoutService {
       'theme': const {'color': '#6750A4'},
     });
 
-    return completer.future;
+    return completer.future.timeout(
+      const Duration(minutes: 5),
+      onTimeout: () {
+        razorpay.clear();
+        return CheckoutResult.timedOut;
+      },
+    );
   }
 }

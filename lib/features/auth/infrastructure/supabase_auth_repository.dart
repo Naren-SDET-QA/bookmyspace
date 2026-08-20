@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/errors/app_exceptions.dart' show AppException, mapError;
 import '../domain/auth_repository.dart';
-import '../domain/auth_user.dart' as domain show AuthUser;
+import '../domain/auth_user.dart' as domain;
 
 /// A Supabase authentication error surfaced to the presentation layer.
 class AppAuthException extends AppException {
@@ -29,10 +29,13 @@ class SupabaseAuthRepository implements AuthRepository {
 
   @override
   Stream<domain.AuthUser?> authStateChanges() {
-    return _client.auth.onAuthStateChange.map((data) {
+    return _client.auth.onAuthStateChange.asyncExpand((data) async* {
       final user = data.session?.user;
-      if (user == null) return null;
-      return _toUser(user);
+      if (user == null) {
+        yield null;
+        return;
+      }
+      yield await _loadAuthoritativeUser(user);
     });
   }
 
@@ -212,6 +215,72 @@ class SupabaseAuthRepository implements AuthRepository {
       phone: u.phone ?? '',
       fullName: (u.userMetadata?['full_name'] ?? '') as String,
       avatarUrl: (u.userMetadata?['avatar_url'] ?? '') as String,
+    );
+  }
+
+  Future<domain.AuthUser> _loadAuthoritativeUser(User user) async {
+    var profile = <String, dynamic>{};
+    var role = domain.AppRole.customer;
+    var verification = user.emailConfirmedAt != null
+        ? domain.VerificationStatus.approved
+        : domain.VerificationStatus.pending;
+    try {
+      final profileRow = await _client
+          .from('profiles')
+          .select('full_name, avatar_url')
+          .eq('id', user.id)
+          .maybeSingle();
+      profile = profileRow ?? profile;
+      final roleRows = await _client
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .isFilter('revoked_at', null);
+      final roles = roleRows.map((row) => row['role'] as String? ?? '').toSet();
+      if (roles.contains('administrator') ||
+          roles.contains('super_administrator')) {
+        role = domain.AppRole.admin;
+        verification = domain.VerificationStatus.approved;
+      } else if (roles.any(
+        (value) =>
+            value == 'venue_owner' ||
+            value == 'institute_owner' ||
+            value == 'event_organizer',
+      )) {
+        role = domain.AppRole.venueOwner;
+        final owner = await _client
+            .from('owner_profiles')
+            .select('id')
+            .eq('user_id', user.id)
+            .maybeSingle();
+        if (owner != null) {
+          final organization = await _client
+              .from('organizations')
+              .select('business_verification')
+              .eq('owner_user_id', owner['id'])
+              .maybeSingle();
+          verification = domain.VerificationStatus.values.firstWhere(
+            (status) => status.name == organization?['business_verification'],
+            orElse: () => domain.VerificationStatus.pending,
+          );
+        }
+      }
+    } catch (_) {
+      // Keep the authenticated user usable if optional profile hydration is
+      // unavailable; protected screens still require the authoritative role.
+    }
+    return domain.AuthUser(
+      id: user.id,
+      email: user.email ?? '',
+      phone: user.phone ?? '',
+      fullName:
+          profile['full_name'] as String? ??
+          (user.userMetadata?['full_name'] as String? ?? ''),
+      avatarUrl:
+          profile['avatar_url'] as String? ??
+          (user.userMetadata?['avatar_url'] as String? ?? ''),
+      role: role,
+      verificationStatus: verification,
     );
   }
 

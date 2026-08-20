@@ -28,14 +28,22 @@ Widget _app(
       ownerVenueRepositoryProvider.overrideWithValue(ownerVenueRepo),
       authRepositoryProvider.overrideWithValue(
         MockAuthRepository(
-          initialUser: const AuthUser(id: 'u1', email: 'owner@b.com'),
+          initialUser: const AuthUser(
+            id: 'u1',
+            email: 'owner@b.com',
+            role: AppRole.venueOwner,
+          ),
         ),
       ),
     ],
     child: MaterialApp.router(
       routerConfig: createAppRouter(
         initialLocation: initialLocation,
-        currentUser: const AuthUser(id: 'u1', email: 'owner@b.com'),
+        currentUser: const AuthUser(
+          id: 'u1',
+          email: 'owner@b.com',
+          role: AppRole.venueOwner,
+        ),
       ),
       localizationsDelegates: const [
         AppLocalizations.delegate,
@@ -78,7 +86,10 @@ void main() {
     tester,
   ) async {
     final bookingRepo = MockOwnerBookingRepository(
-      bookings: [_booking(), _booking(id: 'b2', status: BookingStatus.confirmed)],
+      bookings: [
+        _booking(),
+        _booking(id: 'b2', status: BookingStatus.confirmed),
+      ],
     );
     final ownerVenueRepo = MockOwnerVenueRepository()
       ..venues.add(
@@ -117,9 +128,7 @@ void main() {
   testWidgets('confirming a pending booking applies the transition', (
     tester,
   ) async {
-    final bookingRepo = MockOwnerBookingRepository(
-      bookings: [_booking()],
-    );
+    final bookingRepo = MockOwnerBookingRepository(bookings: [_booking()]);
     final ownerVenueRepo = MockOwnerVenueRepository();
 
     await tester.pumpWidget(_app(bookingRepo, ownerVenueRepo));
@@ -147,7 +156,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('No bookings for your venues yet'), findsOneWidget);
-    expect(find.text('You need at least one venue before managing bookings.'), findsOneWidget);
+    expect(
+      find.text('You need at least one venue before managing bookings.'),
+      findsOneWidget,
+    );
     expect(find.text('New offline booking'), findsNothing);
   });
 }

@@ -147,6 +147,23 @@ void main() {
     expect(find.text('Payment failed'), findsWidgets);
   });
 
+  testWidgets('a checkout timeout exits loading without retrying the order', (
+    tester,
+  ) async {
+    final paymentRepo = MockPaymentRepository();
+    await tester.pumpWidget(
+      _app(paymentRepo, FakeCheckoutService(CheckoutResult.timedOut)),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Pay now'));
+    await _pumpThroughPayment(tester);
+
+    expect(find.textContaining('timed out'), findsOneWidget);
+    expect(paymentRepo.lastOrderBookingId, 'b1');
+    expect(find.text('Pay now'), findsNothing);
+  });
+
   testWidgets('order creation failure surfaces an error', (tester) async {
     final paymentRepo = MockPaymentRepository()..failCreateOrder = true;
     await tester.pumpWidget(_app(paymentRepo, FakeCheckoutService()));

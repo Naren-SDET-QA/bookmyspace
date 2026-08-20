@@ -55,16 +55,17 @@ class SupabaseBookingRepository implements BookingRepository {
     int holdMinutes = 10,
   }) async {
     try {
+      final request = {
+        'venue_id': venueId,
+        'slot_id': slotId,
+        'book_date': _formatDate(bookDate),
+        'idempotency_key': _newUuid(),
+        'amount': amount,
+        'hold_minutes': holdMinutes,
+      };
       final response = await _client.functions.invoke(
         'create-booking-hold',
-        body: {
-          'venue_id': venueId,
-          'slot_id': slotId,
-          'book_date': _formatDate(bookDate),
-          'idempotency_key': _newUuid(),
-          'amount': amount,
-          'hold_minutes': holdMinutes,
-        },
+        body: request,
       );
       final data = response.data;
       if (data is! Map<String, dynamic>) {

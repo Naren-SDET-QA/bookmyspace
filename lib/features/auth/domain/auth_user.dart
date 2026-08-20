@@ -2,6 +2,10 @@
 ///
 /// NOTE: Freezed/JsonSerializable codegen is configured but was not run in
 /// this environment. The class is hand-written to stay dependency-free.
+enum AppRole { customer, venueOwner, admin }
+
+enum VerificationStatus { pending, submitted, approved, rejected, unknown }
+
 class AuthUser {
   const AuthUser({
     required this.id,
@@ -9,6 +13,8 @@ class AuthUser {
     this.phone = '',
     this.fullName = '',
     this.avatarUrl = '',
+    this.role = AppRole.customer,
+    this.verificationStatus = VerificationStatus.unknown,
   });
 
   final String id;
@@ -16,6 +22,11 @@ class AuthUser {
   final String phone;
   final String fullName;
   final String avatarUrl;
+  final AppRole role;
+  final VerificationStatus verificationStatus;
+
+  bool get isAdmin => role == AppRole.admin;
+  bool get isOwner => role == AppRole.venueOwner || isAdmin;
 
   AuthUser copyWith({
     String? id,
@@ -23,6 +34,8 @@ class AuthUser {
     String? phone,
     String? fullName,
     String? avatarUrl,
+    AppRole? role,
+    VerificationStatus? verificationStatus,
   }) {
     return AuthUser(
       id: id ?? this.id,
@@ -30,6 +43,8 @@ class AuthUser {
       phone: phone ?? this.phone,
       fullName: fullName ?? this.fullName,
       avatarUrl: avatarUrl ?? this.avatarUrl,
+      role: role ?? this.role,
+      verificationStatus: verificationStatus ?? this.verificationStatus,
     );
   }
 
@@ -39,7 +54,23 @@ class AuthUser {
     phone: json['phone'] as String? ?? '',
     fullName: json['full_name'] as String? ?? '',
     avatarUrl: json['avatar_url'] as String? ?? '',
+    role: _role(json['role'] as String?),
+    verificationStatus: _verification(json['verification_status'] as String?),
   );
+
+  static AppRole _role(String? value) => switch (value) {
+    'admin' || 'administrator' || 'super_administrator' => AppRole.admin,
+    'venue_owner' ||
+    'institute_owner' ||
+    'event_organizer' => AppRole.venueOwner,
+    _ => AppRole.customer,
+  };
+
+  static VerificationStatus _verification(String? value) =>
+      VerificationStatus.values.firstWhere(
+        (status) => status.name == value,
+        orElse: () => VerificationStatus.unknown,
+      );
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -47,6 +78,8 @@ class AuthUser {
     'phone': phone,
     'full_name': fullName,
     'avatar_url': avatarUrl,
+    'role': role.name,
+    'verification_status': verificationStatus.name,
   };
 
   @override

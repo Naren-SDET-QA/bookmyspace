@@ -89,6 +89,9 @@ class FakeCheckoutService implements CheckoutService {
   String? lastKeyId;
 
   @override
+  CheckoutSuccessDetails? get lastSuccessDetails => null;
+
+  @override
   Future<CheckoutResult> openCheckout({
     required String orderId,
     required double amount,

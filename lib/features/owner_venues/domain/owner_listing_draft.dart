@@ -44,6 +44,7 @@ class OwnerListingDraft {
     this.photos = const [],
     this.facilities = const [],
     this.publish = false,
+    this.locationNodeId,
   });
 
   final String name;
@@ -61,6 +62,7 @@ class OwnerListingDraft {
   final List<OwnerListingPhoto> photos;
   final List<String> facilities;
   final bool publish;
+  final String? locationNodeId;
 
   static const maxPhotos = 6;
   static const storageBucket = 'venue-images';

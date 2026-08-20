@@ -14,6 +14,22 @@ Future<void> initSupabase() async {
   );
 }
 
+/// Optionally establishes a real DEV Auth session for browser regression runs.
+/// Credentials are supplied at launch and are never available in production.
+Future<void> signInDevelopmentTestUser() async {
+  if (!AppConfig.isDevelopment ||
+      AppConfig.devTestEmail.isEmpty ||
+      AppConfig.devTestPassword.isEmpty) {
+    return;
+  }
+  final client = Supabase.instance.client;
+  if (client.auth.currentSession != null) return;
+  await client.auth.signInWithPassword(
+    email: AppConfig.devTestEmail,
+    password: AppConfig.devTestPassword,
+  );
+}
+
 /// Exposes the Supabase client.
 final supabaseProvider = Provider<SupabaseClient>(
   (ref) => Supabase.instance.client,
@@ -32,21 +48,13 @@ final authStateProvider = StreamProvider<AuthUser?>((ref) {
 
 /// Auth state holder.
 class AuthState {
-  const AuthState({
-    this.user,
-    this.isLoading = false,
-    this.error,
-  });
+  const AuthState({this.user, this.isLoading = false, this.error});
 
   final AuthUser? user;
   final bool isLoading;
   final String? error;
 
-  AuthState copyWith({
-    AuthUser? user,
-    bool? isLoading,
-    String? error,
-  }) {
+  AuthState copyWith({AuthUser? user, bool? isLoading, String? error}) {
     return AuthState(
       user: user ?? this.user,
       isLoading: isLoading ?? this.isLoading,
@@ -58,7 +66,7 @@ class AuthState {
 /// State notifier managing active user profile updates and authentication state.
 class AuthNotifier extends StateNotifier<AuthState> {
   AuthNotifier(this._repository)
-      : super(AuthState(user: _repository.currentUser)) {
+    : super(AuthState(user: _repository.currentUser)) {
     _repository.authStateChanges().listen((user) {
       state = state.copyWith(user: user, isLoading: false);
     });
@@ -66,10 +74,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   final AuthRepository _repository;
 
-  Future<void> updateProfile({
-    String? fullName,
-    String? avatarUrl,
-  }) async {
+  Future<void> updateProfile({String? fullName, String? avatarUrl}) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final updatedUser = await _repository.updateProfile(
@@ -90,8 +95,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
 }
 
 /// Global AuthNotifierProvider for reactive UI consumption.
-final authNotifierProvider =
-    StateNotifierProvider<AuthNotifier, AuthState>((ref) {
+final authNotifierProvider = StateNotifierProvider<AuthNotifier, AuthState>((
+  ref,
+) {
   return AuthNotifier(ref.watch(authRepositoryProvider));
 });
 
@@ -99,4 +105,3 @@ final authNotifierProvider =
 final currentUserProvider = Provider<AuthUser?>((ref) {
   return ref.watch(authNotifierProvider).user;
 });
-

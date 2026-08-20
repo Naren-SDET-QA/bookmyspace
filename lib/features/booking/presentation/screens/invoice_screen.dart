@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -77,7 +78,10 @@ class _InvoiceBody extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 _Row(label: l10n.bookingRef, value: booking.bookingRef),
-                _Row(label: l10n.bookingStatus, value: _statusLabel(booking.status, l10n)),
+                _Row(
+                  label: l10n.bookingStatus,
+                  value: _statusLabel(booking.status, l10n),
+                ),
                 _Row(
                   label: l10n.dateOfBooking,
                   value: DateFormat.yMMMd().format(booking.bookDate),
@@ -130,9 +134,9 @@ class _InvoiceBody extends StatelessWidget {
                 ],
                 if (_metadataExtras(l10n).isNotEmpty) ...[
                   const Divider(height: 28),
-                  ..._metadataExtras(l10n).entries.map(
-                    (e) => _Row(label: e.key, value: e.value),
-                  ),
+                  ..._metadataExtras(
+                    l10n,
+                  ).entries.map((e) => _Row(label: e.key, value: e.value)),
                 ],
               ],
             ),
@@ -156,7 +160,8 @@ class _InvoiceBody extends StatelessWidget {
             ),
           ),
         ),
-        if (booking.paymentMethod.isNotEmpty || booking.paymentRef.isNotEmpty) ...[
+        if (booking.paymentMethod.isNotEmpty ||
+            booking.paymentRef.isNotEmpty) ...[
           const SizedBox(height: 12),
           Card(
             child: Padding(
@@ -174,13 +179,44 @@ class _InvoiceBody extends StatelessWidget {
                   if (booking.paidAt != null)
                     _Row(
                       label: l10n.paidOn,
-                      value: DateFormat.yMMMd().add_jm().format(booking.paidAt!),
+                      value: DateFormat.yMMMd().add_jm().format(
+                        booking.paidAt!,
+                      ),
                     ),
                 ],
               ),
             ),
           ),
         ],
+        const SizedBox(height: 16),
+        Consumer(
+          builder: (context, ref, _) {
+            final artifact = ref.watch(invoiceArtifactProvider(booking.id));
+            return artifact.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) => Text('Invoice PDF unavailable: $error'),
+              data: (invoice) => Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  Text(
+                    'Invoice ${invoice.invoiceNumber}',
+                    style: theme.textTheme.titleSmall,
+                  ),
+                  if (invoice.signedUrl != null)
+                    OutlinedButton.icon(
+                      onPressed: () => launchUrl(
+                        Uri.parse(invoice.signedUrl!),
+                        mode: LaunchMode.externalApplication,
+                      ),
+                      icon: const Icon(Icons.download_outlined),
+                      label: const Text('Open / download PDF'),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
       ],
     );
   }
@@ -192,7 +228,8 @@ class _InvoiceBody extends StatelessWidget {
     final checkout = booking.metadata['checkout_date'];
     if (checkout is String && checkout.isNotEmpty) {
       final parsed = DateTime.tryParse(checkout);
-      if (parsed != null) extras[l10n.checkOut] = DateFormat.yMMMd().format(parsed);
+      if (parsed != null)
+        extras[l10n.checkOut] = DateFormat.yMMMd().format(parsed);
     }
     final sharing = booking.metadata['sharing'];
     if (sharing is num) extras[l10n.sharingOption] = '${sharing + 1}';
@@ -215,7 +252,11 @@ class _InvoiceBody extends StatelessWidget {
 }
 
 class _Row extends StatelessWidget {
-  const _Row({required this.label, required this.value, this.emphasize = false});
+  const _Row({
+    required this.label,
+    required this.value,
+    this.emphasize = false,
+  });
 
   final String label;
   final String value;

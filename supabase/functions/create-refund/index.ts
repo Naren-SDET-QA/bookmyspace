@@ -7,6 +7,7 @@
 //
 // POST body: { booking_id, amount?, reason? }
 import { createClient, SupabaseClient } from 'npm:@supabase/supabase-js@2';
+import { enqueueEmail, userEmail } from '../_shared/email_outbox.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -151,26 +152,51 @@ Deno.serve(async (req) => {
       });
     }
 
-    const refund = await createRazorpayRefund(
-      payment.provider_payment_id,
-      Math.round(refundAmount * 100),
-      reason ?? '',
-    );
-
-    const { data: refundRow, error: refundInsertError } = await supabase
+    const { data: initiatedRefund, error: initiatedError } = await supabase
       .from('refunds')
       .insert({
         payment_id: payment.id,
         booking_id: booking.id,
         amount: refundAmount,
         reason: reason ?? null,
+        status: 'requested',
+      })
+      .select('id, amount, status')
+      .single();
+    if (initiatedError || !initiatedRefund) {
+      return new Response(JSON.stringify({ error: 'refund_insert_failed' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const customer = await userEmail(supabase, user.id);
+    if (customer) await enqueueEmail(supabase, {
+      eventKey: `refund.initiated.customer.${initiatedRefund.id}`,
+      eventType: 'refund.initiated',
+      recipientEmail: customer.email,
+      recipientName: customer.name,
+      bookingId: booking.id,
+      paymentId: payment.id,
+      refundId: initiatedRefund.id,
+      templateName: 'refund-initiated',
+      payload: { title: 'Refund initiated', message: 'Your refund request has been submitted.', amount: refundAmount },
+    });
+
+    const refund = await createRazorpayRefund(
+      payment.provider_payment_id,
+      Math.round(refundAmount * 100),
+      reason ?? '',
+    );
+
+    const { data: refundRow, error: refundUpdateError } = await supabase
+      .from('refunds')
+      .update({
         status: 'processed',
         provider_refund_id: refund.id,
         processed_at: new Date().toISOString(),
       })
+      .eq('id', initiatedRefund.id)
       .select('id, amount, status, provider_refund_id')
       .single();
-    if (refundInsertError) {
+    if (refundUpdateError) {
       return new Response(JSON.stringify({ error: 'refund_insert_failed' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -204,6 +230,18 @@ Deno.serve(async (req) => {
     } catch (_) {
       // Refund state is authoritative; notification delivery is best-effort.
     }
+
+    if (customer) await enqueueEmail(supabase, {
+      eventKey: `refund.completed.customer.${initiatedRefund.id}`,
+      eventType: 'refund.completed',
+      recipientEmail: customer.email,
+      recipientName: customer.name,
+      bookingId: booking.id,
+      paymentId: payment.id,
+      refundId: initiatedRefund.id,
+      templateName: 'refund-completed',
+      payload: { title: 'Refund completed', message: 'Your refund has been processed.', amount: refundAmount },
+    });
 
     return new Response(JSON.stringify(refundRow), {
       status: 200,

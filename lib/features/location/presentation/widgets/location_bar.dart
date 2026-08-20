@@ -93,7 +93,9 @@ class LocationFooterCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+          color: theme.colorScheme.surfaceContainerHighest.withValues(
+            alpha: 0.4,
+          ),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
@@ -109,7 +111,10 @@ class LocationFooterCard extends StatelessWidget {
                 children: [
                   Text(
                     'Current City: ${area.label}',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),

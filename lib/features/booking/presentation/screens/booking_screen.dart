@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/config/settings_controller.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/validators/app_validators.dart';
 import '../../../../core/widgets/empty_state.dart';
@@ -58,6 +59,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
     final date = _selectedDate;
     final section = CustomerSectionCatalog.sectionForVenue(widget.venue);
     final l10n = AppLocalizations.of(context);
+    final quickMode = ref.watch(bookingModeProvider) == BookingMode.quick;
 
     if (section == CustomerSection.institutesClasses) {
       return Scaffold(
@@ -84,46 +86,58 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
           : Form(
               key: _detailsFormKey,
               child: Column(
-              children: [
-                _VenueHeader(venue: widget.venue),
-                const Divider(height: 1),
-                SectionCustomerDetailsForm(
-                  section: section,
-                  details: _details,
-                  onChanged: (next) => setState(() => _details = next),
-                ),
-                _SectionBookingFields(
-                  section: section,
-                  venue: widget.venue,
-                  guestCount: _guestCount,
-                  checkIn: date,
-                  checkOut: _checkOutDate ?? date.add(const Duration(days: 1)),
-                  sharingIndex: _sharingIndex,
-                  onGuestsChanged: (v) => setState(() => _guestCount = v),
-                  onCheckOutChanged: (v) => setState(() => _checkOutDate = v),
-                  onSharingChanged: (v) => setState(() => _sharingIndex = v),
-                ),
-                _DateStrip(
-                  selected: date,
-                  onSelected: (d) {
-                    setState(() {
-                      _selectedDate = d;
-                      _selectedSlot = null;
-                    });
-                  },
-                ),
-                Expanded(
-                  child: _SlotList(
-                    venueId: widget.venue.id,
-                    date: date,
-                    selectedSlot: _selectedSlot,
-                    onSelected: (slot) => setState(() {
-                      _selectedSlot = slot;
-                    }),
+                children: [
+                  _VenueHeader(venue: widget.venue),
+                  if (quickMode)
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Chip(
+                          avatar: Icon(Icons.flash_on_rounded, size: 16),
+                          label: Text('Quick booking mode'),
+                        ),
+                      ),
+                    ),
+                  const Divider(height: 1),
+                  SectionCustomerDetailsForm(
+                    section: section,
+                    details: _details,
+                    onChanged: (next) => setState(() => _details = next),
                   ),
-                ),
-              ],
-            ),
+                  _SectionBookingFields(
+                    section: section,
+                    venue: widget.venue,
+                    guestCount: _guestCount,
+                    checkIn: date,
+                    checkOut:
+                        _checkOutDate ?? date.add(const Duration(days: 1)),
+                    sharingIndex: _sharingIndex,
+                    onGuestsChanged: (v) => setState(() => _guestCount = v),
+                    onCheckOutChanged: (v) => setState(() => _checkOutDate = v),
+                    onSharingChanged: (v) => setState(() => _sharingIndex = v),
+                  ),
+                  _DateStrip(
+                    selected: date,
+                    onSelected: (d) {
+                      setState(() {
+                        _selectedDate = d;
+                        _selectedSlot = null;
+                      });
+                    },
+                  ),
+                  Expanded(
+                    child: _SlotList(
+                      venueId: widget.venue.id,
+                      date: date,
+                      selectedSlot: _selectedSlot,
+                      onSelected: (slot) => setState(() {
+                        _selectedSlot = slot;
+                      }),
+                    ),
+                  ),
+                ],
+              ),
             ),
       bottomNavigationBar: _selectedSlot != null
           ? _ConfirmBar(
@@ -146,8 +160,10 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
       final error = switch (field) {
         CustomerDetailField.fullName => AppValidators.name(details.fullName),
         CustomerDetailField.phone => AppValidators.phone(details.phone),
-        CustomerDetailField.eventType =>
-          AppValidators.required(details.eventType, fieldName: 'Event type'),
+        CustomerDetailField.eventType => AppValidators.required(
+          details.eventType,
+          fieldName: 'Event type',
+        ),
         CustomerDetailField.idNumber => AppValidators.required(
           details.idNumber,
           fieldName: 'ID number',
@@ -171,7 +187,9 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
     final section = CustomerSectionCatalog.sectionForVenue(widget.venue);
     final missing = _validateSectionDetails(section, _details);
     if (missing != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(missing)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(missing)));
       return;
     }
     final l10n = AppLocalizations.of(context);
@@ -182,46 +200,56 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
     final tax = (amount * taxRate / 100).roundToDouble();
     final total = amount + tax;
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.confirmBooking),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _SummaryRow(label: l10n.venueDetails, value: widget.venue.name),
-            _SummaryRow(
-              label: l10n.selectDate,
-              value: DateFormat.yMMMd().format(date),
-            ),
-            _SummaryRow(
-              label: l10n.selectTimeSlot,
-              value: '${slot.displayStart} – ${slot.displayEnd}',
-            ),
-            const Divider(height: 24),
-            _SummaryRow(label: l10n.basePrice, value: formatInr(amount)),
-            _SummaryRow(label: l10n.taxRate, value: formatInr(tax)),
-            const Divider(height: 24),
-            _SummaryRow(
-              label: l10n.total,
-              value: formatInr(total),
-              emphasize: true,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(l10n.confirm),
-          ),
-        ],
-      ),
-    );
+    final quickMode = ref.read(bookingModeProvider) == BookingMode.quick;
+    final confirmed = quickMode
+        ? true
+        : await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: Text(l10n.confirmBooking),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _SummaryRow(
+                        label: l10n.venueDetails,
+                        value: widget.venue.name,
+                      ),
+                      _SummaryRow(
+                        label: l10n.selectDate,
+                        value: DateFormat.yMMMd().format(date),
+                      ),
+                      _SummaryRow(
+                        label: l10n.selectTimeSlot,
+                        value: '${slot.displayStart} – ${slot.displayEnd}',
+                      ),
+                      const Divider(height: 24),
+                      _SummaryRow(
+                        label: l10n.basePrice,
+                        value: formatInr(amount),
+                      ),
+                      _SummaryRow(label: l10n.taxRate, value: formatInr(tax)),
+                      const Divider(height: 24),
+                      _SummaryRow(
+                        label: l10n.total,
+                        value: formatInr(total),
+                        emphasize: true,
+                      ),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: Text(l10n.cancel),
+                    ),
+                    FilledButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: Text(l10n.confirm),
+                    ),
+                  ],
+                ),
+              ) ??
+              false;
 
     if (confirmed != true) return;
 
@@ -245,9 +273,9 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
       );
       ref.invalidate(myBookingsProvider);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.slotHeld)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.slotHeld)));
       // Enter the payment flow with the freshly created pending booking.
       unawaited(context.push('/bookings/${booking.id}/pay', extra: booking));
     } catch (e) {
@@ -262,7 +290,10 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
 
   /// Section-specific extras (guests, check-out, sharing) recorded on the
   /// booking's `metadata` jsonb column for the invoice and owner records.
-  Map<String, dynamic> _bookingMetadata(DateTime date, CustomerSection? section) {
+  Map<String, dynamic> _bookingMetadata(
+    DateTime date,
+    CustomerSection? section,
+  ) {
     return {
       'customer_name': _details.fullName,
       'customer_phone': _details.phone,
@@ -272,8 +303,8 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
       if (section == CustomerSection.lodgeRooms)
         'checkout_date':
             '${(_checkOutDate ?? date.add(const Duration(days: 1))).year.toString().padLeft(4, '0')}-'
-                '${(_checkOutDate ?? date.add(const Duration(days: 1))).month.toString().padLeft(2, '0')}-'
-                '${(_checkOutDate ?? date.add(const Duration(days: 1))).day.toString().padLeft(2, '0')}',
+            '${(_checkOutDate ?? date.add(const Duration(days: 1))).month.toString().padLeft(2, '0')}-'
+            '${(_checkOutDate ?? date.add(const Duration(days: 1))).day.toString().padLeft(2, '0')}',
       if (section == CustomerSection.pgHostels) ...{
         'sharing': _sharingIndex,
         'deposit': widget.venue.pricingBaseAmount,

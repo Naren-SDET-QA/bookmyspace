@@ -198,6 +198,13 @@ class AppLocalizations {
   String get offlinePayment => _t('offlinePayment');
   String get paidOn => _t('paidOn');
   String get paymentRef => _t('paymentRef');
+  String get paymentHistory => _t('paymentHistory');
+  String get noPaymentHistory => _t('noPaymentHistory');
+  String get noPaymentHistoryMessage => _t('noPaymentHistoryMessage');
+  String get transactionSummary => _t('transactionSummary');
+  String get razorpayTransactionId => _t('razorpayTransactionId');
+  String get razorpayOrderId => _t('razorpayOrderId');
+  String get bookingId => _t('bookingId');
   String get walkIn => _t('walkIn');
   String get statusHeld => _t('statusHeld');
   String get statusPending => _t('statusPending');
@@ -272,9 +279,10 @@ class AppLocalizations {
   String get analytics => _t('analytics');
   String get support => _t('support');
   String get auditLog => _t('auditLog');
-   String get priority => _t('priority');
-   String get noNotifications => _t('noNotifications');
+  String get priority => _t('priority');
+  String get noNotifications => _t('noNotifications');
   String get noNotificationsMessage => _t('noNotificationsMessage');
+  String get markAllRead => _t('markAllRead');
   String get unread => _t('unread');
   String get noAnalyticsData => _t('noAnalyticsData');
   String get noSupportTickets => _t('noSupportTickets');
@@ -288,10 +296,10 @@ class AppLocalizations {
   String get ticketCreated => _t('ticketCreated');
   String get ticketUpdated => _t('ticketUpdated');
   String get admin => _t('admin');
-   String get noAuditLogs => _t('noAuditLogs');
-   String get privacyPolicy => _t('privacyPolicy');
-   String get termsAndConditions => _t('termsAndConditions');
-   String get deleteAccount => _t('deleteAccount');
+  String get noAuditLogs => _t('noAuditLogs');
+  String get privacyPolicy => _t('privacyPolicy');
+  String get termsAndConditions => _t('termsAndConditions');
+  String get deleteAccount => _t('deleteAccount');
   String get about => _t('about');
 
   // Errors
@@ -476,6 +484,14 @@ class AppLocalizations {
       'offlinePayment': 'Offline (walk-in)',
       'paidOn': 'Paid on',
       'paymentRef': 'Payment reference',
+      'paymentHistory': 'Payment history',
+      'noPaymentHistory': 'No completed payments',
+      'noPaymentHistoryMessage':
+          'Your successful transactions will appear here.',
+      'transactionSummary': 'Transaction summary',
+      'razorpayTransactionId': 'Razorpay transaction ID',
+      'razorpayOrderId': 'Razorpay order ID',
+      'bookingId': 'Booking ID',
       'walkIn': 'Walk-in',
       'statusHeld': 'Held',
       'statusPending': 'Pending',
@@ -545,10 +561,11 @@ class AppLocalizations {
       'analytics': 'Analytics',
       'support': 'Support',
       'auditLog': 'Audit Log',
-       'priority': 'Priority',
-       'noNotifications': 'No notifications',
-       'noNotificationsMessage':
-           'You will see notifications here when they arrive.',
+      'priority': 'Priority',
+      'noNotifications': 'No notifications',
+      'noNotificationsMessage':
+          'You will see notifications here when they arrive.',
+      'markAllRead': 'Mark all read',
       'unread': 'Unread',
       'noAnalyticsData': 'No analytics data',
       'noSupportTickets': 'No support tickets',
@@ -564,8 +581,8 @@ class AppLocalizations {
       'admin': 'Admin',
       'noAuditLogs': 'No audit logs',
       'privacyPolicy': 'Privacy policy',
-       'termsAndConditions': 'Terms & conditions',
-       'deleteAccount': 'Delete account',
+      'termsAndConditions': 'Terms & conditions',
+      'deleteAccount': 'Delete account',
       'about': 'About',
       'errorNoInternet': 'No internet connection',
       'errorInvalidEmail': 'Enter a valid email address',
@@ -750,6 +767,13 @@ class AppLocalizations {
       'offlinePayment': 'ఆఫ్‌లైన్ (వాక్-ఇన్)',
       'paidOn': 'చెల్లించిన తేదీ',
       'paymentRef': 'చెల్లింపు రిఫరెన్స్',
+      'paymentHistory': 'చెల్లింపు చరిత్ర',
+      'noPaymentHistory': 'పూర్తయిన చెల్లింపులు లేవు',
+      'noPaymentHistoryMessage': 'మీ విజయవంతమైన లావాదేవీలు ఇక్కడ కనిపిస్తాయి.',
+      'transactionSummary': 'లావాదేవీ సారాంశం',
+      'razorpayTransactionId': 'రేజర్‌పే లావాదేవీ ID',
+      'razorpayOrderId': 'రేజర్‌పే ఆర్డర్ ID',
+      'bookingId': 'బుకింగ్ ID',
       'walkIn': 'వాక్-ఇన్',
       'statusHeld': 'రిజర్వ్ చేయబడింది',
       'statusPending': 'పెండింగ్',
@@ -819,10 +843,10 @@ class AppLocalizations {
       'analytics': 'విశ్లేషణ',
       'support': 'సహాయం',
       'auditLog': 'ఆడిట్ లాగ్',
-       'priority': 'ప్రాధాన్యత',
-       'noNotifications': 'నోటిఫికేషన్లు లేవు',
-       'noNotificationsMessage':
-           'నోటిఫికేషన్లు వచ్చినప్పుడు ఇక్కడ కనిపిస్తాయి.',
+      'priority': 'ప్రాధాన్యత',
+      'noNotifications': 'నోటిఫికేషన్లు లేవు',
+      'noNotificationsMessage': 'నోటిఫికేషన్లు వచ్చినప్పుడు ఇక్కడ కనిపిస్తాయి.',
+      'markAllRead': 'అన్నీ చదివినట్లు గుర్తించండి',
       'unread': 'చదలపడలేదు',
       'noAnalyticsData': 'విశ్లేషణ డేటా లేదు',
       'noSupportTickets': 'సహాయ టికెట్లు లేవు',
@@ -838,8 +862,8 @@ class AppLocalizations {
       'admin': 'నిర్వాహకుడు',
       'noAuditLogs': 'ఆడిట్ లాగ్లు లేవు',
       'privacyPolicy': 'గోప్యతా విధానం',
-       'termsAndConditions': 'నిబంధనలు & షరతులు',
-       'deleteAccount': 'ఖాతాను తొలగించండి',
+      'termsAndConditions': 'నిబంధనలు & షరతులు',
+      'deleteAccount': 'ఖాతాను తొలగించండి',
       'about': 'గురించి',
       'errorNoInternet': 'ఇంటర్నెట్ కనెక్షన్ లేదు',
       'errorInvalidEmail': 'చెల్లుబాటు అయ్యే ఇమెయిల్ నమోదు చేయండి',

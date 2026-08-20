@@ -44,7 +44,8 @@ class OwnerVenuesScreen extends ConsumerWidget {
             ? const EmptyState(
                 icon: Icons.storefront_rounded,
                 title: 'No listings yet',
-                message: 'Tap + to add a Function Hall, Lodge, PG or Institute.',
+                message:
+                    'Tap + to add a Function Hall, Lodge, PG or Institute.',
               )
             : ListView.builder(
                 padding: const EdgeInsets.all(16),
@@ -99,7 +100,8 @@ class _VenueTile extends ConsumerWidget {
                       const SizedBox(height: 4),
                       Text(
                         [
-                          if (section != null) '${section.emoji} ${section.title}',
+                          if (section != null)
+                            '${section.emoji} ${section.title}',
                           '${venue.city}, ${venue.state}',
                         ].join(' · '),
                         style: theme.textTheme.bodySmall?.copyWith(
@@ -110,7 +112,10 @@ class _VenueTile extends ConsumerWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: venue.isActive
                         ? AppTheme.brand.withValues(alpha: 0.12)
@@ -177,10 +182,9 @@ class _VenueTile extends ConsumerWidget {
                 ),
                 TextButton(
                   onPressed: () async {
-                    await ref.read(ownerVenueRepositoryProvider).setPublished(
-                      venue.id,
-                      !venue.isActive,
-                    );
+                    await ref
+                        .read(ownerVenueRepositoryProvider)
+                        .setPublished(venue.id, !venue.isActive);
                     ref.invalidate(myVenuesProvider);
                   },
                   child: Text(venue.isActive ? 'Unpublish' : 'Publish'),

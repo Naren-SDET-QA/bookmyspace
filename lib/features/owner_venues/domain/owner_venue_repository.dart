@@ -46,6 +46,9 @@ abstract interface class OwnerVenueRepository {
   /// Publish or unpublish via existing `is_active`.
   Future<Venue> setPublished(String venueId, bool published);
 
+  /// Associates an approved normalized Location Master node with an owned venue.
+  Future<void> setLocationNode(String venueId, String locationNodeId);
+
   /// Replace gallery rows on `venue_images` (owner RLS write).
   Future<void> replaceImages(String venueId, List<String> imageUrls);
 
@@ -60,4 +63,3 @@ abstract interface class OwnerVenueRepository {
     String contentType = 'image/jpeg',
   });
 }
-

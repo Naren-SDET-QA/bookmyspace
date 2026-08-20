@@ -67,6 +67,11 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
           _phase = _PaymentPhase.idle;
           _errorMessage = l10n.paymentCancelled;
         });
+      } else if (result == CheckoutResult.timedOut) {
+        setState(() {
+          _phase = _PaymentPhase.error;
+          _errorMessage = 'Payment checkout timed out. Please try again.';
+        });
       } else {
         setState(() {
           _phase = _PaymentPhase.error;
@@ -131,13 +136,15 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   Future<void> _recordConfirmedNotification() async {
     final l10n = AppLocalizations.of(context);
     try {
-      await ref.read(notificationRepositoryProvider).create(
-        type: NotificationType.bookingConfirmed,
-        title: l10n.statusConfirmed,
-        body:
-            '${widget.booking.venueName} · ${DateFormat.yMMMd().format(widget.booking.bookDate)}',
-        data: {'booking_id': widget.booking.id},
-      );
+      await ref
+          .read(notificationRepositoryProvider)
+          .create(
+            type: NotificationType.bookingConfirmed,
+            title: l10n.statusConfirmed,
+            body:
+                '${widget.booking.venueName} · ${DateFormat.yMMMd().format(widget.booking.bookDate)}',
+            data: {'booking_id': widget.booking.id},
+          );
       ref.invalidate(unreadNotificationsCountProvider);
     } catch (_) {
       // Best-effort; never block the payment flow.

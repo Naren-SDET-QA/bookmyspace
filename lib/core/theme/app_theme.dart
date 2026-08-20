@@ -13,14 +13,17 @@ class AppTheme {
   static const Color _surfaceLight = Color(0xFFF7F7FA);
   static const Color _surfaceDark = Color(0xFF131318);
 
-  static ThemeData get light => _base(Brightness.light);
+  static ThemeData get light => lightFor(brand);
 
-  static ThemeData get dark => _base(Brightness.dark);
+  static ThemeData get dark => darkFor(brand);
 
-  static ThemeData _base(Brightness brightness) {
+  static ThemeData lightFor(Color seed) => _base(Brightness.light, seed);
+  static ThemeData darkFor(Color seed) => _base(Brightness.dark, seed);
+
+  static ThemeData _base(Brightness brightness, Color seed) {
     final isLight = brightness == Brightness.light;
     final scheme = ColorScheme.fromSeed(
-      seedColor: brand,
+      seedColor: seed,
       brightness: brightness,
       primary: isLight ? brand : brandLight,
       secondary: accent,

@@ -17,9 +17,17 @@ final venueCategoriesProvider = FutureProvider<List<VenueCategory>>((ref) {
   return ref.watch(venueRepositoryProvider).categories();
 });
 
-/// Popular venues shown on the home screen.
+/// Location-aware venues shown on the home screen.
 final popularVenuesProvider = FutureProvider<List<Venue>>((ref) {
-  return ref.watch(venueRepositoryProvider).popularVenues(limit: 10);
+  final area = ref.watch(searchAreaProvider);
+  return ref
+      .watch(venueRepositoryProvider)
+      .nearbyVenues(
+        latitude: area.latitude,
+        longitude: area.longitude,
+        maxDistanceKm: area.radiusKm,
+        limit: 10,
+      );
 });
 
 /// Venues near the user's location (or a sensible default city centre).

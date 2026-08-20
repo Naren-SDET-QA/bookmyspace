@@ -39,6 +39,7 @@ class Notification {
     this.data = const {},
     this.read = false,
     this.readAt,
+    this.createdAt,
   });
 
   final String id;
@@ -49,6 +50,7 @@ class Notification {
   final Map<String, dynamic> data;
   final bool read;
   final DateTime? readAt;
+  final DateTime? createdAt;
 
   factory Notification.fromJson(Map<String, dynamic> json) => Notification(
     id: json['id'] as String? ?? '',
@@ -63,5 +65,6 @@ class Notification {
     readAt: json['read_at'] != null
         ? DateTime.tryParse(json['read_at'] as String? ?? '')
         : null,
+    createdAt: DateTime.tryParse(json['created_at'] as String? ?? ''),
   );
 }

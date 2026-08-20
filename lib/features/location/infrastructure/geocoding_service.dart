@@ -34,12 +34,7 @@ class GeocodingService {
     if (trimmed.isEmpty) return null;
     final response = await _dio.get<List<dynamic>>(
       '/search',
-      queryParameters: {
-        'q': trimmed,
-        'format': 'json',
-        'limit': 1,
-        'countrycodes': 'in',
-      },
+      queryParameters: {'q': trimmed, 'format': 'json', 'limit': 1},
     );
     final rows = response.data ?? const [];
     if (rows.isEmpty) return null;

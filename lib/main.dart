@@ -13,6 +13,13 @@ Future<void> main() async {
 
   // Initialize Supabase
   await initSupabase();
+  // Optional, explicitly supplied DEV-only account for live regression.
+  // Without these dart-defines the normal login/bypass behavior is unchanged.
+  try {
+    await signInDevelopmentTestUser();
+  } catch (error) {
+    debugPrint('DEV test sign-in unavailable: $error');
+  }
 
   runApp(const ProviderScope(child: BookMySpaceApp()));
 }

@@ -67,6 +67,7 @@ class MockNotificationRepository implements NotificationRepository {
         body: body,
         type: type,
         data: data,
+        createdAt: DateTime.now(),
       ),
     );
   }

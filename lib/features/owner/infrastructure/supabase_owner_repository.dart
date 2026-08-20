@@ -36,11 +36,7 @@ class SupabaseOwnerRepository implements OwnerRepository {
 
       final ownerJson = await _client
           .from('owner_profiles')
-          .insert({
-            'user_id': response.user!.id,
-            'email': email,
-            'name': name,
-          })
+          .insert({'user_id': response.user!.id, 'email': email, 'name': name})
           .select(_ownerSelect)
           .single();
 

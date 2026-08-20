@@ -120,6 +120,18 @@ class SupabaseOwnerVenueRepository implements OwnerVenueRepository {
   }
 
   @override
+  Future<void> setLocationNode(String venueId, String locationNodeId) async {
+    try {
+      await _client
+          .from('venues')
+          .update({'location_node_id': locationNodeId})
+          .eq('id', venueId);
+    } catch (e) {
+      throw mapError(e);
+    }
+  }
+
+  @override
   Future<Venue> saveListing({
     String? venueId,
     required OwnerListingDraft draft,
@@ -128,34 +140,38 @@ class SupabaseOwnerVenueRepository implements OwnerVenueRepository {
       draft.validate();
       Venue venue;
       if (venueId == null) {
-        venue = await createVenue(
-          name: draft.name,
-          categoryId: draft.categoryId,
-          description: draft.description,
-          city: draft.city,
-          state: draft.state,
-          latitude: draft.latitude,
-          longitude: draft.longitude,
-          capacity: draft.capacity,
-          pricingBaseAmount: draft.pricingBaseAmount,
-        );
+        venue = draft.locationNodeId == null
+            ? await createVenue(
+                name: draft.name,
+                categoryId: draft.categoryId,
+                description: draft.description,
+                city: draft.city,
+                state: draft.state,
+                latitude: draft.latitude,
+                longitude: draft.longitude,
+                capacity: draft.capacity,
+                pricingBaseAmount: draft.pricingBaseAmount,
+              )
+            : await _createVenueWithLocation(draft);
         if (!draft.publish) {
           venue = await updateVenue(venueId: venue.id, isActive: false);
         }
       } else {
-        venue = await updateVenue(
-          venueId: venueId,
-          name: draft.name,
-          categoryId: draft.categoryId,
-          description: draft.description,
-          city: draft.city,
-          state: draft.state,
-          latitude: draft.latitude,
-          longitude: draft.longitude,
-          capacity: draft.capacity,
-          pricingBaseAmount: draft.pricingBaseAmount,
-          isActive: draft.publish,
-        );
+        venue = draft.locationNodeId == null
+            ? await updateVenue(
+                venueId: venueId,
+                name: draft.name,
+                categoryId: draft.categoryId,
+                description: draft.description,
+                city: draft.city,
+                state: draft.state,
+                latitude: draft.latitude,
+                longitude: draft.longitude,
+                capacity: draft.capacity,
+                pricingBaseAmount: draft.pricingBaseAmount,
+                isActive: draft.publish,
+              )
+            : await _updateVenueWithLocation(venueId, draft);
       }
 
       await _patchAddress(venue.id, draft.addressLine1);
@@ -181,6 +197,49 @@ class SupabaseOwnerVenueRepository implements OwnerVenueRepository {
     } catch (e) {
       throw mapError(e);
     }
+  }
+
+  Future<Venue> _createVenueWithLocation(OwnerListingDraft draft) async {
+    final row = await _client.rpc<Map<String, dynamic>>(
+      'create_owner_venue_with_location',
+      params: {
+        'p_name': draft.name,
+        'p_category_id': draft.categoryId,
+        'p_description': draft.description,
+        'p_city': draft.city,
+        'p_state': draft.state,
+        'p_latitude': draft.latitude,
+        'p_longitude': draft.longitude,
+        'p_capacity': draft.capacity,
+        'p_pricing_base_amount': draft.pricingBaseAmount,
+        'p_location_node_id': draft.locationNodeId,
+      },
+    );
+    return Venue.fromJson(row);
+  }
+
+  Future<Venue> _updateVenueWithLocation(
+    String venueId,
+    OwnerListingDraft draft,
+  ) async {
+    final row = await _client.rpc<Map<String, dynamic>>(
+      'update_owner_venue_with_location',
+      params: {
+        'p_venue_id': venueId,
+        'p_name': draft.name,
+        'p_category_id': draft.categoryId,
+        'p_description': draft.description,
+        'p_city': draft.city,
+        'p_state': draft.state,
+        'p_latitude': draft.latitude,
+        'p_longitude': draft.longitude,
+        'p_capacity': draft.capacity,
+        'p_pricing_base_amount': draft.pricingBaseAmount,
+        'p_is_active': draft.publish,
+        'p_location_node_id': draft.locationNodeId,
+      },
+    );
+    return Venue.fromJson(row);
   }
 
   @override

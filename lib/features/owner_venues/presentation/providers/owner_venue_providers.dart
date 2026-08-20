@@ -18,29 +18,32 @@ final myVenuesProvider = FutureProvider<List<Venue>>((ref) {
 
 /// Create a venue and invalidate the list.
 final createVenueProvider = FutureProvider.autoDispose
-    .family<Venue, ({
-      String name,
-      String categoryId,
-      String description,
-      String city,
-      String state,
-      double latitude,
-      double longitude,
-      int capacity,
-      double pricingBaseAmount,
-    })>((ref, params) async {
-  final repo = ref.watch(ownerVenueRepositoryProvider);
-  final venue = await repo.createVenue(
-    name: params.name,
-    categoryId: params.categoryId,
-    description: params.description,
-    city: params.city,
-    state: params.state,
-    latitude: params.latitude,
-    longitude: params.longitude,
-    capacity: params.capacity,
-    pricingBaseAmount: params.pricingBaseAmount,
-  );
-  ref.invalidate(myVenuesProvider);
-  return venue;
-});
+    .family<
+      Venue,
+      ({
+        String name,
+        String categoryId,
+        String description,
+        String city,
+        String state,
+        double latitude,
+        double longitude,
+        int capacity,
+        double pricingBaseAmount,
+      })
+    >((ref, params) async {
+      final repo = ref.watch(ownerVenueRepositoryProvider);
+      final venue = await repo.createVenue(
+        name: params.name,
+        categoryId: params.categoryId,
+        description: params.description,
+        city: params.city,
+        state: params.state,
+        latitude: params.latitude,
+        longitude: params.longitude,
+        capacity: params.capacity,
+        pricingBaseAmount: params.pricingBaseAmount,
+      );
+      ref.invalidate(myVenuesProvider);
+      return venue;
+    });

@@ -17,7 +17,11 @@ class SupabaseVenueRepository implements VenueRepository {
   final SupabaseClient _client;
 
   static const String _venueSelect = '''
-    *,
+    id, org_id, category_id, name, slug, description, address_line1,
+    address_line2, city, state, postal_code, country, location_node_id, latitude, longitude,
+    capacity, pricing_base_amount, pricing_currency, tax_rate,
+    parking_capacity, food_options, rules, cancellation_policy, is_verified,
+    is_active, avg_rating, rating_count, created_at, updated_at, deleted_at,
     venue_categories (id, slug, name, icon),
     venue_images (id, url, thumbnail_url, alt_text, is_cover, sort_order)
   ''';
@@ -87,10 +91,59 @@ class SupabaseVenueRepository implements VenueRepository {
         categoryId = catRow?['id'] as String?;
       }
 
+      // Prefer the additive, indexed RPC when the amenity/search migration is
+      // present. The existing REST path remains a safe compatibility fallback
+      // for local databases that have not applied it yet.
+      try {
+        final serverRows = await _client.rpc<List<dynamic>>(
+          'search_venues',
+          params: {
+            'p_query': query.query.trim().isEmpty ? null : query.query.trim(),
+            'p_location_node_id': query.locationNodeId,
+            'p_lat': query.latitude,
+            'p_lng': query.longitude,
+            'p_radius_km': query.maxDistanceKm ?? 50,
+            'p_category_id': categoryId,
+            'p_min_price': query.minPrice,
+            'p_max_price': query.maxPrice,
+            'p_min_rating': query.minRating,
+            'p_min_capacity': query.minCapacity,
+            'p_sort': _serverSort(query.sortBy),
+            'p_page': 0,
+            'p_page_size': 50,
+          },
+        );
+        var serverVenues = serverRows
+            .whereType<Map<String, dynamic>>()
+            .map(Venue.fromJson)
+            .toList();
+        final section = CustomerSection.fromId(query.sectionId);
+        if (section != null) {
+          serverVenues = serverVenues
+              .where(
+                (v) => CustomerSectionCatalog.matchesVenue(
+                  v,
+                  section,
+                  query.categorySlug,
+                ),
+              )
+              .toList();
+        }
+        return serverVenues
+            .where((v) => CustomerSectionCatalog.matchesFilters(v, query))
+            .toList();
+      } catch (_) {
+        // Older/local schemas continue through the existing REST implementation.
+      }
+
       // Use inner join syntax on venue_categories when filtering by category to avoid PostgREST 42803 grouping errors
       final selectClause = (query.categorySlug != null)
           ? '''
-            *,
+            id, org_id, category_id, name, slug, description, address_line1,
+            address_line2, city, state, postal_code, country, location_node_id, latitude, longitude,
+            capacity, pricing_base_amount, pricing_currency, tax_rate,
+            parking_capacity, food_options, rules, cancellation_policy, is_verified,
+            is_active, avg_rating, rating_count, created_at, updated_at, deleted_at,
             venue_categories!inner (id, slug, name, icon),
             venue_images (id, url, thumbnail_url, alt_text, is_cover, sort_order)
           '''
@@ -108,8 +161,43 @@ class SupabaseVenueRepository implements VenueRepository {
         // Explicitly cast category_id UUID parameter for PostgREST
         builder = builder.filter('category_id', 'eq', categoryId);
       }
+      if (query.locationNodeId != null && query.locationNodeId!.isNotEmpty) {
+        try {
+          final descendantRows = await _client.rpc<List<dynamic>>(
+            'get_location_descendants',
+            params: {'p_location_id': query.locationNodeId},
+          );
+          final ids = descendantRows
+              .whereType<Map<String, dynamic>>()
+              .map((row) => row['id'] as String?)
+              .whereType<String>()
+              .toList();
+          builder = ids.isEmpty
+              ? builder.eq('location_node_id', query.locationNodeId!)
+              : builder.inFilter('location_node_id', ids);
+        } catch (_) {
+          // Keep DEV/older schemas compatible until the additive RPC is
+          // deployed; exact-node filtering remains safe fallback behavior.
+          builder = builder.eq('location_node_id', query.locationNodeId!);
+        }
+      }
+      if (query.country != null && query.country!.trim().isNotEmpty) {
+        builder = builder.ilike('country', '%${query.country!.trim()}%');
+      }
+      if (query.state != null && query.state!.trim().isNotEmpty) {
+        builder = builder.ilike('state', '%${query.state!.trim()}%');
+      }
+      if (query.district != null && query.district!.trim().isNotEmpty) {
+        builder = builder.ilike('address_line1', '%${query.district!.trim()}%');
+      }
       if (query.city != null && query.city!.trim().isNotEmpty) {
         builder = builder.ilike('city', '%${query.city!.trim()}%');
+      }
+      if (query.area != null && query.area!.trim().isNotEmpty) {
+        builder = builder.ilike('address_line1', '%${query.area!.trim()}%');
+      }
+      if (query.postalCode != null && query.postalCode!.trim().isNotEmpty) {
+        builder = builder.ilike('postal_code', '%${query.postalCode!.trim()}%');
       }
       if (query.minPrice != null) {
         builder = builder.gte('pricing_base_amount', query.minPrice!);
@@ -130,7 +218,8 @@ class SupabaseVenueRepository implements VenueRepository {
 
       // Log exact SQL executed for function hall / category searches
       if (query.categorySlug != null) {
-        final executedSql = "SELECT $selectClause FROM venues WHERE is_active = true"
+        final executedSql =
+            "SELECT $selectClause FROM venues WHERE is_active = true"
             " AND category_id = '${categoryId ?? ''}'::uuid"
             "${query.query.trim().isNotEmpty ? " AND search_document @@ to_tsquery('${query.query.trim()}')" : ""}"
             "${query.city != null && query.city!.trim().isNotEmpty ? " AND city ILIKE '%${query.city!.trim()}%'" : ""}"
@@ -215,6 +304,14 @@ class SupabaseVenueRepository implements VenueRepository {
     }
   }
 
+  String _serverSort(VenueSortBy sort) => switch (sort) {
+    VenueSortBy.distance => 'nearest',
+    VenueSortBy.priceAsc => 'lowest_price',
+    VenueSortBy.priceDesc => 'highest_price',
+    VenueSortBy.rating => 'highest_rating',
+    VenueSortBy.relevance => 'recommended',
+  };
+
   @override
   Future<Venue> venueById(String id) async {
     try {
@@ -281,5 +378,8 @@ class SupabaseVenueRepository implements VenueRepository {
   }
 
   /// Maps an RPC row (which lacks embedded collections) to a [Venue].
-  Venue _fromRow(Map<String, dynamic> row) => Venue.fromJson(row);
+  Venue _fromRow(Map<String, dynamic> row) {
+    final safe = Map<String, dynamic>.from(row)..remove('contact_whatsapp');
+    return Venue.fromJson(safe);
+  }
 }

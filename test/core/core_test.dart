@@ -30,6 +30,20 @@ void main() {
       expect(AppConfig.supabaseUrl, isNotEmpty);
       expect(AppConfig.razorpayKeyId, isNotEmpty);
     });
+
+    test('DEV Razorpay configuration uses a public test key when supplied', () {
+      if (AppConfig.isDevelopment || AppConfig.isStaging) {
+        expect(AppConfig.razorpayKeyId, startsWith('rzp_test_'));
+        expect(AppConfig.razorpayKeyId, isNot(contains('secret')));
+      }
+    });
+
+    test('production does not use a DEV test key override', () {
+      expect(
+        AppEnvironment.production.toModel().razorpayKeyId,
+        isNot(startsWith('rzp_test_')),
+      );
+    });
   });
 
   group('AppExceptions', () {

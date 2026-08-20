@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/config/settings_controller.dart';
+import 'core/config/app_config.dart';
 import 'core/localization/app_localizations.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
@@ -25,14 +26,19 @@ class BookMySpaceApp extends ConsumerWidget {
       initialLocation: initialLocation ?? AppRoutes.shell,
       currentUser: currentUser,
       authReady: authReady,
+      allowUnauthenticatedTestAccess: AppConfig.allowUnauthenticatedTestAccess,
     );
 
     return MaterialApp.router(
       title: 'BookMySpace',
       debugShowCheckedModeBanner: false,
       routerConfig: router,
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
+      theme: AppTheme.lightFor(
+        themePaletteColor(ref.watch(themePaletteProvider)),
+      ),
+      darkTheme: AppTheme.darkFor(
+        themePaletteColor(ref.watch(themePaletteProvider)),
+      ),
       themeMode: ref.watch(themeModeProvider),
       locale: ref.watch(localeProvider),
       supportedLocales: AppLocalizations.supportedLocales,
@@ -42,6 +48,16 @@ class BookMySpaceApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
+      builder: (context, child) {
+        final simple = ref.watch(simpleModeProvider);
+        final media = MediaQuery.of(context);
+        return MediaQuery(
+          data: media.copyWith(
+            textScaler: media.textScaler.scale(simple ? 1.15 : 1.0),
+          ),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
     );
   }
 }

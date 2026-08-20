@@ -8,6 +8,7 @@ import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_network_image.dart';
 import '../../../../core/widgets/responsive_layout.dart';
+import '../../domain/auth_user.dart';
 import '../auth_providers.dart';
 import '../widgets/edit_profile_modal.dart';
 
@@ -53,7 +54,9 @@ class ProfileScreen extends ConsumerWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(24),
                     side: BorderSide(
-                      color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+                      color: theme.colorScheme.outlineVariant.withValues(
+                        alpha: 0.4,
+                      ),
                     ),
                   ),
                   child: Padding(
@@ -85,14 +88,17 @@ class ProfileScreen extends ConsumerWidget {
                                       : Center(
                                           child: Text(
                                             user?.fullName.isNotEmpty == true
-                                                ? user!.fullName[0].toUpperCase()
+                                                ? user!.fullName[0]
+                                                      .toUpperCase()
                                                 : user?.email.isNotEmpty == true
-                                                    ? user!.email[0].toUpperCase()
-                                                    : 'U',
+                                                ? user!.email[0].toUpperCase()
+                                                : 'U',
                                             style: TextStyle(
                                               fontSize: 28,
                                               fontWeight: FontWeight.bold,
-                                              color: theme.colorScheme.onPrimaryContainer,
+                                              color: theme
+                                                  .colorScheme
+                                                  .onPrimaryContainer,
                                             ),
                                           ),
                                         ),
@@ -132,10 +138,11 @@ class ProfileScreen extends ConsumerWidget {
                                           user?.fullName.isNotEmpty == true
                                               ? user!.fullName
                                               : 'Guest User',
-                                          style: theme.textTheme.titleLarge?.copyWith(
-                                            fontWeight: FontWeight.w900,
-                                            letterSpacing: -0.3,
-                                          ),
+                                          style: theme.textTheme.titleLarge
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w900,
+                                                letterSpacing: -0.3,
+                                              ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
@@ -147,7 +154,9 @@ class ProfileScreen extends ConsumerWidget {
                                         ),
                                         decoration: BoxDecoration(
                                           color: Colors.green.shade100,
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
                                         ),
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
@@ -159,7 +168,7 @@ class ProfileScreen extends ConsumerWidget {
                                             ),
                                             const SizedBox(width: 3),
                                             Text(
-                                              'Verified',
+                                              _verificationLabel(user),
                                               style: TextStyle(
                                                 fontSize: 10,
                                                 fontWeight: FontWeight.bold,
@@ -170,6 +179,15 @@ class ProfileScreen extends ConsumerWidget {
                                         ),
                                       ),
                                     ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    _roleLabel(user),
+                                    style: theme.textTheme.labelMedium
+                                        ?.copyWith(
+                                          color: theme.colorScheme.primary,
+                                          fontWeight: FontWeight.w700,
+                                        ),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
@@ -186,9 +204,12 @@ class ProfileScreen extends ConsumerWidget {
                                     const SizedBox(height: 2),
                                     Text(
                                       user!.phone,
-                                      style: theme.textTheme.bodySmall?.copyWith(
-                                        color: theme.colorScheme.onSurfaceVariant,
-                                      ),
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            color: theme
+                                                .colorScheme
+                                                .onSurfaceVariant,
+                                          ),
                                     ),
                                   ],
                                 ],
@@ -248,7 +269,7 @@ class ProfileScreen extends ConsumerWidget {
                         title: 'Wallet',
                         count: '₹2,500',
                         color: Colors.amber.shade800,
-                        onTap: () {},
+                        onTap: () => context.push(AppRoutes.wallet),
                       ),
                     ),
                   ],
@@ -269,6 +290,24 @@ class ProfileScreen extends ConsumerWidget {
                   title: 'Edit Profile & Avatar',
                   subtitle: 'Update your display name and photo in Supabase',
                   onTap: () => EditProfileModal.show(context),
+                ),
+                _ProfileMenuTile(
+                  icon: Icons.payments_outlined,
+                  title: 'Payment History',
+                  subtitle: 'View completed transactions and invoices',
+                  onTap: () => context.push(AppRoutes.paymentHistory),
+                ),
+                _ProfileMenuTile(
+                  icon: Icons.card_giftcard_outlined,
+                  title: 'Refer & Earn',
+                  subtitle: 'Share your code and track rewards',
+                  onTap: () => context.push(AppRoutes.referrals),
+                ),
+                _ProfileMenuTile(
+                  icon: Icons.insights_outlined,
+                  title: 'Spending & Usage',
+                  subtitle: 'Review your bookings and spending trends',
+                  onTap: () => context.push(AppRoutes.customerAnalytics),
                 ),
                 _ProfileMenuTile(
                   icon: Icons.notifications_none_rounded,
@@ -326,6 +365,20 @@ class ProfileScreen extends ConsumerWidget {
       ),
     );
   }
+
+  String _roleLabel(AuthUser? user) => switch (user?.role) {
+    AppRole.admin => 'Admin',
+    AppRole.venueOwner => 'Venue Owner',
+    _ => 'Customer',
+  };
+
+  String _verificationLabel(AuthUser? user) =>
+      switch (user?.verificationStatus) {
+        VerificationStatus.approved => 'Verified',
+        VerificationStatus.submitted => 'Under review',
+        VerificationStatus.rejected => 'Rejected',
+        _ => 'Unverified',
+      };
 }
 
 class _MetricCard extends StatelessWidget {
@@ -349,9 +402,7 @@ class _MetricCard extends StatelessWidget {
     return Card(
       elevation: 0,
       color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
@@ -405,9 +456,7 @@ class _ProfileMenuTile extends StatelessWidget {
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 8),
       color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: ListTile(
         leading: Container(
           padding: const EdgeInsets.all(8),
@@ -423,7 +472,10 @@ class _ProfileMenuTile extends StatelessWidget {
         ),
         subtitle: Text(
           subtitle,
-          style: TextStyle(fontSize: 11.5, color: theme.colorScheme.onSurfaceVariant),
+          style: TextStyle(
+            fontSize: 11.5,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
         ),
         trailing: const Icon(Icons.chevron_right_rounded, size: 20),
         onTap: onTap,

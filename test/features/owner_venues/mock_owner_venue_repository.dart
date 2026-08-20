@@ -32,7 +32,11 @@ class MockOwnerVenueRepository implements OwnerVenueRepository {
       capacity: capacity,
       pricingBaseAmount: pricingBaseAmount,
       isActive: true,
-      category: VenueCategory(id: categoryId, slug: categoryId, name: categoryId),
+      category: VenueCategory(
+        id: categoryId,
+        slug: categoryId,
+        name: categoryId,
+      ),
     );
     venues.insert(0, venue);
     return venue;
@@ -87,7 +91,8 @@ class MockOwnerVenueRepository implements OwnerVenueRepository {
           draft.section,
           draft.catalogCategoryId,
         ) &&
-        CustomerSectionCatalog.fromAny(draft.catalogCategoryId) != draft.section) {
+        CustomerSectionCatalog.fromAny(draft.catalogCategoryId) !=
+            draft.section) {
       throw StateError('Wrong-section category');
     }
     final images = [
@@ -168,6 +173,9 @@ class MockOwnerVenueRepository implements OwnerVenueRepository {
   }
 
   @override
+  Future<void> setLocationNode(String venueId, String locationNodeId) async {}
+
+  @override
   Future<void> replaceImages(String venueId, List<String> imageUrls) async {
     final index = venues.indexWhere((v) => v.id == venueId);
     if (index < 0) return;
@@ -195,11 +203,16 @@ class MockOwnerVenueRepository implements OwnerVenueRepository {
   }
 
   @override
-  Future<void> replaceFacilities(String venueId, List<String> facilities) async {
+  Future<void> replaceFacilities(
+    String venueId,
+    List<String> facilities,
+  ) async {
     final index = venues.indexWhere((v) => v.id == venueId);
     if (index < 0) return;
     venues[index] = venues[index].copyWith(
-      facilities: facilities.map((name) => VenueFacility(facility: name)).toList(),
+      facilities: facilities
+          .map((name) => VenueFacility(facility: name))
+          .toList(),
     );
   }
 }

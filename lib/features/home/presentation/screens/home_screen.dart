@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:speech_to_text/speech_to_text.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -121,9 +122,9 @@ class AmenityFilter {
 
 List<AmenityFilter> _amenitiesFor(CustomerSection? section) {
   if (section == null) return const [];
-  return CustomerSectionCatalog.amenityFilters(section)
-      .map((s) => AmenityFilter(s.id, s.label, s.emoji))
-      .toList();
+  return CustomerSectionCatalog.amenityFilters(
+    section,
+  ).map((s) => AmenityFilter(s.id, s.label, s.emoji)).toList();
 }
 
 /// Redesigned BookMySpace customer Home Screen:
@@ -190,7 +191,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       responsive: responsive,
                       onLoginTap: () => context.push(AppRoutes.login),
                       onProfileTap: () => context.push(AppRoutes.profile),
-                      onNotificationsTap: () => context.push(AppRoutes.notifications),
+                      onNotificationsTap: () =>
+                          context.push(AppRoutes.notifications),
                     ),
                   ),
 
@@ -240,20 +242,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           crossAxisSpacing: responsive.gridSpacing,
                           childAspectRatio: responsive.categoryAspectRatio,
                         ),
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final section = MainHomeSection.values[index];
-                            return _MainSectionHeroCard(
-                              key: ValueKey('section_${section.id}'),
-                              section: section,
-                              isTabletOrWide: responsive.isTabletOrLandscape,
-                              onTap: () {
-                                selectCustomerSection(ref, section.catalog);
-                              },
-                            );
-                          },
-                          childCount: MainHomeSection.values.length,
-                        ),
+                        delegate: SliverChildBuilderDelegate((context, index) {
+                          final section = MainHomeSection.values[index];
+                          return _MainSectionHeroCard(
+                            key: ValueKey('section_${section.id}'),
+                            section: section,
+                            isTabletOrWide: responsive.isTabletOrLandscape,
+                            onTap: () {
+                              selectCustomerSection(ref, section.catalog);
+                            },
+                          );
+                        }, childCount: MainHomeSection.values.length),
                       ),
                     ),
 
@@ -271,7 +270,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                     ),
                   ]
-
                   // =========================================================
                   // 🚀 SECTION DRILL-DOWN: Category Index -> Location -> Results
                   // =========================================================
@@ -303,10 +301,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       vertical: 8,
                                     ),
                                   ),
-                                  icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                                  icon: const Icon(
+                                    Icons.arrow_back_rounded,
+                                    size: 18,
+                                  ),
                                   label: const Text(
                                     'All Spaces',
-                                    style: TextStyle(fontWeight: FontWeight.bold),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                                 Container(
@@ -321,14 +324,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Text(selectedSection.emoji, style: const TextStyle(fontSize: 16)),
+                                      Text(
+                                        selectedSection.emoji,
+                                        style: const TextStyle(fontSize: 16),
+                                      ),
                                       const SizedBox(width: 6),
                                       Text(
                                         selectedSection.title,
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 13,
-                                          color: theme.colorScheme.onPrimaryContainer,
+                                          color: theme
+                                              .colorScheme
+                                              .onPrimaryContainer,
                                         ),
                                       ),
                                     ],
@@ -360,10 +368,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             Align(
                               alignment: Alignment.centerLeft,
                               child: TextButton.icon(
-                                onPressed: () => _showContextAwareHelpDialog(context),
-                                icon: const Icon(Icons.help_outline_rounded, size: 16),
+                                onPressed: () =>
+                                    _showContextAwareHelpDialog(context),
+                                icon: const Icon(
+                                  Icons.help_outline_rounded,
+                                  size: 16,
+                                ),
                                 label: Text(
-                                  'Help · How ${selectedSection.title} booking works',
+                                  selectedSection.catalog.isBookable
+                                      ? 'Help · How ${selectedSection.title} booking works'
+                                      : 'Help · How institute enquiries work',
                                   style: const TextStyle(fontSize: 12),
                                 ),
                               ),
@@ -399,25 +413,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 horizontal: responsive.horizontalPadding,
                               ),
                               itemCount: selectedSection.categoryOptions.length,
-                              separatorBuilder: (_, __) => const SizedBox(width: 8),
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(width: 8),
                               itemBuilder: (context, index) {
-                                final cat = selectedSection.categoryOptions[index];
-                                final isSelected = selectedCategorySlug == cat.id;
+                                final cat =
+                                    selectedSection.categoryOptions[index];
+                                final isSelected =
+                                    selectedCategorySlug == cat.id;
                                 return FilterChip(
                                   selected: isSelected,
                                   onSelected: (_) {
                                     ref
-                                        .read(
-                                          selectedCustomerCategoryProvider
-                                              .notifier,
-                                        )
-                                        .state = cat.id;
+                                            .read(
+                                              selectedCustomerCategoryProvider
+                                                  .notifier,
+                                            )
+                                            .state =
+                                        cat.id;
                                   },
-                                  avatar: Text(cat.emoji, style: const TextStyle(fontSize: 14)),
+                                  avatar: Text(
+                                    cat.emoji,
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
                                   label: Text(
                                     cat.label,
                                     style: TextStyle(
-                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                      fontWeight: isSelected
+                                          ? FontWeight.bold
+                                          : FontWeight.w500,
                                       color: isSelected
                                           ? theme.colorScheme.onPrimary
                                           : theme.colorScheme.onSurface,
@@ -465,10 +488,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   vertical: 12,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                                  color: theme
+                                      .colorScheme
+                                      .surfaceContainerHighest
+                                      .withValues(alpha: 0.5),
                                   borderRadius: BorderRadius.circular(16),
                                   border: Border.all(
-                                    color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                                    color: theme.colorScheme.outlineVariant
+                                        .withValues(alpha: 0.5),
                                   ),
                                 ),
                                 child: Row(
@@ -482,7 +509,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       child: Text(
                                         'Search ${selectedSection.title} in ${area.label}...',
                                         style: TextStyle(
-                                          color: theme.colorScheme.onSurfaceVariant,
+                                          color: theme
+                                              .colorScheme
+                                              .onSurfaceVariant,
                                           fontSize: 13.5,
                                         ),
                                         maxLines: 1,
@@ -492,7 +521,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     Container(
                                       padding: const EdgeInsets.all(6),
                                       decoration: BoxDecoration(
-                                        color: theme.colorScheme.primaryContainer,
+                                        color:
+                                            theme.colorScheme.primaryContainer,
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Icon(
@@ -507,49 +537,46 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                             const SizedBox(height: 10),
 
-                            // Voice Booking Banner
-                            _VoiceBookingBanner(
-                              onTap: () => _showVoiceBookingDialog(context),
-                            ),
-                            const SizedBox(height: 10),
-
-                            // 1-Tap Quick Book Card
-                            _QuickBookCard(
-                              sectionTitle: selectedSection.title,
-                              onQuickBookTap: () {
-                                final section = selectedSection.catalog;
-                                if (!section.isBookable) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Institutes are listings only. Call or WhatsApp the academy.',
+                            if (selectedSection.catalog.isBookable) ...[
+                              _VoiceBookingBanner(
+                                onTap: () => _showVoiceBookingDialog(context),
+                              ),
+                              const SizedBox(height: 10),
+                              _QuickBookCard(
+                                sectionTitle: selectedSection.title,
+                                onQuickBookTap: () {
+                                  final match = _scopedVenues(
+                                    popularVenuesAsync.value ?? const [],
+                                  ).firstOrNull;
+                                  if (match == null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'No verified ${selectedSection.title} available right now.',
+                                        ),
                                       ),
+                                    );
+                                    return;
+                                  }
+                                  context.push(
+                                    AppRoutes.bookingFlow.replaceAll(
+                                      ':id',
+                                      match.id,
                                     ),
+                                    extra: match,
                                   );
-                                  return;
-                                }
-                                final match = _scopedVenues(
-                                  popularVenuesAsync.value ?? const [],
-                                ).firstOrNull;
-                                if (match == null) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'No verified ${selectedSection.title} available right now.',
-                                      ),
-                                    ),
-                                  );
-                                  return;
-                                }
-                                context.push(
-                                  AppRoutes.bookingFlow.replaceAll(
-                                    ':id',
-                                    match.id,
-                                  ),
-                                  extra: match,
-                                );
-                              },
-                            ),
+                                },
+                              ),
+                            ] else
+                              _InstituteEnquiryCard(
+                                onTap: () => context.push(
+                                  AppRoutes.search,
+                                  extra: <String, dynamic>{
+                                    'section':
+                                        CustomerSection.institutesClasses.id,
+                                  },
+                                ),
+                              ),
                           ],
                         ),
                       ),
@@ -592,12 +619,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 itemCount: _amenitiesFor(
                                   selectedSection.catalog,
                                 ).length,
-                                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(width: 8),
                                 itemBuilder: (context, index) {
                                   final amenity = _amenitiesFor(
                                     selectedSection.catalog,
                                   )[index];
-                                  final isSelected = _selectedAmenities.contains(amenity.id);
+                                  final isSelected = _selectedAmenities
+                                      .contains(amenity.id);
                                   return FilterChip(
                                     selected: isSelected,
                                     onSelected: (selected) {
@@ -609,9 +638,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                         }
                                       });
                                     },
-                                    avatar: Text(amenity.emoji, style: const TextStyle(fontSize: 12)),
-                                    label: Text(amenity.label, style: const TextStyle(fontSize: 12)),
-                                    selectedColor: theme.colorScheme.primaryContainer,
+                                    avatar: Text(
+                                      amenity.emoji,
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                    label: Text(
+                                      amenity.label,
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                    selectedColor:
+                                        theme.colorScheme.primaryContainer,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(14),
                                     ),
@@ -643,7 +679,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               child: EmptyState(
                                 icon: Icons.search_off_rounded,
                                 title: 'No spaces found',
-                                message: 'Try changing category or location filters.',
+                                message:
+                                    'Try changing category or location filters.',
                               ),
                             ),
                           );
@@ -655,41 +692,47 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             vertical: 8,
                           ),
                           sliver: SliverGrid(
-                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: responsive.resultsColumns,
-                              mainAxisSpacing: responsive.gridSpacing,
-                              crossAxisSpacing: responsive.gridSpacing,
-                              childAspectRatio: responsive.resultsAspectRatio,
-                            ),
-                            delegate: SliverChildBuilderDelegate(
-                              (context, index) {
-                                final venue = scoped[index];
-                                final bookable =
-                                    selectedSection.catalog.isBookable;
-                                return _SectionVenueCard(
-                                  venue: venue,
-                                  bookLabel: CustomerSectionCatalog.bookingCtaLabel(
-                                    selectedSection.catalog,
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: responsive.resultsColumns,
+                                  mainAxisSpacing: responsive.gridSpacing,
+                                  crossAxisSpacing: responsive.gridSpacing,
+                                  childAspectRatio:
+                                      responsive.resultsAspectRatio,
+                                ),
+                            delegate: SliverChildBuilderDelegate((
+                              context,
+                              index,
+                            ) {
+                              final venue = scoped[index];
+                              final bookable =
+                                  selectedSection.catalog.isBookable;
+                              return _SectionVenueCard(
+                                venue: venue,
+                                bookLabel:
+                                    CustomerSectionCatalog.bookingCtaLabel(
+                                      selectedSection.catalog,
+                                    ),
+                                onTap: () => context.push(
+                                  AppRoutes.venueDetails.replaceAll(
+                                    ':id',
+                                    venue.id,
                                   ),
-                                  onTap: () => context.push(
-                                    AppRoutes.venueDetails.replaceAll(':id', venue.id),
-                                  ),
-                                  onBookTap: bookable
-                                      ? () => context.push(
-                                          AppRoutes.bookingFlow.replaceAll(
-                                            ':id',
-                                            venue.id,
-                                          ),
-                                          extra: venue,
-                                        )
-                                      : () => _handleCall(context, venue),
-                                  onCallTap: () => _handleCall(context, venue),
-                                  onWhatsAppTap: () =>
-                                      _handleWhatsApp(context, venue),
-                                );
-                              },
-                              childCount: scoped.length,
-                            ),
+                                ),
+                                onBookTap: bookable
+                                    ? () => context.push(
+                                        AppRoutes.bookingFlow.replaceAll(
+                                          ':id',
+                                          venue.id,
+                                        ),
+                                        extra: venue,
+                                      )
+                                    : () => _handleCall(context, venue),
+                                onCallTap: () => _handleCall(context, venue),
+                                onWhatsAppTap: () =>
+                                    _handleWhatsApp(context, venue),
+                              );
+                            }, childCount: scoped.length),
                           ),
                         );
                       },
@@ -698,9 +741,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           padding: EdgeInsets.all(responsive.horizontalPadding),
                           child: const Row(
                             children: [
-                              Expanded(child: SkeletonBox(height: 220, radius: 16)),
+                              Expanded(
+                                child: SkeletonBox(height: 220, radius: 16),
+                              ),
                               SizedBox(width: 12),
-                              Expanded(child: SkeletonBox(height: 220, radius: 16)),
+                              Expanded(
+                                child: SkeletonBox(height: 220, radius: 16),
+                              ),
                             ],
                           ),
                         ),
@@ -710,15 +757,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           padding: const EdgeInsets.all(16),
                           child: ErrorView(
                             message: err.toString(),
-                            onRetry: () => ref.invalidate(popularVenuesProvider),
+                            onRetry: () =>
+                                ref.invalidate(popularVenuesProvider),
                           ),
                         ),
                       ),
                     ),
 
-                    const SliverToBoxAdapter(
-                      child: SizedBox(height: 48),
-                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 48)),
                   ],
                 ],
               ),
@@ -744,12 +790,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               CustomerSectionCatalog.matchesVenue(v, catalog, categorySlug) &&
               CustomerSectionCatalog.matchesAmenities(v, _selectedAmenities),
         )
-        .map(
-          (v) {
-            final d = distance(point, LatLng(v.latitude, v.longitude));
-            return v.copyWith(distanceKm: d / 1000);
-          },
-        )
+        .map((v) {
+          final d = distance(point, LatLng(v.latitude, v.longitude));
+          return v.copyWith(distanceKm: d / 1000);
+        })
         .where((v) => (v.distanceKm ?? 0) <= area.radiusKm)
         .toList();
   }
@@ -878,12 +922,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         extra: match,
                       );
                     } else {
-                      context.push(AppRoutes.search, extra: {'section': section.id});
+                      context.push(
+                        AppRoutes.search,
+                        extra: {'section': section.id},
+                      );
                     }
                   } else if (action == HelpAction.instituteEnquiry ||
                       action == HelpAction.search) {
                     if (section != null) {
-                      context.push(AppRoutes.search, extra: {'section': section.id});
+                      context.push(
+                        AppRoutes.search,
+                        extra: {'section': section.id},
+                      );
                     }
                   }
                 },
@@ -902,10 +952,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: const Row(
             children: [
-              Text('🎙️ Bol-ke-Book', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                '🎙️ Bol-ke-Book',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ],
           ),
           content: Column(
@@ -948,14 +1003,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   if (context.mounted) Navigator.pop(context);
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Voice is unavailable. Use normal search instead.')),
+                      const SnackBar(
+                        content: Text(
+                          'Voice is unavailable. Use normal search instead.',
+                        ),
+                      ),
                     );
-                    context.push(AppRoutes.search, extra: {'section': section.id});
+                    context.push(
+                      AppRoutes.search,
+                      extra: {'section': section.id},
+                    );
                   }
                   return;
                 }
                 String transcript = '';
-                final localeId = Localizations.localeOf(context).languageCode == 'te'
+                final localeId =
+                    Localizations.localeOf(context).languageCode == 'te'
                     ? 'te_IN'
                     : 'en_IN';
                 await speech.listen(
@@ -977,6 +1040,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     'category': intent.categorySlug,
                     'query': transcript,
                     'intent': intent,
+                    'category':
+                        intent.categorySlug ??
+                        (ref.read(selectedCustomerCategoryProvider) == 'all'
+                            ? null
+                            : ref.read(selectedCustomerCategoryProvider)),
                   },
                 );
               },
@@ -1022,16 +1090,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       section: section,
       hasConfirmedPaidBooking: _hasConfirmedPaidBooking(venue.id),
     );
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          allowed
-              ? 'Opening WhatsApp chat with ${venue.name}...'
-              : 'Owner WhatsApp unlocks after confirmed advance payment.',
+    if (!allowed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Owner WhatsApp unlocks after confirmed advance payment.',
+          ),
         ),
-        duration: const Duration(seconds: 2),
-      ),
+      );
+      return;
+    }
+    final phone = venue.contactWhatsapp;
+    if (phone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('WhatsApp contact is unavailable.')),
+      );
+      return;
+    }
+    final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    final uri = Uri.parse(
+      'https://api.whatsapp.com/send?phone=$cleanPhone&text='
+      '${Uri.encodeComponent('Hi! I am interested in ${venue.name} on BookMySpace.')}',
     );
+    launchUrl(uri, mode: LaunchMode.externalApplication).then((launched) {
+      if (!launched && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open WhatsApp.')),
+        );
+      }
+    });
   }
 }
 
@@ -1099,11 +1186,17 @@ class _TopHeaderBar extends StatelessWidget {
                 FilledButton.tonalIcon(
                   onPressed: onLoginTap,
                   style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
                     minimumSize: const Size(80, 40),
                   ),
                   icon: const Icon(Icons.login_rounded, size: 16),
-                  label: const Text('Sign In', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  label: const Text(
+                    'Sign In',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
                 )
               else
                 InkWell(
@@ -1160,22 +1253,19 @@ class _MainSectionHeroCard extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Card(
-      clipBehavior: Clip.antiAlias,
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(isTabletOrWide ? 22 : 18),
-        side: BorderSide(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+        clipBehavior: Clip.antiAlias,
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(isTabletOrWide ? 22 : 18),
+          side: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+          ),
         ),
-      ),
-      child: Stack(
+        child: Stack(
           fit: StackFit.expand,
           children: [
             // Background Image
-            AppNetworkImage(
-              url: section.imageUrl,
-              fit: BoxFit.cover,
-            ),
+            AppNetworkImage(url: section.imageUrl, fit: BoxFit.cover),
 
             // High-Contrast Gradient Scrim
             Container(
@@ -1313,7 +1403,11 @@ class _VoiceBookingBanner extends StatelessWidget {
                 color: Colors.white.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.mic_rounded, color: Colors.white, size: 20),
+              child: const Icon(
+                Icons.mic_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
             ),
             const SizedBox(width: 12),
             const Expanded(
@@ -1330,17 +1424,50 @@ class _VoiceBookingBanner extends StatelessWidget {
                   ),
                   Text(
                     'Tap to speak and book in Telugu, Hindi or English',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 11,
-                    ),
+                    style: TextStyle(color: Colors.white70, fontSize: 11),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 14),
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: Colors.white70,
+              size: 14,
+            ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _InstituteEnquiryCard extends StatelessWidget {
+  const _InstituteEnquiryCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.contact_phone_outlined, color: theme.colorScheme.primary),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Text(
+              'Explore institutes and contact them by Call or WhatsApp.',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+          TextButton(onPressed: onTap, child: const Text('Explore')),
+        ],
       ),
     );
   }
@@ -1404,7 +1531,10 @@ class _QuickBookCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               minimumSize: const Size(70, 36),
             ),
-            child: const Text('Book', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Book',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -1461,7 +1591,10 @@ class _SectionVenueCard extends StatelessWidget {
                       top: 8,
                       right: 8,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.7),
                           borderRadius: BorderRadius.circular(10),
@@ -1477,7 +1610,10 @@ class _SectionVenueCard extends StatelessWidget {
                       left: 8,
                       bottom: 8,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.7),
                           borderRadius: BorderRadius.circular(10),
@@ -1485,7 +1621,11 @@ class _SectionVenueCard extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.near_me_rounded, size: 12, color: Colors.white),
+                            const Icon(
+                              Icons.near_me_rounded,
+                              size: 12,
+                              color: Colors.white,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               formatDistance(venue.distanceKm),
@@ -1568,7 +1708,10 @@ class _SectionVenueCard extends StatelessWidget {
                           ),
                           child: Text(
                             bookLabel,
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),

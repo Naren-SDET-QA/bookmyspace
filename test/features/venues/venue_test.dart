@@ -4,6 +4,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'mock_venue_repository.dart';
 
 void main() {
+  test('venue hydrates normalized location association', () {
+    final venue = Venue.fromJson({
+      'id': 'venue-1',
+      'name': 'Hall',
+      'latitude': 17.4,
+      'longitude': 78.4,
+      'location_node_id': 'area-1',
+    });
+    expect(venue.locationNodeId, 'area-1');
+  });
+
   group('Venue', () {
     test('serializes and deserializes a rich row', () {
       final json = {

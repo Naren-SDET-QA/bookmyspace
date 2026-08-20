@@ -4,12 +4,23 @@ import '../../auth/presentation/auth_providers.dart';
 import '../domain/booking.dart';
 import '../domain/booking_repository.dart';
 import '../infrastructure/supabase_booking_repository.dart';
+import '../domain/invoice_repository.dart';
+import '../infrastructure/supabase_invoice_repository.dart';
 
 /// Booking repository instance.
 final bookingRepositoryProvider = Provider<BookingRepository>((ref) {
   final client = ref.watch(supabaseProvider);
   return SupabaseBookingRepository(client);
 });
+
+final invoiceRepositoryProvider = Provider<InvoiceRepository>((ref) {
+  return SupabaseInvoiceRepository(ref.watch(supabaseProvider));
+});
+
+final invoiceArtifactProvider = FutureProvider.autoDispose
+    .family<InvoiceArtifact, String>((ref, bookingId) {
+      return ref.watch(invoiceRepositoryProvider).generate(bookingId);
+    });
 
 /// Availability of the venue's slots for a given (venueId, date) pair.
 final slotAvailabilityProvider = FutureProvider.autoDispose

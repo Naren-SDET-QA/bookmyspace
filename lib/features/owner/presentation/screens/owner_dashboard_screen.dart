@@ -48,6 +48,11 @@ class OwnerDashboardScreen extends ConsumerWidget {
                     onTap: () => context.push(AppRoutes.ownerVenues),
                   ),
                   _QuickAction(
+                    icon: Icons.location_on_rounded,
+                    label: 'Location submissions',
+                    onTap: () => context.push('/owner/locations'),
+                  ),
+                  _QuickAction(
                     icon: Icons.notifications_rounded,
                     label: l10n.notifications,
                     onTap: () => context.push(AppRoutes.notifications),
@@ -90,7 +95,7 @@ class _OwnerCard extends StatelessWidget {
             CircleAvatar(
               radius: 28,
               backgroundColor: AppTheme.brand.withValues(alpha: 0.12),
-              child:               const Icon(Icons.person_rounded, color: AppTheme.brand),
+              child: const Icon(Icons.person_rounded, color: AppTheme.brand),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -152,7 +157,11 @@ class _QuickAction extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              Icon(Icons.arrow_forward_ios_rounded, size: 16, color: theme.colorScheme.onSurfaceVariant),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 16,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ],
           ),
         ),

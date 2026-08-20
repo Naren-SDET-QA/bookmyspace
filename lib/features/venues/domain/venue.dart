@@ -106,6 +106,7 @@ class Venue {
     this.state = '',
     this.postalCode = '',
     this.country = 'IN',
+    this.locationNodeId,
     this.capacity = 0,
     this.pricingBaseAmount = 0,
     this.pricingCurrency = 'INR',
@@ -121,6 +122,7 @@ class Venue {
     this.images = const [],
     this.facilities = const [],
     this.operatingHours = const [],
+    this.contactWhatsapp = '',
     this.distanceKm,
   });
 
@@ -134,6 +136,7 @@ class Venue {
   final String state;
   final String postalCode;
   final String country;
+  final String? locationNodeId;
   final double latitude;
   final double longitude;
   final int capacity;
@@ -153,6 +156,7 @@ class Venue {
   final List<VenueImage> images;
   final List<VenueFacility> facilities;
   final List<VenueOperatingHours> operatingHours;
+  final String contactWhatsapp;
 
   /// Distance in kilometres from the query point, when computed.
   final double? distanceKm;
@@ -194,6 +198,7 @@ class Venue {
       state: json['state'] as String? ?? '',
       postalCode: json['postal_code'] as String? ?? '',
       country: json['country'] as String? ?? 'IN',
+      locationNodeId: json['location_node_id'] as String?,
       latitude: (json['latitude'] as num?)?.toDouble() ?? 0,
       longitude: (json['longitude'] as num?)?.toDouble() ?? 0,
       capacity: (json['capacity'] as num?)?.toInt() ?? 0,
@@ -208,6 +213,7 @@ class Venue {
       avgRating: (json['avg_rating'] as num?)?.toDouble() ?? 0,
       ratingCount: (json['rating_count'] as num?)?.toInt() ?? 0,
       distanceKm: (json['distance_km'] as num?)?.toDouble(),
+      contactWhatsapp: json['contact_whatsapp'] as String? ?? '',
       category: categoryRaw is Map<String, dynamic>
           ? VenueCategory.fromJson(categoryRaw)
           : null,
@@ -243,6 +249,7 @@ class Venue {
     String? state,
     String? postalCode,
     String? country,
+    String? locationNodeId,
     double? latitude,
     double? longitude,
     int? capacity,
@@ -261,6 +268,7 @@ class Venue {
     double? distanceKm,
     double? avgRating,
     int? ratingCount,
+    String? contactWhatsapp,
   }) {
     return Venue(
       id: id ?? this.id,
@@ -273,6 +281,7 @@ class Venue {
       state: state ?? this.state,
       postalCode: postalCode ?? this.postalCode,
       country: country ?? this.country,
+      locationNodeId: locationNodeId ?? this.locationNodeId,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       capacity: capacity ?? this.capacity,
@@ -286,6 +295,7 @@ class Venue {
       isActive: isActive ?? this.isActive,
       avgRating: avgRating ?? this.avgRating,
       ratingCount: ratingCount ?? this.ratingCount,
+      contactWhatsapp: contactWhatsapp ?? this.contactWhatsapp,
       category: category ?? this.category,
       images: images ?? this.images,
       facilities: facilities ?? this.facilities,
@@ -307,7 +317,13 @@ class VenueSearchQuery {
     this.query = '',
     this.categorySlug,
     this.sectionId,
+    this.locationNodeId,
+    this.country,
+    this.state,
+    this.district,
     this.city,
+    this.area,
+    this.postalCode,
     this.minPrice,
     this.maxPrice,
     this.sortBy = VenueSortBy.relevance,
@@ -332,7 +348,13 @@ class VenueSearchQuery {
   final String query;
   final String? categorySlug;
   final String? sectionId;
+  final String? locationNodeId;
+  final String? country;
+  final String? state;
+  final String? district;
   final String? city;
+  final String? area;
+  final String? postalCode;
   final double? minPrice;
   final double? maxPrice;
   final VenueSortBy sortBy;
@@ -389,7 +411,13 @@ class VenueSearchQuery {
       query.isNotEmpty ||
       categorySlug != null ||
       sectionId != null ||
+      locationNodeId != null ||
+      country != null ||
+      state != null ||
+      district != null ||
       city != null ||
+      area != null ||
+      postalCode != null ||
       minPrice != null ||
       maxPrice != null ||
       latitude != null ||
@@ -416,7 +444,13 @@ class VenueSearchQuery {
     String? query,
     String? Function()? categorySlug,
     String? Function()? sectionId,
+    String? Function()? locationNodeId,
+    String? Function()? country,
+    String? Function()? state,
+    String? Function()? district,
     String? Function()? city,
+    String? Function()? area,
+    String? Function()? postalCode,
     double? Function()? minPrice,
     double? Function()? maxPrice,
     VenueSortBy? sortBy,
@@ -441,7 +475,15 @@ class VenueSearchQuery {
       query: query ?? this.query,
       categorySlug: categorySlug != null ? categorySlug() : this.categorySlug,
       sectionId: sectionId != null ? sectionId() : this.sectionId,
+      locationNodeId: locationNodeId != null
+          ? locationNodeId()
+          : this.locationNodeId,
+      country: country != null ? country() : this.country,
+      state: state != null ? state() : this.state,
+      district: district != null ? district() : this.district,
       city: city != null ? city() : this.city,
+      area: area != null ? area() : this.area,
+      postalCode: postalCode != null ? postalCode() : this.postalCode,
       minPrice: minPrice != null ? minPrice() : this.minPrice,
       maxPrice: maxPrice != null ? maxPrice() : this.maxPrice,
       sortBy: sortBy ?? this.sortBy,

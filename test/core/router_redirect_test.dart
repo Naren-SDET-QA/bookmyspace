@@ -16,11 +16,13 @@ Future<String> _redirectTo(
   required String initialLocation,
   required AuthUser? currentUser,
   required bool authReady,
+  bool allowUnauthenticatedTestAccess = false,
 }) async {
   final router = createAppRouter(
     initialLocation: initialLocation,
     currentUser: currentUser,
     authReady: authReady,
+    allowUnauthenticatedTestAccess: allowUnauthenticatedTestAccess,
   );
   await tester.pumpWidget(
     ProviderScope(
@@ -93,5 +95,47 @@ void main() {
       authReady: false,
     );
     expect(uri, AppRoutes.login);
+  });
+
+  testWidgets('development test access can open Home without a session', (
+    tester,
+  ) async {
+    final uri = await _redirectTo(
+      tester,
+      initialLocation: AppRoutes.shell,
+      currentUser: null,
+      authReady: true,
+      allowUnauthenticatedTestAccess: true,
+    );
+    expect(uri, AppRoutes.shell);
+  });
+
+  testWidgets('customer cannot enter owner or admin routes', (tester) async {
+    final ownerUri = await _redirectTo(
+      tester,
+      initialLocation: AppRoutes.ownerDashboard,
+      currentUser: const AuthUser(id: 'u1'),
+      authReady: true,
+    );
+    expect(ownerUri, AppRoutes.profile);
+  });
+
+  testWidgets('owner cannot enter admin routes', (tester) async {
+    final uri = await _redirectTo(
+      tester,
+      initialLocation: AppRoutes.adminLocations,
+      currentUser: const AuthUser(id: 'u1', role: AppRole.venueOwner),
+      authReady: true,
+    );
+    expect(uri, AppRoutes.profile);
+  });
+
+  testWidgets('admin can enter admin routes', (tester) async {
+    final redirect = resolveAppRedirect(
+      location: AppRoutes.adminLocations,
+      currentUser: const AuthUser(id: 'u1', role: AppRole.admin),
+      authReady: true,
+    );
+    expect(redirect, isNull);
   });
 }

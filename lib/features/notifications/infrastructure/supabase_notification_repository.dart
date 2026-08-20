@@ -13,11 +13,13 @@ class SupabaseNotificationRepository implements NotificationRepository {
 
   @override
   Future<List<Notification>> myNotifications() async {
+    final userId = _userId;
+    if (userId == null) return const [];
     try {
       final rows = await _client
           .from('notifications')
           .select('*')
-          .eq('user_id', _userId!)
+          .eq('user_id', userId)
           .order('created_at', ascending: false)
           .limit(100);
       return rows.map((r) => Notification.fromJson(r)).toList();
@@ -28,12 +30,14 @@ class SupabaseNotificationRepository implements NotificationRepository {
 
   @override
   Future<void> markRead(String notificationId) async {
+    final userId = _userId;
+    if (userId == null) return;
     try {
       await _client
           .from('notifications')
           .update({'read': true, 'read_at': 'now()'})
           .eq('id', notificationId)
-          .eq('user_id', _userId!);
+          .eq('user_id', userId);
     } catch (e) {
       throw app_errors.mapError(e);
     }
@@ -41,11 +45,13 @@ class SupabaseNotificationRepository implements NotificationRepository {
 
   @override
   Future<void> markAllRead() async {
+    final userId = _userId;
+    if (userId == null) return;
     try {
       await _client
           .from('notifications')
           .update({'read': true, 'read_at': 'now()'})
-          .eq('user_id', _userId!);
+          .eq('user_id', userId);
     } catch (e) {
       throw app_errors.mapError(e);
     }
@@ -53,11 +59,13 @@ class SupabaseNotificationRepository implements NotificationRepository {
 
   @override
   Future<int> unreadCount() async {
+    final userId = _userId;
+    if (userId == null) return 0;
     try {
       final rows = await _client
           .from('notifications')
           .select('id')
-          .eq('user_id', _userId!)
+          .eq('user_id', userId)
           .eq('read', false);
       return rows.length;
     } catch (e) {

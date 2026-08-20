@@ -10,6 +10,10 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_network_image.dart';
 import '../../../../core/widgets/responsive_layout.dart';
 import '../../../home/domain/customer_section_catalog.dart';
+import '../../../location/presentation/widgets/cascading_location_selector.dart';
+import '../../../location/domain/location_node.dart';
+import '../../../location/domain/search_area.dart';
+import '../../../location/presentation/location_providers.dart';
 import '../../../venues/domain/venue.dart';
 import '../../../venues/presentation/venue_providers.dart';
 import '../../domain/owner_listing_draft.dart';
@@ -38,8 +42,12 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
   final _capacityController = TextEditingController();
   final _priceController = TextEditingController();
   final _photoUrlController = TextEditingController();
-  final _latController = TextEditingController(text: '17.3850');
-  final _lngController = TextEditingController(text: '78.4867');
+  final _latController = TextEditingController(
+    text: SearchArea.defaultArea.latitude.toStringAsFixed(4),
+  );
+  final _lngController = TextEditingController(
+    text: SearchArea.defaultArea.longitude.toStringAsFixed(4),
+  );
   final _mapController = MapController();
 
   CustomerSection _section = CustomerSection.functionHalls;
@@ -51,9 +59,7 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
   bool _submitting = false;
   bool _hydrated = false;
   String? _loadError;
-
-  static const _defaultLat = 17.3850;
-  static const _defaultLng = 78.4867;
+  CascadingLocationValue _locationValue = const CascadingLocationValue();
 
   @override
   void initState() {
@@ -90,14 +96,39 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
       }
       venue ??= await ref.read(venueDetailsProvider(widget.venueId!).future);
       if (!mounted) return;
+      final existingVenue = venue!;
+      final path = existingVenue.locationNodeId == null
+          ? const <LocationNode>[]
+          : await ref
+                .read(locationRepositoryProvider)
+                .path(existingVenue.locationNodeId!);
+      if (!mounted) return;
       setState(() {
         _hydrateFrom(venue!);
+        _locationValue = _locationValueFromPath(path);
         _hydrated = true;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() => _loadError = e.toString());
     }
+  }
+
+  CascadingLocationValue _locationValueFromPath(List<LocationNode> path) {
+    LocationNode? at(LocationNodeLevel level) {
+      for (final node in path) {
+        if (node.level == level) return node;
+      }
+      return null;
+    }
+
+    return CascadingLocationValue(
+      country: at(LocationNodeLevel.country),
+      state: at(LocationNodeLevel.stateProvince),
+      district: at(LocationNodeLevel.districtCounty),
+      city: at(LocationNodeLevel.cityTown),
+      area: at(LocationNodeLevel.areaLocality),
+    );
   }
 
   void _hydrateFrom(Venue venue) {
@@ -150,8 +181,10 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
         .toSet();
   }
 
-  double get _latitude => double.tryParse(_latController.text) ?? _defaultLat;
-  double get _longitude => double.tryParse(_lngController.text) ?? _defaultLng;
+  double get _latitude =>
+      double.tryParse(_latController.text) ?? SearchArea.defaultArea.latitude;
+  double get _longitude =>
+      double.tryParse(_lngController.text) ?? SearchArea.defaultArea.longitude;
 
   void _onSectionChanged(CustomerSection section) {
     setState(() {
@@ -275,6 +308,12 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
       );
       return;
     }
+    if (_locationValue.selectedLocationId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Select an approved normalized location')),
+      );
+      return;
+    }
 
     final categories = await ref.read(venueCategoriesProvider.future);
     late final VenueCategory dbCategory;
@@ -309,26 +348,35 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
 
     setState(() => _submitting = true);
     try {
-      final venue = await ref.read(ownerVenueRepositoryProvider).saveListing(
-        venueId: widget.isEditing ? widget.venueId : null,
-        draft: OwnerListingDraft(
-          name: _nameController.text.trim(),
-          section: _section,
-          catalogCategoryId: _catalogCategoryId!,
-          categoryId: dbCategory.id,
-          description: _descriptionController.text.trim(),
-          city: _cityController.text.trim(),
-          state: _stateController.text.trim(),
-          addressLine1: _addressController.text.trim(),
-          latitude: _latitude,
-          longitude: _longitude,
-          capacity: int.tryParse(_capacityController.text) ?? 1,
-          pricingBaseAmount: double.tryParse(_priceController.text) ?? 0,
-          photos: List<OwnerListingPhoto>.from(_photos),
-          facilities: facilities,
-          publish: _publish,
-        ),
-      );
+      final venue = await ref
+          .read(ownerVenueRepositoryProvider)
+          .saveListing(
+            venueId: widget.isEditing ? widget.venueId : null,
+            draft: OwnerListingDraft(
+              name: _nameController.text.trim(),
+              section: _section,
+              catalogCategoryId: _catalogCategoryId!,
+              categoryId: dbCategory.id,
+              description: _descriptionController.text.trim(),
+              city: _cityController.text.trim(),
+              state: _stateController.text.trim(),
+              addressLine1: _addressController.text.trim(),
+              latitude: _latitude,
+              longitude: _longitude,
+              capacity: int.tryParse(_capacityController.text) ?? 1,
+              pricingBaseAmount: double.tryParse(_priceController.text) ?? 0,
+              photos: List<OwnerListingPhoto>.from(_photos),
+              facilities: facilities,
+              publish: _publish,
+              locationNodeId: _locationValue.selectedLocationId,
+            ),
+          );
+      final locationId = _locationValue.selectedLocationId;
+      if (locationId != null && locationId.isNotEmpty) {
+        await ref
+            .read(ownerVenueRepositoryProvider)
+            .setLocationNode(venue.id, locationId);
+      }
       ref.invalidate(myVenuesProvider);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -345,9 +393,9 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -365,8 +413,7 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
           if (widget.isEditing)
             IconButton(
               tooltip: 'Preview',
-              onPressed: () =>
-                  context.push('/venues/${widget.venueId}'),
+              onPressed: () => context.push('/venues/${widget.venueId}'),
               icon: const Icon(Icons.visibility_outlined),
             ),
         ],
@@ -389,8 +436,9 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
                     children: [
                       Text(
                         'Section',
-                        style: Theme.of(context).textTheme.titleSmall
-                            ?.copyWith(fontWeight: FontWeight.w700),
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Wrap(
@@ -400,9 +448,7 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
                           for (final section in CustomerSection.values)
                             ChoiceChip(
                               key: ValueKey('owner_section_${section.id}'),
-                              label: Text(
-                                '${section.emoji} ${section.title}',
-                              ),
+                              label: Text('${section.emoji} ${section.title}'),
                               selected: _section == section,
                               onSelected: (_) => _onSectionChanged(section),
                             ),
@@ -411,8 +457,9 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
                       const SizedBox(height: 16),
                       Text(
                         'Category',
-                        style: Theme.of(context).textTheme.titleSmall
-                            ?.copyWith(fontWeight: FontWeight.w700),
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Wrap(
@@ -421,9 +468,7 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
                         children: [
                           for (final category in categories)
                             ChoiceChip(
-                              key: ValueKey(
-                                'owner_category_${category.id}',
-                              ),
+                              key: ValueKey('owner_category_${category.id}'),
                               label: Text(
                                 '${category.emoji} ${category.label}',
                               ),
@@ -474,6 +519,28 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
+                      Text(
+                        'Normalized location',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      CascadingLocationSelector(
+                        value: _locationValue,
+                        onChanged: (value) {
+                          setState(() {
+                            _locationValue = value;
+                            if (value.city != null) {
+                              _cityController.text = value.city!.name;
+                            }
+                            if (value.state != null) {
+                              _stateController.text = value.state!.name;
+                            }
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 16),
                       Row(
                         children: [
                           Expanded(
@@ -484,8 +551,7 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
                                 labelText: 'City',
                                 border: OutlineInputBorder(),
                               ),
-                              validator: (v) =>
-                                  v == null || v.trim().isEmpty
+                              validator: (v) => v == null || v.trim().isEmpty
                                   ? 'Required'
                                   : null,
                             ),
@@ -499,8 +565,7 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
                                 labelText: 'State',
                                 border: OutlineInputBorder(),
                               ),
-                              validator: (v) =>
-                                  v == null || v.trim().isEmpty
+                              validator: (v) => v == null || v.trim().isEmpty
                                   ? 'Required'
                                   : null,
                             ),
@@ -558,8 +623,9 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
                       const SizedBox(height: 20),
                       Text(
                         'Available fields',
-                        style: Theme.of(context).textTheme.titleSmall
-                            ?.copyWith(fontWeight: FontWeight.w700),
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Wrap(
@@ -599,8 +665,9 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
                       const SizedBox(height: 20),
                       Text(
                         'Location',
-                        style: Theme.of(context).textTheme.titleSmall
-                            ?.copyWith(fontWeight: FontWeight.w700),
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Row(
@@ -612,10 +679,11 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
                                 labelText: 'Latitude',
                                 border: OutlineInputBorder(),
                               ),
-                              keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true,
-                                signed: true,
-                              ),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                    signed: true,
+                                  ),
                               onChanged: (_) => setState(() {}),
                             ),
                           ),
@@ -627,10 +695,11 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
                                 labelText: 'Longitude',
                                 border: OutlineInputBorder(),
                               ),
-                              keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true,
-                                signed: true,
-                              ),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                    signed: true,
+                                  ),
                               onChanged: (_) => setState(() {}),
                             ),
                           ),
@@ -643,10 +712,10 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
                         controller: _mapController,
                         onPicked: (point) {
                           setState(() {
-                            _latController.text =
-                                point.latitude.toStringAsFixed(4);
-                            _lngController.text =
-                                point.longitude.toStringAsFixed(4);
+                            _latController.text = point.latitude
+                                .toStringAsFixed(4);
+                            _lngController.text = point.longitude
+                                .toStringAsFixed(4);
                           });
                         },
                       ),
@@ -738,8 +807,9 @@ class _PhotoEditor extends StatelessWidget {
       children: [
         Text(
           'Photos (${photos.length}/${OwnerListingDraft.maxPhotos})',
-          style: Theme.of(context).textTheme.titleSmall
-              ?.copyWith(fontWeight: FontWeight.w700),
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 8),
         Wrap(
@@ -828,6 +898,7 @@ class _PhotoEditor extends StatelessWidget {
                           ],
                         ),
                       ),
+                      const SizedBox(height: 16),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -840,9 +911,7 @@ class _PhotoEditor extends StatelessWidget {
                           ),
                           IconButton(
                             iconSize: 18,
-                            onPressed: index == 0
-                                ? null
-                                : () => onCover(index),
+                            onPressed: index == 0 ? null : () => onCover(index),
                             icon: const Icon(Icons.star_outline),
                           ),
                           IconButton(
@@ -898,7 +967,8 @@ class _OwnerMapPicker extends StatelessWidget {
             initialZoom: 13,
             onTap: (tap, latLng) => onPicked(latLng),
             interactionOptions: const InteractionOptions(
-              flags: InteractiveFlag.drag |
+              flags:
+                  InteractiveFlag.drag |
                   InteractiveFlag.pinchZoom |
                   InteractiveFlag.doubleTapZoom,
             ),

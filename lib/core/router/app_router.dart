@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/admin/presentation/screens/admin_audit_screen.dart';
@@ -19,14 +20,26 @@ import '../../features/notifications/presentation/screens/notifications_screen.d
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/owner/presentation/screens/owner_dashboard_screen.dart';
 import '../../features/owner/presentation/screens/owner_registration_screen.dart';
+import '../../features/owner/presentation/screens/registration_field_configuration_screen.dart';
+import '../../features/business/presentation/screens/business_pricing_configuration_screen.dart';
 import '../../features/owner_bookings/presentation/screens/create_offline_booking_screen.dart';
 import '../../features/owner_bookings/presentation/screens/owner_bookings_screen.dart';
 import '../../features/owner_venues/presentation/screens/create_venue_screen.dart';
 import '../../features/owner_venues/presentation/screens/owner_venues_screen.dart';
 import '../../features/legal/presentation/screens/privacy_policy_screen.dart';
 import '../../features/legal/presentation/screens/terms_of_service_screen.dart';
+import '../../features/location/presentation/screens/location_management_screen.dart';
+import '../../features/payments/presentation/screens/payment_history_screen.dart';
 import '../../features/payments/presentation/screens/payment_screen.dart';
-import '../../features/saved/presentation/screens/saved_screen.dart';
+import '../../features/rewards/presentation/screens/referral_screen.dart';
+import '../../features/rewards/presentation/screens/wallet_screen.dart';
+import '../../features/rewards/presentation/screens/admin_reward_config_screen.dart';
+import '../../features/customer_analytics/presentation/screens/customer_analytics_screen.dart';
+import '../../features/registration/presentation/module_configuration_screen.dart';
+import '../../features/registration/presentation/module_registration_screen.dart';
+import '../../features/registration/presentation/module_submission_status_screen.dart';
+import '../../features/business/presentation/screens/business_plan_configuration_screen.dart';
+import '../config/settings_controller.dart';
 import '../../features/search/presentation/screens/map_screen.dart';
 import '../../features/search/presentation/screens/search_screen.dart';
 import '../../features/search/domain/ai_search_intent.dart';
@@ -59,6 +72,7 @@ abstract class AppRoutes {
   static const analytics = '/analytics';
   static const support = '/support';
   static const adminAudit = '/admin/audit';
+  static const adminLocations = '/admin/locations';
   static const ownerRegistration = '/owner/register';
   static const ownerDashboard = '/owner';
   static const ownerVenues = '/owner/venues';
@@ -66,7 +80,19 @@ abstract class AppRoutes {
   static const ownerVenueEdit = '/owner/venues/:id/edit';
   static const ownerBookings = '/owner/bookings';
   static const ownerBookingCreate = '/owner/bookings/create';
+  static const ownerLocations = '/owner/locations';
+  static const adminRegistrationFields = '/admin/registration-fields';
+  static const adminBusinessPricing = '/admin/business-pricing';
+  static const adminRewards = '/admin/rewards';
+  static const adminBusinessPlans = '/admin/business-plans';
   static const bookingInvoice = '/bookings/:id/invoice';
+  static const paymentHistory = '/payments';
+  static const wallet = '/wallet';
+  static const referrals = '/referrals';
+  static const customerAnalytics = '/my-analytics';
+  static const adminModuleConfiguration = '/admin/module-configuration';
+  static const moduleRegistration = '/register/:module';
+  static const moduleSubmissionStatus = '/registration/:id';
 
   static String ownerVenueEditPath(String id) => '/owner/venues/$id/edit';
   static const privacyPolicy = '/privacy';
@@ -85,20 +111,17 @@ GoRouter createAppRouter({
   String initialLocation = AppRoutes.shell,
   AuthUser? currentUser,
   bool authReady = true,
+  bool allowUnauthenticatedTestAccess = false,
 }) {
   return GoRouter(
     navigatorKey: rootNavigatorKey,
     initialLocation: initialLocation,
-    redirect: (context, state) {
-      if (!authReady) return null;
-      final location = state.matchedLocation;
-      final isPublic =
-          location == AppRoutes.onboarding || location == AppRoutes.login;
-      if (currentUser == null) {
-        return isPublic ? null : AppRoutes.login;
-      }
-      return isPublic ? AppRoutes.shell : null;
-    },
+    redirect: (context, state) => resolveAppRedirect(
+      location: state.matchedLocation,
+      currentUser: currentUser,
+      authReady: authReady,
+      allowUnauthenticatedTestAccess: allowUnauthenticatedTestAccess,
+    ),
     routes: [
       GoRoute(
         path: AppRoutes.onboarding,
@@ -153,21 +176,10 @@ GoRouter createAppRouter({
             EventDetailScreen(eventId: state.pathParameters['id'] ?? ''),
       ),
       GoRoute(
-        path: AppRoutes.coursesList,
-        parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) => const CoursesListScreen(),
-      ),
-      GoRoute(
         path: AppRoutes.courseDetails,
         parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) => CourseDetailScreen(
-          courseId: state.pathParameters['id'] ?? '',
-        ),
-      ),
-      GoRoute(
-        path: AppRoutes.notifications,
-        parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) => const NotificationsScreen(),
+        builder: (context, state) =>
+            CourseDetailScreen(courseId: state.pathParameters['id'] ?? ''),
       ),
       GoRoute(
         path: AppRoutes.analytics,
@@ -183,6 +195,23 @@ GoRouter createAppRouter({
         path: AppRoutes.adminAudit,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const AdminAuditScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminLocations,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) =>
+            const LocationManagementScreen(admin: true),
+      ),
+      GoRoute(
+        path: AppRoutes.adminRegistrationFields,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) =>
+            const RegistrationFieldConfigurationScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminBusinessPricing,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const BusinessPricingConfigurationScreen(),
       ),
       GoRoute(
         path: AppRoutes.ownerRegistration,
@@ -207,9 +236,8 @@ GoRouter createAppRouter({
       GoRoute(
         path: AppRoutes.ownerVenueEdit,
         parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) => CreateVenueScreen(
-          venueId: state.pathParameters['id'],
-        ),
+        builder: (context, state) =>
+            CreateVenueScreen(venueId: state.pathParameters['id']),
       ),
       GoRoute(
         path: AppRoutes.ownerBookings,
@@ -220,6 +248,12 @@ GoRouter createAppRouter({
         path: AppRoutes.ownerBookingCreate,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const CreateOfflineBookingScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.ownerLocations,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) =>
+            const LocationManagementScreen(admin: false),
       ),
       GoRoute(
         path: AppRoutes.privacyPolicy,
@@ -255,6 +289,57 @@ GoRouter createAppRouter({
           return PaymentScreen(booking: booking);
         },
       ),
+      GoRoute(
+        path: AppRoutes.paymentHistory,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const PaymentHistoryScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminRewards,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const AdminRewardConfigScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminModuleConfiguration,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const ModuleConfigurationScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.moduleRegistration,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => ModuleRegistrationScreen(
+          moduleKey: state.pathParameters['module'] ?? '',
+          venueId: state.uri.queryParameters['venue_id'],
+          bookingId: state.uri.queryParameters['booking_id'],
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.moduleSubmissionStatus,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => ModuleSubmissionStatusScreen(
+          submissionId: state.pathParameters['id'] ?? '',
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.adminBusinessPlans,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const BusinessPlanConfigurationScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.wallet,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const WalletScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.referrals,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const ReferralScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.customerAnalytics,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const CustomerAnalyticsScreen(),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return _AppShell(navigationShell: navigationShell);
@@ -265,6 +350,14 @@ GoRouter createAppRouter({
               GoRoute(
                 path: AppRoutes.home,
                 builder: (context, state) => const HomeScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.notifications,
+                builder: (context, state) => const NotificationsScreen(),
               ),
             ],
           ),
@@ -307,8 +400,8 @@ GoRouter createAppRouter({
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: AppRoutes.saved,
-                builder: (context, state) => const SavedScreen(),
+                path: AppRoutes.coursesList,
+                builder: (context, state) => const CoursesListScreen(),
               ),
             ],
           ),
@@ -326,17 +419,44 @@ GoRouter createAppRouter({
   );
 }
 
-class _AppShell extends StatelessWidget {
+/// Pure route authorization used by the router and by role-gating tests.
+String? resolveAppRedirect({
+  required String location,
+  required AuthUser? currentUser,
+  required bool authReady,
+  bool allowUnauthenticatedTestAccess = false,
+}) {
+  if (!authReady) return null;
+  final isPublic =
+      location == AppRoutes.onboarding || location == AppRoutes.login;
+  if (currentUser == null && !allowUnauthenticatedTestAccess) {
+    return isPublic ? null : AppRoutes.login;
+  }
+  if (currentUser != null) {
+    final isAdminRoute = location.startsWith('/admin/');
+    final isOwnerRoute =
+        location.startsWith('/owner') || location == AppRoutes.analytics;
+    if (isAdminRoute && !currentUser.isAdmin) return AppRoutes.profile;
+    if (isOwnerRoute && !currentUser.isOwner) return AppRoutes.profile;
+  }
+  return isPublic ? AppRoutes.shell : null;
+}
+
+class _AppShell extends ConsumerWidget {
   const _AppShell({required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+    final simpleMode = ref.watch(simpleModeProvider);
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
+        labelBehavior: simpleMode
+            ? NavigationDestinationLabelBehavior.alwaysShow
+            : NavigationDestinationLabelBehavior.onlyShowSelected,
         selectedIndex: navigationShell.currentIndex,
         onDestinationSelected: (index) {
           navigationShell.goBranch(

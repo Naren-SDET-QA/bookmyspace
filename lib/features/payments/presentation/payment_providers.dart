@@ -5,8 +5,8 @@ import '../../booking/domain/booking.dart';
 import '../domain/checkout_service.dart';
 import '../domain/payment.dart';
 import '../domain/payment_repository.dart';
-import '../infrastructure/razorpay_checkout_service.dart';
 import '../infrastructure/supabase_payment_repository.dart';
+import 'checkout_service_factory.dart';
 
 /// Payment repository instance.
 final paymentRepositoryProvider = Provider<PaymentRepository>((ref) {
@@ -16,7 +16,7 @@ final paymentRepositoryProvider = Provider<PaymentRepository>((ref) {
 
 /// Razorpay checkout service. Overridden with a fake in tests/web.
 final checkoutServiceProvider = Provider<CheckoutService>((ref) {
-  return RazorpayCheckoutService();
+  return createCheckoutService();
 });
 
 /// The signed-in user's payments, newest first.

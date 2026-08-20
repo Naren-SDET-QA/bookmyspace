@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../domain/search_area.dart';
+import 'cascading_location_selector.dart';
 import '../location_providers.dart';
 import 'map_point_picker.dart';
 
@@ -49,6 +50,7 @@ class _LocationPickerSheetState extends ConsumerState<LocationPickerSheet> {
   );
   bool _locating = false;
   String _locationError = '';
+  CascadingLocationValue _hierarchy = const CascadingLocationValue();
 
   @override
   void initState() {
@@ -131,6 +133,41 @@ class _LocationPickerSheetState extends ConsumerState<LocationPickerSheet> {
                 ),
               ],
             ),
+            const SizedBox(height: 12),
+
+            CascadingLocationSelector(
+              value: _hierarchy,
+              compact: true,
+              onChanged: (value) {
+                final selected =
+                    value.area ??
+                    value.city ??
+                    value.district ??
+                    value.state ??
+                    value.country;
+                if (selected == null) return;
+                setState(() {
+                  _hierarchy = value;
+                  _area = _area.copyWith(
+                    label: selected.name,
+                    locationNodeId: value.selectedLocationId,
+                    countryCode: selected.countryCode,
+                    country: value.country?.name,
+                    state: value.state?.name,
+                    district: value.district?.name,
+                    city: value.city?.name,
+                    area: value.area?.name,
+                    timezone: selected.timezone,
+                    latitude: selected.latitude,
+                    longitude: selected.longitude,
+                  );
+                  if (selected.latitude != null && selected.longitude != null) {
+                    _mapPoint = LatLng(selected.latitude!, selected.longitude!);
+                  }
+                });
+              },
+            ),
+
             const SizedBox(height: 12),
 
             // Free-text place search
@@ -236,7 +273,12 @@ class _LocationPickerSheetState extends ConsumerState<LocationPickerSheet> {
             ),
             const SizedBox(height: 4),
             ref
-                .watch(reverseGeocodeProvider((_mapPoint.latitude, _mapPoint.longitude)))
+                .watch(
+                  reverseGeocodeProvider((
+                    _mapPoint.latitude,
+                    _mapPoint.longitude,
+                  )),
+                )
                 .when(
                   loading: () => const SizedBox.shrink(),
                   error: (_, _) => const SizedBox.shrink(),
@@ -293,7 +335,8 @@ class _LocationPickerSheetState extends ConsumerState<LocationPickerSheet> {
                 return ChoiceChip(
                   label: Text('Within $km km'),
                   selected: selected,
-                  onSelected: (_) => setState(() => _area = _area.copyWith(radiusKm: km)),
+                  onSelected: (_) =>
+                      setState(() => _area = _area.copyWith(radiusKm: km)),
                 );
               }).toList(),
             ),

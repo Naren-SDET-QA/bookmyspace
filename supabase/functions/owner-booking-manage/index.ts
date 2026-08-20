@@ -18,6 +18,7 @@
 //   status_action: 'confirm' | 'complete' | 'cancel' | 'no_show'
 // }
 import { createClient, SupabaseClient } from 'npm:@supabase/supabase-js@2';
+import { enqueueEmail, userEmail } from '../_shared/email_outbox.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -316,6 +317,18 @@ async function updateBookingStatus(
         body: notif.body,
         type: notif.type,
         data: { booking_id },
+      });
+    }
+    const customer = await userEmail(supabase, customerUserId);
+    if (customer && next === 'cancelled') {
+      await enqueueEmail(supabase, {
+        eventKey: `booking.cancelled.customer.${booking_id}`,
+        eventType: 'booking.cancelled',
+        recipientEmail: customer.email,
+        recipientName: customer.name,
+        bookingId: String(booking_id),
+        templateName: 'booking-cancelled',
+        payload: { title: 'Booking cancelled', message: 'Your booking was cancelled by the venue.', booking_ref: String(booking_id) },
       });
     }
   }

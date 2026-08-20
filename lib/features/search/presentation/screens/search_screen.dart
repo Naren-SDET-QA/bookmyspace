@@ -19,12 +19,19 @@ import '../../../venues/domain/venue.dart';
 import '../../../venues/presentation/venue_providers.dart';
 import '../../../venues/presentation/widgets/venue_card.dart';
 import '../../domain/ai_search_intent.dart';
+import '../../../ai/presentation/voice_booking_sheet.dart';
 
 /// Search screen: text query + section category chips + location + a
 /// section-aware filter sheet. Results are always scoped to the selected
 /// customer section, and a map view (`/map`) renders the same results.
 class SearchScreen extends ConsumerStatefulWidget {
-  const SearchScreen({super.key, this.initialCategory, this.initialSection, this.initialQuery, this.initialIntent});
+  const SearchScreen({
+    super.key,
+    this.initialCategory,
+    this.initialSection,
+    this.initialQuery,
+    this.initialIntent,
+  });
 
   /// Preselected category slug (set when navigating from home chips).
   final String? initialCategory;
@@ -63,16 +70,20 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         selectedSection: incomingSection ?? CustomerSection.functionHalls,
         area: area,
       );
-      ref.read(searchQueryProvider.notifier).state = interpreted ?? current.copyWith(
-        query: widget.initialQuery ?? current.query,
-        sectionId: () => incomingSection?.id,
-        categorySlug: () => category == 'all' || category == incomingSection?.id
-            ? null
-            : category,
-        latitude: () => area.latitude,
-        longitude: () => area.longitude,
-        maxDistanceKm: () => area.radiusKm,
-      );
+      ref.read(searchQueryProvider.notifier).state =
+          interpreted ??
+          current.copyWith(
+            query: widget.initialQuery ?? current.query,
+            sectionId: () => incomingSection?.id,
+            categorySlug: () =>
+                category == 'all' || category == incomingSection?.id
+                ? null
+                : category,
+            latitude: () => area.latitude,
+            longitude: () => area.longitude,
+            maxDistanceKm: () => area.radiusKm,
+            locationNodeId: () => area.locationNodeId,
+          );
     });
   }
 
@@ -120,6 +131,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       latitude: () => area.latitude,
       longitude: () => area.longitude,
       maxDistanceKm: () => area.radiusKm,
+      locationNodeId: () => area.locationNodeId,
     );
   }
 
@@ -145,12 +157,33 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final results = ref.watch(searchResultsProvider);
     final section = ref.watch(selectedCustomerSectionProvider);
     final area = ref.watch(searchAreaProvider);
-    final sectionCategories = section?.categories ?? const <CustomerSectionCategory>[];
+    final sectionCategories =
+        section?.categories ?? const <CustomerSectionCategory>[];
 
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.search),
         actions: [
+          IconButton(
+            onPressed: () => showModalBottomSheet<void>(
+              context: context,
+              isScrollControlled: true,
+              builder: (_) => VoiceBookingSheet(
+                onConfirmed: (intent) {
+                  final current = ref.read(searchQueryProvider);
+                  ref.read(searchQueryProvider.notifier).state = current
+                      .copyWith(
+                        query: intent.location ?? intent.category ?? '',
+                        minPrice: () => null,
+                        maxPrice: () => intent.budget,
+                        minCapacity: () => intent.guests,
+                      );
+                },
+              ),
+            ),
+            tooltip: 'Voice search',
+            icon: const Icon(Icons.mic_none_rounded),
+          ),
           IconButton(
             onPressed: () => context.push(AppRoutes.map),
             tooltip: l10n.viewOnMap,
@@ -230,7 +263,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                           query.categorySlug == null ||
                           query.categorySlug == 'all',
                       onSelected: (_) {
-                        ref.read(selectedCustomerCategoryProvider.notifier).state =
+                        ref
+                                .read(selectedCustomerCategoryProvider.notifier)
+                                .state =
                             'all';
                         ref.read(searchQueryProvider.notifier).state = query
                             .copyWith(
@@ -248,11 +283,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         selected: query.categorySlug == c.id,
                         onSelected: (_) {
                           ref
-                                  .read(
-                                    selectedCustomerCategoryProvider.notifier,
-                                  )
-                                  .state =
-                              c.id;
+                              .read(selectedCustomerCategoryProvider.notifier)
+                              .state = c
+                              .id;
                           ref.read(searchQueryProvider.notifier).state = query
                               .copyWith(
                                 sectionId: () => section.id,
@@ -280,9 +313,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 return ResponsiveLayoutBuilder(
                   builder: (context, responsive) {
                     return GridView.builder(
-                      padding: EdgeInsets.all(
-                        responsive.horizontalPadding,
-                      ),
+                      padding: EdgeInsets.all(responsive.horizontalPadding),
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: responsive.resultsColumns,
                         mainAxisSpacing: responsive.gridSpacing,
@@ -290,8 +321,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         childAspectRatio: responsive.resultsAspectRatio,
                       ),
                       itemCount: venues.length,
-                      itemBuilder: (context, i) =>
-                          VenueCard(venue: venues[i]),
+                      itemBuilder: (context, i) => VenueCard(venue: venues[i]),
                     );
                   },
                 );
@@ -484,7 +514,8 @@ class _SectionFilterSheetState extends State<_SectionFilterSheet> {
     if (inDate == null || !mounted) return;
     final outDate = await showDatePicker(
       context: context,
-      initialDate: (_checkOut ?? inDate.add(const Duration(days: 1))).isAfter(inDate)
+      initialDate:
+          (_checkOut ?? inDate.add(const Duration(days: 1))).isAfter(inDate)
           ? _checkOut ?? inDate.add(const Duration(days: 1))
           : inDate.add(const Duration(days: 1)),
       firstDate: inDate.add(const Duration(days: 1)),
@@ -497,9 +528,8 @@ class _SectionFilterSheetState extends State<_SectionFilterSheet> {
     });
   }
 
-  String _formatDate(DateTime? d) => d == null
-      ? 'Select'
-      : '${d.day}/${d.month}/${d.year}';
+  String _formatDate(DateTime? d) =>
+      d == null ? 'Select' : '${d.day}/${d.month}/${d.year}';
 
   Widget _chipRow({
     required List<String> options,
@@ -572,10 +602,7 @@ class _SectionFilterSheetState extends State<_SectionFilterSheet> {
                       ),
                     ),
                   ),
-                  TextButton(
-                    onPressed: _reset,
-                    child: Text(l10n.clearFilters),
-                  ),
+                  TextButton(onPressed: _reset, child: Text(l10n.clearFilters)),
                 ],
               ),
               const SizedBox(height: 12),
@@ -624,8 +651,9 @@ class _SectionFilterSheetState extends State<_SectionFilterSheet> {
                         _minCapacity != null && _minCapacity.toString() == o,
                     onTap: (o) {
                       setState(() {
-                        _minCapacity =
-                            _minCapacity?.toString() == o ? null : int.tryParse(o);
+                        _minCapacity = _minCapacity?.toString() == o
+                            ? null
+                            : int.tryParse(o);
                       });
                     },
                   ),
@@ -675,9 +703,9 @@ class _SectionFilterSheetState extends State<_SectionFilterSheet> {
                   Text(spec.label, style: theme.textTheme.titleSmall),
                   const SizedBox(height: 8),
                   FilterChip(
-                    label: Text(spec.options.isEmpty
-                        ? 'Included'
-                        : spec.options.first),
+                    label: Text(
+                      spec.options.isEmpty ? 'Included' : spec.options.first,
+                    ),
                     selected: _foodIncluded == true,
                     onSelected: (selected) =>
                         setState(() => _foodIncluded = selected ? true : null),
@@ -688,12 +716,12 @@ class _SectionFilterSheetState extends State<_SectionFilterSheet> {
                   _chipRow(
                     options: spec.options,
                     isSelected: (o) =>
-                        _maxDeposit != null && _maxDeposit == _interpretRange(o).$2,
+                        _maxDeposit != null &&
+                        _maxDeposit == _interpretRange(o).$2,
                     onTap: (o) {
                       final range = _interpretRange(o);
                       setState(() {
-                        _maxDeposit =
-                            _maxDeposit == range.$2 ? null : range.$2;
+                        _maxDeposit = _maxDeposit == range.$2 ? null : range.$2;
                       });
                     },
                   ),
@@ -776,7 +804,8 @@ class _SectionFilterSheetState extends State<_SectionFilterSheet> {
                   _SortChip(
                     label: l10n.relevance,
                     selected: _sortBy == VenueSortBy.relevance,
-                    onTap: () => setState(() => _sortBy = VenueSortBy.relevance),
+                    onTap: () =>
+                        setState(() => _sortBy = VenueSortBy.relevance),
                   ),
                   _SortChip(
                     label: l10n.priceLowToHigh,
@@ -786,7 +815,8 @@ class _SectionFilterSheetState extends State<_SectionFilterSheet> {
                   _SortChip(
                     label: l10n.priceHighToLow,
                     selected: _sortBy == VenueSortBy.priceDesc,
-                    onTap: () => setState(() => _sortBy = VenueSortBy.priceDesc),
+                    onTap: () =>
+                        setState(() => _sortBy = VenueSortBy.priceDesc),
                   ),
                   _SortChip(
                     label: l10n.topRated,
@@ -829,7 +859,8 @@ class _SectionFilterSheetState extends State<_SectionFilterSheet> {
                       (c) => ChoiceChip(
                         label: Text(c.name),
                         selected: _categorySlug == c.slug,
-                        onSelected: (_) => setState(() => _categorySlug = c.slug),
+                        onSelected: (_) =>
+                            setState(() => _categorySlug = c.slug),
                       ),
                     ),
                 ],

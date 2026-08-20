@@ -22,9 +22,30 @@ Future<void> _openInGoogleMaps(BuildContext context, Venue venue) async {
   );
   final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
   if (!launched && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Could not open Google Maps.')),
+    );
+  }
+}
+
+Future<void> _openWhatsApp(BuildContext context, Venue venue) async {
+  final phone = venue.contactWhatsapp;
+  if (phone.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('WhatsApp contact is unavailable.')),
+    );
+    return;
+  }
+  final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+  final uri = Uri.parse(
+    'https://api.whatsapp.com/send?phone=$cleanPhone&text='
+    '${Uri.encodeComponent('Hi! I am interested in ${venue.name} on BookMySpace.')}',
+  );
+  final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+  if (!launched && context.mounted) {
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('Could not open Google Maps.')));
+    ).showSnackBar(const SnackBar(content: Text('Could not open WhatsApp.')));
   }
 }
 
@@ -499,16 +520,7 @@ class _BookingBar extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: FilledButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          l10n.openingWhatsApp
-                              .replaceFirst('{name}', venue.name),
-                        ),
-                      ),
-                    );
-                  },
+                  onPressed: () => _openWhatsApp(context, venue),
                   icon: const Icon(Icons.chat_rounded),
                   label: Text(l10n.whatsapp),
                 ),
