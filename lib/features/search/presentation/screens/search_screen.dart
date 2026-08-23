@@ -346,9 +346,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         'Try a different keyword, category, price range or location.',
                   );
                 }
-                final isFunctionHall =
-                    section == CustomerSection.functionHalls;
-                if (!isFunctionHall) {
+                final isFunctionHall = section == CustomerSection.functionHalls;
+                final isHotel = section == CustomerSection.lodgeRooms;
+                if (!isFunctionHall && !isHotel) {
                   return ResponsiveLayoutBuilder(
                     builder: (context, responsive) {
                       return GridView.builder(
@@ -375,6 +375,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       itemBuilder: (context, index) {
                         if (index == 0) {
                           return _FunctionHallResultsHeader(
+                            title: isHotel ? 'Hotels' : 'Function Halls',
                             areaLabel: area.label,
                             count: venues.length,
                             query: query,
@@ -383,7 +384,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                 .state = query.copyWith(sortBy: sort),
                           );
                         }
-                        return FunctionHallListCard(venue: venues[index - 1]);
+                        return isHotel
+                            ? HotelListCard(venue: venues[index - 1])
+                            : FunctionHallListCard(venue: venues[index - 1]);
                       },
                     );
                     if (!desktop) return list;
@@ -434,12 +437,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
 class _FunctionHallResultsHeader extends StatelessWidget {
   const _FunctionHallResultsHeader({
+    required this.title,
     required this.areaLabel,
     required this.count,
     required this.query,
     required this.onSortChanged,
   });
 
+  final String title;
   final String areaLabel;
   final int count;
   final VenueSearchQuery query;
@@ -455,7 +460,7 @@ class _FunctionHallResultsHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Function Halls in $areaLabel',
+                '$title in $areaLabel',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),

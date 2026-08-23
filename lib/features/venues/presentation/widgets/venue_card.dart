@@ -322,6 +322,152 @@ class FunctionHallListCard extends ConsumerWidget {
   }
 }
 
+/// Compact hotel result card. Room inventory is not part of the current
+/// Venue model, so this card exposes the existing hotel venue and delegates
+/// room/booking details to the established venue details flow.
+class HotelListCard extends ConsumerWidget {
+  const HotelListCard({super.key, required this.venue});
+
+  final Venue venue;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final favorite = ref.watch(isFavoriteProvider(venue.id));
+    final facilities = venue.facilities
+        .where((item) => item.isAvailable && item.facility.trim().isNotEmpty)
+        .take(4)
+        .map((item) => item.facility)
+        .toList(growable: false);
+
+    void details() => context.push(
+      AppRoutes.venueDetails.replaceAll(':id', venue.id),
+    );
+    void book() => context.push(
+      AppRoutes.bookingFlow.replaceAll(':id', venue.id),
+      extra: venue,
+    );
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      margin: EdgeInsets.zero,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final horizontal = constraints.maxWidth >= 560;
+          final image = SizedBox(
+            width: horizontal ? 230 : double.infinity,
+            height: horizontal ? 190 : 180,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                AppNetworkImage(url: venue.coverImageUrl, fit: BoxFit.cover),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: favorite.when(
+                    data: (value) => FavoriteButton(
+                      isFavorite: value ?? false,
+                      onPressed: () => ref
+                          .read(toggleFavoriteProvider(venue.id).future),
+                    ),
+                    loading: () => const FavoriteButton(
+                      isFavorite: false,
+                      onPressed: null,
+                    ),
+                    error: (_, _) => const FavoriteButton(
+                      isFavorite: false,
+                      onPressed: null,
+                    ),
+                  ),
+                ),
+                if (venue.images.length > 1)
+                  Positioned(
+                    left: 8,
+                    bottom: 8,
+                    child: _LabelChip(
+                      icon: Icons.photo_library_outlined,
+                      label: '1/${venue.images.length}',
+                    ),
+                  ),
+              ],
+            ),
+          );
+          final content = Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        venue.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    if (venue.isVerified) const VerifiedBadge(),
+                  ],
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  [
+                    if (venue.city.isNotEmpty) venue.city,
+                    if (venue.state.isNotEmpty) venue.state,
+                  ].join(' • '),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 5,
+                  children: [
+                    if (venue.avgRating > 0)
+                      _InfoPill(
+                        icon: Icons.star_rounded,
+                        label: '${venue.avgRating.toStringAsFixed(1)} (${venue.ratingCount})',
+                      ),
+                    ...facilities.map(
+                      (item) => _InfoPill(icon: Icons.check_circle_outline, label: item),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        venue.price > 0 ? '${formatInr(venue.price)} / night' : 'Price on request',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: AppTheme.brand,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    OutlinedButton(onPressed: details, child: const Text('View Hotel')),
+                    const SizedBox(width: 8),
+                    FilledButton(onPressed: book, child: const Text('Book Stay')),
+                  ],
+                ),
+              ],
+            ),
+          );
+          return horizontal
+              ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [image, Expanded(child: content)])
+              : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [image, content]);
+        },
+      ),
+    );
+  }
+}
+
 class _InfoPill extends StatelessWidget {
   const _InfoPill({required this.icon, required this.label});
 
