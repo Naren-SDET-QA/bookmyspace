@@ -43,7 +43,7 @@ class SettingsScreen extends ConsumerWidget {
                       ?.label ??
                   '#$palette',
             ),
-            onTap: () => _showPalettePicker(context, ref),
+            onTap: () => context.push(AppRoutes.themeCustomizer),
           ),
           SwitchListTile.adaptive(
             secondary: const Icon(Icons.accessibility_new_rounded),
@@ -250,6 +250,13 @@ class SettingsScreen extends ConsumerWidget {
               title: const Text('తెలుగు'),
               onTap: () {
                 ref.read(localeProvider.notifier).setLocale(const Locale('te'));
+                Navigator.pop(sheetContext);
+              },
+            ),
+            ListTile(
+              title: const Text('हिन्दी'),
+              onTap: () {
+                ref.read(localeProvider.notifier).setLocale(const Locale('hi'));
                 Navigator.pop(sheetContext);
               },
             ),

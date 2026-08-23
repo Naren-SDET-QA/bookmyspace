@@ -1,0 +1,27 @@
+/// Product capabilities that can be enabled, disabled, or reconfigured
+/// without deleting modules. Not a venue-category enum.
+enum FeatureId {
+  location,
+  maps,
+  search,
+  booking,
+  payments,
+  razorpay,
+  functionHall,
+  hotels,
+  pg,
+  institutes,
+  courses,
+  events,
+  registration,
+  ai,
+  voice,
+  notifications,
+  email,
+  whatsapp,
+  analytics,
+  barcode,
+  offers,
+  invoice,
+  theme,
+}

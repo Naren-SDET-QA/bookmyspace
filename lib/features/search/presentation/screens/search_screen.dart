@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/modular/feature_id.dart';
+import '../../../../core/modular/feature_providers.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/error_view.dart';
@@ -15,7 +17,11 @@ import '../../../home/presentation/customer_section_providers.dart';
 import '../../../location/presentation/location_providers.dart';
 import '../../../location/presentation/widgets/location_bar.dart';
 import '../../../location/presentation/widgets/location_picker_sheet.dart';
+import '../../../venues/domain/category_configuration.dart';
+import '../../../venues/domain/category_discovery.dart';
+import '../../../venues/domain/category_filter_catalog.dart';
 import '../../../venues/domain/venue.dart';
+import '../../../venues/presentation/category_configuration_providers.dart';
 import '../../../venues/presentation/venue_providers.dart';
 import '../../../venues/presentation/widgets/venue_card.dart';
 import '../../domain/ai_search_intent.dart';
@@ -141,7 +147,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       isScrollControlled: true,
       builder: (_) => _SectionFilterSheet(
         initial: ref.read(searchQueryProvider),
-        categories: ref.read(venueCategoriesProvider).value ?? const [],
+        configurations:
+            ref.read(categoryConfigurationsProvider).valueOrNull ??
+            const <CategoryConfiguration>[],
         section: ref.read(selectedCustomerSectionProvider),
         onApply: (updated) {
           ref.read(searchQueryProvider.notifier).state = updated;
@@ -157,38 +165,59 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final results = ref.watch(searchResultsProvider);
     final section = ref.watch(selectedCustomerSectionProvider);
     final area = ref.watch(searchAreaProvider);
-    final sectionCategories =
-        section?.categories ?? const <CustomerSectionCategory>[];
+    final features = ref.watch(featureRegistryProvider);
+    final visibleSectionIds = features.visibleSearchSections();
+    final dbCategories =
+        ref.watch(categoryConfigurationsProvider).valueOrNull ??
+        const <CategoryConfiguration>[];
+    final fallbackChips = [
+      for (final c in section?.categories ?? const <CustomerSectionCategory>[])
+        if (c.id != 'all')
+          CategoryConfiguration(
+            id: c.id,
+            slug: c.id,
+            name: c.label,
+            icon: c.emoji,
+            sectionId: section?.id ?? '',
+          ),
+    ];
+    final sectionCategories = CategoryDiscovery.searchChips(
+      dbCategories,
+      sectionId: section?.id,
+      fallback: fallbackChips,
+    );
 
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.search),
         actions: [
-          IconButton(
-            onPressed: () => showModalBottomSheet<void>(
-              context: context,
-              isScrollControlled: true,
-              builder: (_) => VoiceBookingSheet(
-                onConfirmed: (intent) {
-                  final current = ref.read(searchQueryProvider);
-                  ref.read(searchQueryProvider.notifier).state = current
-                      .copyWith(
-                        query: intent.location ?? intent.category ?? '',
-                        minPrice: () => null,
-                        maxPrice: () => intent.budget,
-                        minCapacity: () => intent.guests,
-                      );
-                },
+          if (features.isExposed(FeatureId.voice))
+            IconButton(
+              onPressed: () => showModalBottomSheet<void>(
+                context: context,
+                isScrollControlled: true,
+                builder: (_) => VoiceBookingSheet(
+                  onConfirmed: (intent) {
+                    final current = ref.read(searchQueryProvider);
+                    ref.read(searchQueryProvider.notifier).state = current
+                        .copyWith(
+                          query: intent.location ?? intent.category ?? '',
+                          minPrice: () => null,
+                          maxPrice: () => intent.budget,
+                          minCapacity: () => intent.guests,
+                        );
+                  },
+                ),
               ),
+              tooltip: 'Voice search',
+              icon: const Icon(Icons.mic_none_rounded),
             ),
-            tooltip: 'Voice search',
-            icon: const Icon(Icons.mic_none_rounded),
-          ),
-          IconButton(
-            onPressed: () => context.push(AppRoutes.map),
-            tooltip: l10n.viewOnMap,
-            icon: const Icon(Icons.map_outlined),
-          ),
+          if (features.isExposed(FeatureId.maps))
+            IconButton(
+              onPressed: () => context.push(AppRoutes.map),
+              tooltip: l10n.viewOnMap,
+              icon: const Icon(Icons.map_outlined),
+            ),
         ],
       ),
       body: Column(
@@ -237,23 +266,26 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
                 if (section == null)
-                  ...CustomerSection.values.map((s) {
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text('${s.emoji} ${s.title}'),
-                        selected: false,
-                        onSelected: (_) {
-                          selectCustomerSection(ref, s);
-                          ref.read(searchQueryProvider.notifier).state = query
-                              .copyWith(
+                  ...CustomerSection.values
+                      .where((s) => visibleSectionIds.contains(s.id))
+                      .map((s) {
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ChoiceChip(
+                            label: Text('${s.emoji} ${s.title}'),
+                            selected: false,
+                            onSelected: (_) {
+                              selectCustomerSection(ref, s);
+                              ref
+                                  .read(searchQueryProvider.notifier)
+                                  .state = query.copyWith(
                                 sectionId: () => s.id,
                                 categorySlug: () => null,
                               );
-                        },
-                      ),
-                    );
-                  })
+                            },
+                          ),
+                        );
+                      })
                 else ...[
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
@@ -275,21 +307,25 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       },
                     ),
                   ),
-                  ...sectionCategories.where((c) => c.id != 'all').map((c) {
+                  ...sectionCategories.map((c) {
                     return Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: ChoiceChip(
-                        label: Text('${c.emoji} ${c.label}'),
-                        selected: query.categorySlug == c.id,
+                        label: Text(
+                          '${c.icon.isNotEmpty ? c.icon : '•'} ${c.name}',
+                        ),
+                        selected:
+                            query.categorySlug == c.id ||
+                            query.categorySlug == c.slug,
                         onSelected: (_) {
                           ref
                               .read(selectedCustomerCategoryProvider.notifier)
                               .state = c
-                              .id;
+                              .slug;
                           ref.read(searchQueryProvider.notifier).state = query
                               .copyWith(
                                 sectionId: () => section.id,
-                                categorySlug: () => c.id,
+                                categorySlug: () => c.slug,
                               );
                         },
                       ),
@@ -345,13 +381,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 class _SectionFilterSheet extends StatefulWidget {
   const _SectionFilterSheet({
     required this.initial,
-    required this.categories,
+    required this.configurations,
     required this.onApply,
     this.section,
   });
 
   final VenueSearchQuery initial;
-  final List<VenueCategory> categories;
+  final List<CategoryConfiguration> configurations;
   final CustomerSection? section;
   final void Function(VenueSearchQuery) onApply;
 
@@ -555,12 +591,24 @@ class _SectionFilterSheetState extends State<_SectionFilterSheet> {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
     final section = widget.section;
-    final specs = section == null
-        ? const <SectionFilterSpec>[]
-        : CustomerSectionCatalog.filterSpecs(section);
-    final amenitySpecs = section == null
-        ? const <AmenityFilterSpec>[]
-        : CustomerSectionCatalog.amenityFilters(section);
+    final specs = CategoryFilterCatalog.specs(
+      widget.configurations,
+      sectionId: section?.id,
+      fallback: section == null
+          ? const <SectionFilterSpec>[]
+          : CustomerSectionCatalog.filterSpecs(section),
+    );
+    final amenitySpecs = CategoryFilterCatalog.amenities(
+      widget.configurations,
+      sectionId: section?.id,
+      fallback: section == null
+          ? const <AmenityFilterSpec>[]
+          : CustomerSectionCatalog.amenityFilters(section),
+    );
+    final configuredCategories = CategoryDiscovery.searchFilterCategories(
+      widget.configurations,
+      sectionId: section?.id,
+    );
 
     // Map a spec option to its catalog amenity id (spec options are
     // configurable but use the catalog's canonical amenity ids).
@@ -843,26 +891,14 @@ class _SectionFilterSheetState extends State<_SectionFilterSheet> {
                     selected: _categorySlug == null,
                     onSelected: (_) => setState(() => _categorySlug = null),
                   ),
-                  if (section != null)
-                    ...section.categories
-                        .where((c) => c.id != 'all')
-                        .map(
-                          (c) => ChoiceChip(
-                            label: Text(c.label),
-                            selected: _categorySlug == c.id,
-                            onSelected: (_) =>
-                                setState(() => _categorySlug = c.id),
-                          ),
-                        )
-                  else
-                    ...widget.categories.map(
-                      (c) => ChoiceChip(
-                        label: Text(c.name),
-                        selected: _categorySlug == c.slug,
-                        onSelected: (_) =>
-                            setState(() => _categorySlug = c.slug),
-                      ),
+                  ...configuredCategories.map(
+                    (c) => ChoiceChip(
+                      label: Text(c.name),
+                      selected:
+                          _categorySlug == c.slug || _categorySlug == c.id,
+                      onSelected: (_) => setState(() => _categorySlug = c.slug),
                     ),
+                  ),
                 ],
               ),
               const SizedBox(height: 20),

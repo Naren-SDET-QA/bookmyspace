@@ -7,16 +7,23 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/config/settings_controller.dart';
+import '../../../../core/modular/feature_providers.dart';
+import '../../../../core/modular/plugin_kind.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/validators/app_validators.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../auth/presentation/auth_providers.dart';
 import '../../../home/domain/customer_section_catalog.dart';
+import '../../../venues/domain/category_configuration.dart';
+import '../../../venues/domain/category_registration.dart';
 import '../../../venues/domain/venue.dart';
+import '../../../venues/presentation/category_configuration_providers.dart';
 import '../../../venues/presentation/widgets/venue_badges.dart';
 import '../../domain/booking.dart';
+import '../../domain/configurable_booking.dart';
 import '../booking_providers.dart';
+import '../widgets/configurable_booking_fields_form.dart';
 import '../widgets/section_customer_details_form.dart';
 
 /// Booking flow: pick a date, pick an available slot, confirm the hold.
@@ -36,11 +43,9 @@ class BookingScreen extends ConsumerStatefulWidget {
 class _BookingScreenState extends ConsumerState<BookingScreen> {
   final _detailsFormKey = GlobalKey<FormState>();
   DateTime? _selectedDate;
-  DateTime? _checkOutDate;
   SlotAvailability? _selectedSlot;
   bool _confirming = false;
-  int _guestCount = 100;
-  int _sharingIndex = 0;
+  BookingFieldValues _fieldValues = const BookingFieldValues({'guests': 100});
   CustomerBookingDetails _details = const CustomerBookingDetails();
 
   @override
@@ -58,10 +63,18 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
   Widget build(BuildContext context) {
     final date = _selectedDate;
     final section = CustomerSectionCatalog.sectionForVenue(widget.venue);
+    final config = _categoryConfig(ref);
+    final listingOnly =
+        config?.isListingOnly ?? section == CustomerSection.institutesClasses;
+    final bookingFields = ConfigurableBookingFields.resolve(
+      config: config,
+      sectionId: section?.id,
+      registry: ref.watch(featureRegistryProvider),
+    );
     final l10n = AppLocalizations.of(context);
     final quickMode = ref.watch(bookingModeProvider) == BookingMode.quick;
 
-    if (section == CustomerSection.institutesClasses) {
+    if (listingOnly) {
       return Scaffold(
         appBar: AppBar(
           title: Text(CustomerSectionCatalog.bookingScreenTitle(section)),
@@ -105,17 +118,10 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                     details: _details,
                     onChanged: (next) => setState(() => _details = next),
                   ),
-                  _SectionBookingFields(
-                    section: section,
-                    venue: widget.venue,
-                    guestCount: _guestCount,
-                    checkIn: date,
-                    checkOut:
-                        _checkOutDate ?? date.add(const Duration(days: 1)),
-                    sharingIndex: _sharingIndex,
-                    onGuestsChanged: (v) => setState(() => _guestCount = v),
-                    onCheckOutChanged: (v) => setState(() => _checkOutDate = v),
-                    onSharingChanged: (v) => setState(() => _sharingIndex = v),
+                  ConfigurableBookingFieldsForm(
+                    fields: bookingFields,
+                    values: _fieldValues,
+                    onChanged: (next) => setState(() => _fieldValues = next),
                   ),
                   _DateStrip(
                     selected: date,
@@ -191,6 +197,35 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
         context,
       ).showSnackBar(SnackBar(content: Text(missing)));
       return;
+    }
+    final config = _categoryConfig(ref);
+    final bookingFields = ConfigurableBookingFields.resolve(
+      config: config,
+      sectionId: section?.id,
+      registry: ref.read(featureRegistryProvider),
+    );
+    final missingBooking = _fieldValues.missing(bookingFields);
+    if (missingBooking.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Need: ${missingBooking.join(', ')}')),
+      );
+      return;
+    }
+    final registration = CategoryRegistrationConfig.from(config);
+    if (registration.enforcedForBooking) {
+      final missingRegistration = registration.missing({
+        'full_name': _details.fullName,
+        'phone': _details.phone,
+        'customer_name': _details.fullName,
+        'customer_phone': _details.phone,
+        ..._fieldValues.values,
+      });
+      if (missingRegistration.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Need: ${missingRegistration.join(', ')}')),
+        );
+        return;
+      }
     }
     final l10n = AppLocalizations.of(context);
     final repo = ref.read(bookingRepositoryProvider);
@@ -269,15 +304,22 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
         amount: amount,
         taxAmount: tax,
         totalAmount: total,
-        metadata: _bookingMetadata(date, section),
+        metadata: {
+          'customer_name': _details.fullName,
+          'customer_phone': _details.phone,
+          'full_name': _details.fullName,
+          'phone': _details.phone,
+          ..._fieldValues.toMetadata(),
+        },
       );
       ref.invalidate(myBookingsProvider);
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(l10n.slotHeld)));
-      // Enter the payment flow with the freshly created pending booking.
-      unawaited(context.push('/bookings/${booking.id}/pay', extra: booking));
+      if (isCheckoutExposed(ref.read(featureRegistryProvider))) {
+        unawaited(context.push('/bookings/${booking.id}/pay', extra: booking));
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -288,28 +330,15 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
     }
   }
 
-  /// Section-specific extras (guests, check-out, sharing) recorded on the
-  /// booking's `metadata` jsonb column for the invoice and owner records.
-  Map<String, dynamic> _bookingMetadata(
-    DateTime date,
-    CustomerSection? section,
-  ) {
-    return {
-      'customer_name': _details.fullName,
-      'customer_phone': _details.phone,
-      'full_name': _details.fullName,
-      'phone': _details.phone,
-      if (section == CustomerSection.functionHalls) 'guests': _guestCount,
-      if (section == CustomerSection.lodgeRooms)
-        'checkout_date':
-            '${(_checkOutDate ?? date.add(const Duration(days: 1))).year.toString().padLeft(4, '0')}-'
-            '${(_checkOutDate ?? date.add(const Duration(days: 1))).month.toString().padLeft(2, '0')}-'
-            '${(_checkOutDate ?? date.add(const Duration(days: 1))).day.toString().padLeft(2, '0')}',
-      if (section == CustomerSection.pgHostels) ...{
-        'sharing': _sharingIndex,
-        'deposit': widget.venue.pricingBaseAmount,
-      },
-    };
+  CategoryConfiguration? _categoryConfig(WidgetRef ref) {
+    final configs =
+        ref.watch(categoryConfigurationsProvider).valueOrNull ?? const [];
+    final slug = widget.venue.category?.slug;
+    final id = widget.venue.category?.id;
+    for (final item in configs) {
+      if (item.id == id || item.slug == slug) return item;
+    }
+    return null;
   }
 }
 
@@ -744,119 +773,5 @@ class _SummaryRow extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-class _SectionBookingFields extends StatelessWidget {
-  const _SectionBookingFields({
-    required this.section,
-    required this.venue,
-    required this.guestCount,
-    required this.checkIn,
-    required this.checkOut,
-    required this.sharingIndex,
-    required this.onGuestsChanged,
-    required this.onCheckOutChanged,
-    required this.onSharingChanged,
-  });
-
-  final CustomerSection? section;
-  final Venue venue;
-  final int guestCount;
-  final DateTime checkIn;
-  final DateTime checkOut;
-  final int sharingIndex;
-  final ValueChanged<int> onGuestsChanged;
-  final ValueChanged<DateTime> onCheckOutChanged;
-  final ValueChanged<int> onSharingChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    if (section == null || section == CustomerSection.functionHalls) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-        child: Row(
-          children: [
-            Text(l10n.guestCount),
-            const Spacer(),
-            IconButton(
-              onPressed: guestCount > 10
-                  ? () => onGuestsChanged(guestCount - 10)
-                  : null,
-              icon: const Icon(Icons.remove_circle_outline),
-            ),
-            Text('$guestCount'),
-            IconButton(
-              onPressed: () => onGuestsChanged(guestCount + 10),
-              icon: const Icon(Icons.add_circle_outline),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (section == CustomerSection.lodgeRooms) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                '${l10n.checkIn} ${DateFormat.MMMd().format(checkIn)}',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ),
-            TextButton(
-              onPressed: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: checkOut,
-                  firstDate: checkIn.add(const Duration(days: 1)),
-                  lastDate: checkIn.add(const Duration(days: 30)),
-                );
-                if (picked != null) onCheckOutChanged(picked);
-              },
-              child: Text(
-                '${l10n.checkOut} ${DateFormat.MMMd().format(checkOut)}',
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (section == CustomerSection.pgHostels) {
-      final deposit = venue.pricingBaseAmount;
-      final totalMoveIn = venue.pricingBaseAmount + deposit;
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${l10n.moveIn} ${DateFormat.yMMMd().format(checkIn)} · '
-              '${l10n.sharingOption} ${sharingIndex + 1}',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '${l10n.rent} ${formatInr(venue.pricingBaseAmount)} + '
-              '${l10n.deposit} ${formatInr(deposit)} = ${formatInr(totalMoveIn)}',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton(
-                onPressed: () => onSharingChanged((sharingIndex + 1) % 3),
-                child: Text(l10n.changeSharing),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return const SizedBox.shrink();
   }
 }

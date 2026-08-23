@@ -82,6 +82,18 @@ void main() {
       expect(Booking.fromJson({'status': 'confirmed'}).canCancel, isFalse);
     });
 
+    test('held and pending bookings can pay; confirmed cannot', () {
+      expect(Booking.fromJson({'status': 'held'}).canPay, isTrue);
+      expect(Booking.fromJson({'status': 'pending'}).canPay, isTrue);
+      expect(Booking.fromJson({'status': 'confirmed'}).canPay, isFalse);
+    });
+
+    test('book again requires a completed first booking and still revalidates', () {
+      expect(Booking.fromJson({'status': 'confirmed'}).canBookAgain, isTrue);
+      expect(Booking.fromJson({'status': 'held'}).canBookAgain, isFalse);
+      expect(Booking.fromJson({'status': 'pending'}).canBookAgain, isFalse);
+    });
+
     test('parses metadata and payment embed for offline bookings', () {
       final booking = Booking.fromJson({
         'id': 'b2',

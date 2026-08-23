@@ -59,6 +59,7 @@ class Payment {
     this.providerOrderId = '',
     this.providerPaymentId = '',
     this.method = '',
+    this.createdAt,
   });
 
   final String id;
@@ -69,6 +70,7 @@ class Payment {
   final String currency;
   final PaymentStatus status;
   final String method;
+  final DateTime? createdAt;
 
   bool get isRefundable =>
       status == PaymentStatus.captured ||
@@ -83,6 +85,7 @@ class Payment {
     currency: json['currency'] as String? ?? 'INR',
     status: PaymentStatus.fromDb(json['status'] as String? ?? 'pending'),
     method: json['method'] as String? ?? '',
+    createdAt: DateTime.tryParse(json['created_at'] as String? ?? ''),
   );
 }
 

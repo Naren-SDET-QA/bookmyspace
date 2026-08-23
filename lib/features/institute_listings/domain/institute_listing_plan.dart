@@ -28,11 +28,11 @@ class InstituteListingPlan {
     return InstituteListingPlan(
       id: json['id'] as String,
       name: json['name'] as String,
-      description: json['description'] as String ?? '',
+      description: json['description'] as String? ?? '',
       price: (json['price'] as num).toDouble(),
-      durationInDays: json['duration_in_days'] as int,
-      features: List<String>.from(json['features'] ?? []),
-      isActive: json['is_active'] as bool,
+      durationInDays: (json['duration_in_days'] as num?)?.toInt() ?? 0,
+      features: List<String>.from((json['features'] as List?) ?? const []),
+      isActive: json['is_active'] as bool? ?? false,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );

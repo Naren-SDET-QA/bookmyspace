@@ -294,6 +294,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ],
                   const SizedBox(height: 24),
                   TextButton(
+                    onPressed: _busy
+                        ? null
+                        : () => context.push(AppRoutes.unifiedRegistration),
+                    child: const Text('Create a profile'),
+                  ),
+                  TextButton(
                     onPressed: _busy ? null : () => context.go(AppRoutes.shell),
                     child: Text(l10n.back),
                   ),

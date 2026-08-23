@@ -6,6 +6,8 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/modular/feature_providers.dart';
+import '../../../../core/modular/plugins/map_provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_network_image.dart';
 import '../../../../core/widgets/error_view.dart';
@@ -429,7 +431,7 @@ class _DetailRow extends StatelessWidget {
   }
 }
 
-class _VenueMap extends StatelessWidget {
+class _VenueMap extends ConsumerWidget {
   const _VenueMap({
     required this.latitude,
     required this.longitude,
@@ -441,7 +443,11 @@ class _VenueMap extends StatelessWidget {
   final String name;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final map = resolvedMapProvider(ref.watch(providerRegistryProvider));
+    if (map == null) {
+      return const SizedBox.shrink();
+    }
     final point = LatLng(latitude, longitude);
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
@@ -460,8 +466,8 @@ class _VenueMap extends StatelessWidget {
           ),
           children: [
             TileLayer(
-              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-              userAgentPackageName: 'com.bookmyspace.app',
+              urlTemplate: map.tileUrlTemplate,
+              userAgentPackageName: map.userAgentPackageName,
             ),
             MarkerLayer(
               markers: [

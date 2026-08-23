@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/config/settings_controller.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/modular/feature_id.dart';
+import '../../../../core/modular/feature_providers.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_network_image.dart';
 import '../../../../core/widgets/responsive_layout.dart';
 import '../../domain/auth_user.dart';
+import '../../../venues/presentation/venue_providers.dart';
 import '../auth_providers.dart';
 import '../widgets/edit_profile_modal.dart';
 
@@ -23,6 +25,7 @@ class ProfileScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final authState = ref.watch(authNotifierProvider);
     final user = authState.user;
+    final features = ref.watch(featureRegistryProvider);
 
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
@@ -249,7 +252,7 @@ class ProfileScreen extends ConsumerWidget {
                         title: 'My Bookings',
                         count: '3 Active',
                         color: Colors.blue,
-                        onTap: () => context.push(AppRoutes.bookings),
+                        onTap: () => context.go(AppRoutes.bookings),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -257,7 +260,7 @@ class ProfileScreen extends ConsumerWidget {
                       child: _MetricCard(
                         icon: Icons.favorite_rounded,
                         title: 'Saved Spaces',
-                        count: '8 Saved',
+                        count: '${ref.watch(favoritesProvider).valueOrNull?.length ?? 0} Saved',
                         color: Colors.pink,
                         onTap: () => context.push(AppRoutes.saved),
                       ),
@@ -291,12 +294,13 @@ class ProfileScreen extends ConsumerWidget {
                   subtitle: 'Update your display name and photo in Supabase',
                   onTap: () => EditProfileModal.show(context),
                 ),
-                _ProfileMenuTile(
-                  icon: Icons.payments_outlined,
-                  title: 'Payment History',
-                  subtitle: 'View completed transactions and invoices',
-                  onTap: () => context.push(AppRoutes.paymentHistory),
-                ),
+                if (features.isExposed(FeatureId.payments))
+                  _ProfileMenuTile(
+                    icon: Icons.payments_outlined,
+                    title: 'Payment History',
+                    subtitle: 'View completed transactions and invoices',
+                    onTap: () => context.push(AppRoutes.paymentHistory),
+                  ),
                 _ProfileMenuTile(
                   icon: Icons.card_giftcard_outlined,
                   title: 'Refer & Earn',
@@ -309,24 +313,68 @@ class ProfileScreen extends ConsumerWidget {
                   subtitle: 'Review your bookings and spending trends',
                   onTap: () => context.push(AppRoutes.customerAnalytics),
                 ),
-                _ProfileMenuTile(
-                  icon: Icons.notifications_none_rounded,
-                  title: 'Notifications & Alerts',
-                  subtitle: 'Booking updates, reminders, and offers',
-                  onTap: () => context.push(AppRoutes.notifications),
-                ),
+                if (features.isExposed(FeatureId.notifications))
+                  _ProfileMenuTile(
+                    icon: Icons.notifications_none_rounded,
+                    title: 'Notifications & Alerts',
+                    subtitle: 'Booking updates, reminders, and offers',
+                    onTap: () => context.push(AppRoutes.notifications),
+                  ),
                 _ProfileMenuTile(
                   icon: Icons.tune_rounded,
                   title: 'App Preferences',
                   subtitle: 'Theme, language, and display options',
                   onTap: () => context.push(AppRoutes.settings),
                 ),
-                _ProfileMenuTile(
-                  icon: Icons.storefront_outlined,
-                  title: 'Partner / Venue Owner Hub',
-                  subtitle: 'List your spaces, halls, and classes',
-                  onTap: () => context.push(AppRoutes.ownerDashboard),
-                ),
+                if (user?.isOwner == true)
+                  _ProfileMenuTile(
+                    icon: Icons.storefront_outlined,
+                    title: 'Partner / Venue Owner Hub',
+                    subtitle: 'List your spaces, halls, and classes',
+                    onTap: () => context.push(AppRoutes.ownerDashboard),
+                  ),
+                if (user?.isOwner == true)
+                  _ProfileMenuTile(
+                    icon: Icons.school_outlined,
+                    title: 'Institute owner portal',
+                    subtitle: 'Faculty, classes, demo sessions and plans',
+                    onTap: () => context.push(AppRoutes.ownerInstitute),
+                  ),
+                if (user?.isOwner == true)
+                  _ProfileMenuTile(
+                    icon: Icons.qr_code_scanner_rounded,
+                    title: 'QR check-in',
+                    subtitle: 'Verify a confirmed booking pass',
+                    onTap: () => context.push(AppRoutes.checkIn),
+                  ),
+                if (user?.isAdmin == true)
+                  _ProfileMenuTile(
+                    icon: Icons.admin_panel_settings_outlined,
+                    title: 'Admin dashboard',
+                    subtitle: 'Approvals, categories, payments and audit',
+                    onTap: () => context.push(AppRoutes.adminDashboard),
+                  ),
+                if (user?.isAdmin == true)
+                  _ProfileMenuTile(
+                    icon: Icons.healing_outlined,
+                    title: 'Payment & self-healing',
+                    subtitle: 'Reconcile stale pending Razorpay payments',
+                    onTap: () => context.push(AppRoutes.adminPaymentHealth),
+                  ),
+                if (features.isExposed(FeatureId.ai))
+                  _ProfileMenuTile(
+                    icon: Icons.auto_awesome,
+                    title: 'AI assistant',
+                    subtitle: 'Voice and natural-language discovery',
+                    onTap: () => context.push(AppRoutes.assistant),
+                  ),
+                if (features.isExposed(FeatureId.institutes))
+                  _ProfileMenuTile(
+                    icon: Icons.school_outlined,
+                    title: 'Institutes & classes',
+                    subtitle: 'Browse academies, faculty and demo sessions',
+                    onTap: () => context.push(AppRoutes.institutesList),
+                  ),
                 _ProfileMenuTile(
                   icon: Icons.headset_mic_outlined,
                   title: 'Support & Help Desk',

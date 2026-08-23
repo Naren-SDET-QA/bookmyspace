@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/modular/feature_providers.dart';
+import '../../../../core/modular/plugin_kind.dart';
+import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/error_view.dart';
@@ -155,7 +158,8 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                 padding: const EdgeInsets.only(bottom: 12),
                 child: _BookingCard(
                   booking: list[i],
-                  onShowPass: (list[i].status == BookingStatus.confirmed ||
+                  onShowPass:
+                      (list[i].status == BookingStatus.confirmed ||
                           list[i].status == BookingStatus.completed)
                       ? () => _showEntryPass(list[i])
                       : null,
@@ -170,6 +174,22 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                       : null,
                   onRefund: list[i].canRefund
                       ? () => _requestRefund(list[i])
+                      : null,
+                  onPay:
+                      list[i].canPay &&
+                          isCheckoutExposed(ref.watch(featureRegistryProvider))
+                      ? () => context.push(
+                          AppRoutes.paymentFlow.replaceFirst(':id', list[i].id),
+                          extra: list[i],
+                        )
+                      : null,
+                  onBookAgain: list[i].canBookAgain
+                      ? () => context.push(
+                          AppRoutes.venueDetails.replaceFirst(
+                            ':id',
+                            list[i].venueId,
+                          ),
+                        )
                       : null,
                 ),
               ),
@@ -207,9 +227,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
               decoration: BoxDecoration(
                 color: theme.colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: theme.colorScheme.outlineVariant,
-                ),
+                border: Border.all(color: theme.colorScheme.outlineVariant),
               ),
               child: Column(
                 children: [
@@ -304,6 +322,8 @@ class _BookingCard extends StatelessWidget {
     this.onInvoice,
     this.onCancel,
     this.onRefund,
+    this.onPay,
+    this.onBookAgain,
   });
 
   final Booking booking;
@@ -311,6 +331,8 @@ class _BookingCard extends StatelessWidget {
   final VoidCallback? onInvoice;
   final VoidCallback? onCancel;
   final VoidCallback? onRefund;
+  final VoidCallback? onPay;
+  final VoidCallback? onBookAgain;
 
   @override
   Widget build(BuildContext context) {
@@ -430,6 +452,28 @@ class _BookingCard extends StatelessWidget {
                   onPressed: onRefund,
                   icon: const Icon(Icons.currency_rupee_rounded, size: 18),
                   label: Text(l10n.requestRefund),
+                ),
+              ),
+            ],
+            if (onPay != null) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: onPay,
+                  icon: const Icon(Icons.payment_rounded, size: 18),
+                  label: Text(l10n.payNow),
+                ),
+              ),
+            ],
+            if (onBookAgain != null) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: onBookAgain,
+                  icon: const Icon(Icons.replay_rounded, size: 18),
+                  label: Text(l10n.bookAgain),
                 ),
               ),
             ],

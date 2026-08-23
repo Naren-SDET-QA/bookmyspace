@@ -9,6 +9,7 @@ import '../../../../core/widgets/app_network_image.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../home/domain/customer_section_catalog.dart';
+import '../../../admin/presentation/admin_moderation_providers.dart';
 import '../../../venues/domain/venue.dart';
 import '../providers/owner_venue_providers.dart';
 
@@ -123,7 +124,7 @@ class _VenueTile extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
-                    venue.isActive ? 'Published' : 'Draft',
+                    venue.resolvedListingStatus,
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: venue.isActive
                           ? AppTheme.brand
@@ -188,6 +189,15 @@ class _VenueTile extends ConsumerWidget {
                     ref.invalidate(myVenuesProvider);
                   },
                   child: Text(venue.isActive ? 'Unpublish' : 'Publish'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    await ref
+                        .read(listingLifecycleRepositoryProvider)
+                        .submitForReview(venue.id);
+                    ref.invalidate(myVenuesProvider);
+                  },
+                  child: const Text('Submit for review'),
                 ),
                 TextButton(
                   onPressed: () async {

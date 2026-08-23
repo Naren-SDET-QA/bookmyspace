@@ -53,7 +53,9 @@ class BookMySpaceApp extends ConsumerWidget {
         final media = MediaQuery.of(context);
         return MediaQuery(
           data: media.copyWith(
-            textScaler: media.textScaler.scale(simple ? 1.15 : 1.0),
+            textScaler: TextScaler.linear(
+              media.textScaler.scale(1) * (simple ? 1.15 : 1.0),
+            ),
           ),
           child: child ?? const SizedBox.shrink(),
         );

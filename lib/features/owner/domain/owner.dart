@@ -22,6 +22,14 @@ class Owner {
 
 /// Contract for owner repository.
 abstract interface class OwnerRepository {
+  Future<void> requestOwnerOtp(String email, String name);
+
+  Future<Owner> verifyOwnerOtp({
+    required String email,
+    required String name,
+    required String token,
+  });
+
   /// Create a new owner profile for the current user.
   Future<Owner> createOwner({
     required String email,

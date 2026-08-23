@@ -12,6 +12,26 @@ const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers
 function response(body: unknown, status = 200) { return new Response(JSON.stringify(body), { status, headers: cors }); }
 function safeRef(invoiceNumber: string, bookingRef: string) { return `BMS-INVOICE:${invoiceNumber}:${bookingRef}`; }
 
+async function enqueueInvoiceEmail(admin: SupabaseClient, booking: any, invoice: any, payment: any) {
+  const { data: customer } = await admin.auth.admin.getUserById(booking.user_id);
+  if (!customer.user?.email) return false;
+  await admin.from('email_outbox').upsert({
+    event_key: `invoice.generated.customer.${invoice.id}`,
+    event_type: 'invoice.generated',
+    recipient_email: customer.user.email,
+    recipient_name: String(customer.user.user_metadata?.full_name ?? ''),
+    booking_id: booking.id,
+    payment_id: payment?.id ?? null,
+    invoice_id: invoice.id,
+    template_name: 'invoice-generated',
+    payload: { invoice_number: invoice.invoice_number, booking_ref: booking.booking_ref, amount: booking.total_amount },
+    attachment_metadata: [{ bucket: 'invoices', path: invoice.storage_path, filename: `${invoice.invoice_number}.pdf` }],
+    status: 'pending',
+    next_attempt_at: new Date().toISOString(),
+  }, { onConflict: 'event_key', ignoreDuplicates: true });
+  return true;
+}
+
 async function authorised(client: SupabaseClient, authHeader: string, booking: any, userId: string) {
   if (booking.user_id === userId) return true;
   const { data: roles } = await client.from('user_roles').select('role').eq('user_id', userId).is('revoked_at', null);
@@ -42,7 +62,8 @@ Deno.serve(async (req) => {
     const { data: existing } = await admin.from('invoice_documents').select('*').eq('booking_id', booking.id).maybeSingle();
     if (existing?.status === 'generated' && existing.storage_path) {
       const { data: signed } = await admin.storage.from('invoices').createSignedUrl(existing.storage_path, 900);
-      return response({ invoice: existing, signed_url: signed?.signedUrl ?? null });
+      const emailQueued = await enqueueInvoiceEmail(admin, booking, existing, payment);
+      return response({ invoice: existing, signed_url: signed?.signedUrl ?? null, email_queued: emailQueued });
     }
     const { data: invoice, error: invoiceError } = await admin.from('invoice_documents').upsert({ invoice_number: existing?.invoice_number ?? invoiceNumber, booking_id: booking.id, payment_id: payment?.id ?? null, status: 'pending' }, { onConflict: 'booking_id' }).select().single();
     if (invoiceError || !invoice) return response({ error: 'invoice_claim_failed' }, 500);
@@ -69,8 +90,7 @@ Deno.serve(async (req) => {
     const { data: generated, error: generatedError } = await admin.from('invoice_documents').update({ storage_path: path, status: 'generated', generated_at: new Date().toISOString(), error_message: null }).eq('id', invoice.id).select().single();
     if (generatedError || !generated) return response({ error: 'invoice_finalize_failed' }, 500);
     const { data: signed } = await admin.storage.from('invoices').createSignedUrl(path, 900);
-    const { data: customer } = await admin.auth.admin.getUserById(booking.user_id);
-    if (customer.user?.email) await admin.from('email_outbox').upsert({ event_key: `invoice.generated.customer.${invoice.id}`, event_type: 'invoice.generated', recipient_email: customer.user.email, recipient_name: String(customer.user.user_metadata?.full_name ?? ''), booking_id: booking.id, payment_id: payment?.id ?? null, invoice_id: invoice.id, template_name: 'invoice-generated', payload: { invoice_number: invoice.invoice_number, booking_ref: booking.booking_ref, amount: booking.total_amount }, attachment_metadata: [{ bucket: 'invoices', path, filename: `${invoice.invoice_number}.pdf` }], status: 'pending', next_attempt_at: new Date().toISOString() }, { onConflict: 'event_key', ignoreDuplicates: true });
-    return response({ invoice: generated, signed_url: signed?.signedUrl ?? null });
+    const emailQueued = await enqueueInvoiceEmail(admin, booking, { ...generated, storage_path: path }, payment);
+    return response({ invoice: generated, signed_url: signed?.signedUrl ?? null, email_queued: emailQueued });
   } catch (_) { return response({ error: 'invoice_generation_failed' }, 500); }
 });

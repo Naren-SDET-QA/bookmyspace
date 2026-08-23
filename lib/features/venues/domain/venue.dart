@@ -8,18 +8,23 @@ class VenueCategory {
     required this.slug,
     required this.name,
     this.icon = '',
+    this.metadata = const {},
   });
 
   final String id;
   final String slug;
   final String name;
   final String icon;
+  final Map<String, dynamic> metadata;
 
   factory VenueCategory.fromJson(Map<String, dynamic> json) => VenueCategory(
     id: json['id'] as String? ?? '',
     slug: json['slug'] as String? ?? '',
     name: json['name'] as String? ?? '',
     icon: json['icon'] as String? ?? '',
+    metadata: json['metadata'] is Map
+        ? Map<String, dynamic>.from(json['metadata'] as Map)
+        : const {},
   );
 }
 
@@ -32,6 +37,7 @@ class VenueImage {
     this.altText = '',
     this.isCover = false,
     this.sortOrder = 0,
+    this.mediaKind = 'image',
   });
 
   final String id;
@@ -41,6 +47,11 @@ class VenueImage {
   final bool isCover;
   final int sortOrder;
 
+  /// image | video | model_3d | other — UI currently renders images.
+  final String mediaKind;
+
+  bool get isImage => mediaKind == 'image' || mediaKind.isEmpty;
+
   factory VenueImage.fromJson(Map<String, dynamic> json) => VenueImage(
     id: json['id'] as String? ?? '',
     url: json['url'] as String? ?? '',
@@ -48,6 +59,7 @@ class VenueImage {
     altText: json['alt_text'] as String? ?? '',
     isCover: json['is_cover'] as bool? ?? false,
     sortOrder: json['sort_order'] as int? ?? 0,
+    mediaKind: json['media_kind'] as String? ?? 'image',
   );
 }
 
@@ -124,6 +136,8 @@ class Venue {
     this.operatingHours = const [],
     this.contactWhatsapp = '',
     this.distanceKm,
+    this.listingStatus,
+    this.listingRejectionReason = '',
   });
 
   final String id;
@@ -160,6 +174,19 @@ class Venue {
 
   /// Distance in kilometres from the query point, when computed.
   final double? distanceKm;
+
+  /// Server listing lifecycle. Null when the column is absent.
+  final String? listingStatus;
+  final String listingRejectionReason;
+
+  String get resolvedListingStatus {
+    if (listingStatus != null && listingStatus!.isNotEmpty) {
+      return listingStatus!;
+    }
+    if (isActive && isVerified) return 'published';
+    if (isActive) return 'pending_approval';
+    return 'draft';
+  }
 
   /// Cover image URL (first cover, else first image, else placeholder).
   String get coverImageUrl {
@@ -214,6 +241,8 @@ class Venue {
       ratingCount: (json['rating_count'] as num?)?.toInt() ?? 0,
       distanceKm: (json['distance_km'] as num?)?.toDouble(),
       contactWhatsapp: json['contact_whatsapp'] as String? ?? '',
+      listingStatus: json['listing_status'] as String?,
+      listingRejectionReason: json['listing_rejection_reason'] as String? ?? '',
       category: categoryRaw is Map<String, dynamic>
           ? VenueCategory.fromJson(categoryRaw)
           : null,
@@ -269,6 +298,8 @@ class Venue {
     double? avgRating,
     int? ratingCount,
     String? contactWhatsapp,
+    String? listingStatus,
+    String? listingRejectionReason,
   }) {
     return Venue(
       id: id ?? this.id,
@@ -296,6 +327,9 @@ class Venue {
       avgRating: avgRating ?? this.avgRating,
       ratingCount: ratingCount ?? this.ratingCount,
       contactWhatsapp: contactWhatsapp ?? this.contactWhatsapp,
+      listingStatus: listingStatus ?? this.listingStatus,
+      listingRejectionReason:
+          listingRejectionReason ?? this.listingRejectionReason,
       category: category ?? this.category,
       images: images ?? this.images,
       facilities: facilities ?? this.facilities,

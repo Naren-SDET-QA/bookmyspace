@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:speech_to_text/speech_to_text.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_network_image.dart';
@@ -23,8 +23,17 @@ import '../../../venues/presentation/venue_providers.dart';
 import '../../../venues/presentation/widgets/venue_badges.dart';
 import '../../domain/context_aware_help.dart';
 import '../../domain/customer_section_catalog.dart';
+import '../../../ai/domain/voice_locale.dart';
+import '../../../../core/modular/feature_id.dart';
+import '../../../../core/modular/feature_providers.dart';
+import '../../../../core/modular/plugins/voice_provider.dart';
 import '../../../search/domain/ai_search_intent.dart';
+import '../../../venues/domain/category_configuration.dart';
+import '../../../venues/domain/category_discovery.dart';
+import '../../../venues/presentation/category_configuration_providers.dart';
 import '../customer_section_providers.dart';
+import '../widgets/category_carousel.dart';
+import '../widgets/home_discovery_widgets.dart';
 
 /// The 4 primary sections of BookMySpace
 enum MainHomeSection {
@@ -142,6 +151,13 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final Set<String> _selectedAmenities = {};
 
+  List<MainHomeSection> _visibleHomeSections(WidgetRef ref) {
+    final ids = ref.watch(featureRegistryProvider).visibleHomeSections();
+    return MainHomeSection.values
+        .where((section) => ids.contains(section.id))
+        .toList();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -157,12 +173,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final authState = ref.watch(authNotifierProvider);
     final user = authState.user;
     final popularVenuesAsync = ref.watch(popularVenuesProvider);
     final selectedCatalog = ref.watch(selectedCustomerSectionProvider);
     final selectedCategorySlug = ref.watch(selectedCustomerCategoryProvider);
     final area = ref.watch(searchAreaProvider);
+    final features = ref.watch(featureRegistryProvider);
     final selectedSection = selectedCatalog == null
         ? null
         : MainHomeSection.values.firstWhere(
@@ -189,10 +207,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     child: _TopHeaderBar(
                       user: user,
                       responsive: responsive,
+                      showAssistant: features.isExposed(FeatureId.ai),
+                      showNotifications: features.isExposed(
+                        FeatureId.notifications,
+                      ),
+                      showCheckIn: features.isQrVisible(),
                       onLoginTap: () => context.push(AppRoutes.login),
                       onProfileTap: () => context.push(AppRoutes.profile),
                       onNotificationsTap: () =>
                           context.push(AppRoutes.notifications),
+                      onAssistantTap: () => context.push(AppRoutes.assistant),
+                      onCheckInTap: () => context.push(AppRoutes.checkIn),
                     ),
                   ),
 
@@ -200,6 +225,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   // 🌟 FIRST SCREEN: EXACTLY 4 MAIN SECTIONS ONLY
                   // =========================================================
                   if (selectedSection == null) ...[
+                    if (responsive.isCompact)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: responsive.horizontalPadding,
+                          ),
+                          child: LocationBar(
+                            area: area,
+                            dense: true,
+                            onTap: _showLocationPickerModal,
+                          ),
+                        ),
+                      ),
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: EdgeInsets.symmetric(
@@ -230,29 +268,132 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                     ),
 
-                    // Dynamic Aspect Ratio Responsive Grid for the 4 Main Sections
-                    SliverPadding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: responsive.horizontalPadding,
-                      ),
-                      sliver: SliverGrid(
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: responsive.categoryColumns,
-                          mainAxisSpacing: responsive.gridSpacing,
-                          crossAxisSpacing: responsive.gridSpacing,
-                          childAspectRatio: responsive.categoryAspectRatio,
-                        ),
-                        delegate: SliverChildBuilderDelegate((context, index) {
-                          final section = MainHomeSection.values[index];
-                          return _MainSectionHeroCard(
-                            key: ValueKey('section_${section.id}'),
-                            section: section,
-                            isTabletOrWide: responsive.isTabletOrLandscape,
-                            onTap: () {
-                              selectCustomerSection(ref, section.catalog);
+                    if (responsive.isCompact)
+                      SliverToBoxAdapter(
+                        child: SizedBox(
+                          height: 158,
+                          child: ListView.separated(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: responsive.horizontalPadding,
+                            ),
+                            scrollDirection: Axis.horizontal,
+                            itemCount: _visibleHomeSections(ref).length,
+                            separatorBuilder: (_, _) =>
+                                SizedBox(width: responsive.gridSpacing),
+                            itemBuilder: (context, index) {
+                              final section = _visibleHomeSections(ref)[index];
+                              return SizedBox(
+                                width: 252,
+                                child: _MainSectionHeroCard(
+                                  key: ValueKey('section_${section.id}'),
+                                  section: section,
+                                  isTabletOrWide: false,
+                                  onTap: () => selectCustomerSection(
+                                    ref,
+                                    section.catalog,
+                                  ),
+                                ),
+                              );
                             },
-                          );
-                        }, childCount: MainHomeSection.values.length),
+                          ),
+                        ),
+                      )
+                    else
+                      SliverPadding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: responsive.horizontalPadding,
+                        ),
+                        sliver: SliverGrid(
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: responsive.categoryColumns,
+                            mainAxisSpacing: responsive.gridSpacing,
+                            crossAxisSpacing: responsive.gridSpacing,
+                            childAspectRatio: responsive.categoryAspectRatio,
+                          ),
+                          delegate: SliverChildBuilderDelegate((context, index) {
+                            final visible = _visibleHomeSections(ref);
+                            final section = visible[index];
+                            return _MainSectionHeroCard(
+                              key: ValueKey('section_${section.id}'),
+                              section: section,
+                              isTabletOrWide: responsive.isTabletOrLandscape,
+                              onTap: () => selectCustomerSection(
+                                ref,
+                                section.catalog,
+                              ),
+                            );
+                          }, childCount: _visibleHomeSections(ref).length),
+                        ),
+                      ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          responsive.horizontalPadding,
+                          16,
+                          responsive.horizontalPadding,
+                          0,
+                        ),
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            if (features.isExposed(FeatureId.events))
+                              ActionChip(
+                                avatar: const Icon(
+                                  Icons.event_outlined,
+                                  size: 18,
+                                ),
+                                label: Text(l10n.events),
+                                onPressed: () =>
+                                    context.push(AppRoutes.eventsList),
+                              ),
+                            if (features.isExposed(FeatureId.courses))
+                              ActionChip(
+                                avatar: const Icon(
+                                  Icons.school_outlined,
+                                  size: 18,
+                                ),
+                                label: Text(l10n.courses),
+                                onPressed: () =>
+                                    context.push(AppRoutes.coursesList),
+                              ),
+                            if (features.isExposed(FeatureId.maps))
+                              ActionChip(
+                                avatar: const Icon(
+                                  Icons.map_outlined,
+                                  size: 18,
+                                ),
+                                label: Text(l10n.viewOnMap),
+                                onPressed: () => context.push(AppRoutes.map),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: responsive.horizontalPadding,
+                        ),
+                        child: const HomePromoCard(),
+                      ),
+                    ),
+
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: responsive.horizontalPadding,
+                          vertical: 16,
+                        ),
+                        child: HomeRadarCard(
+                          locationLabel: area.label,
+                          verifiedCount: popularVenuesAsync.maybeWhen(
+                            data: (venues) => venues.length,
+                            orElse: () => 0,
+                          ),
+                          onTap: _showLocationPickerModal,
+                        ),
                       ),
                     ),
 
@@ -365,6 +506,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               onTap: _showLocationPickerModal,
                             ),
                             const SizedBox(height: 8),
+                            CategorySpotlightCard(
+                              title: selectedSection.title,
+                              imageUrl: selectedSection.imageUrl,
+                              onTap: () => context.push(AppRoutes.search),
+                            ),
+                            const SizedBox(height: 10),
                             Align(
                               alignment: Alignment.centerLeft,
                               child: TextButton.icon(
@@ -405,54 +552,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                           ),
                           const SizedBox(height: 6),
-                          SizedBox(
-                            height: 44,
-                            child: ListView.separated(
-                              scrollDirection: Axis.horizontal,
-                              padding: EdgeInsets.symmetric(
-                                horizontal: responsive.horizontalPadding,
-                              ),
-                              itemCount: selectedSection.categoryOptions.length,
-                              separatorBuilder: (_, __) =>
-                                  const SizedBox(width: 8),
-                              itemBuilder: (context, index) {
-                                final cat =
-                                    selectedSection.categoryOptions[index];
-                                final isSelected =
-                                    selectedCategorySlug == cat.id;
-                                return FilterChip(
-                                  selected: isSelected,
-                                  onSelected: (_) {
-                                    ref
-                                            .read(
-                                              selectedCustomerCategoryProvider
-                                                  .notifier,
-                                            )
-                                            .state =
-                                        cat.id;
-                                  },
-                                  avatar: Text(
-                                    cat.emoji,
-                                    style: const TextStyle(fontSize: 14),
-                                  ),
-                                  label: Text(
-                                    cat.label,
-                                    style: TextStyle(
-                                      fontWeight: isSelected
-                                          ? FontWeight.bold
-                                          : FontWeight.w500,
-                                      color: isSelected
-                                          ? theme.colorScheme.onPrimary
-                                          : theme.colorScheme.onSurface,
-                                    ),
-                                  ),
-                                  selectedColor: theme.colorScheme.primary,
-                                  checkmarkColor: theme.colorScheme.onPrimary,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                );
-                              },
+                          CategoryCarousel(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: responsive.horizontalPadding,
+                            ),
+                            selectedId: selectedCategorySlug,
+                            onSelected: (id) {
+                              ref
+                                      .read(
+                                        selectedCustomerCategoryProvider
+                                            .notifier,
+                                      )
+                                      .state =
+                                  id;
+                            },
+                            items: _carouselCategories(
+                              selectedSection,
+                              ref
+                                      .watch(categoryConfigurationsProvider)
+                                      .valueOrNull ??
+                                  const [],
                             ),
                           ),
                         ],
@@ -538,10 +657,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             const SizedBox(height: 10),
 
                             if (selectedSection.catalog.isBookable) ...[
-                              _VoiceBookingBanner(
-                                onTap: () => _showVoiceBookingDialog(context),
-                              ),
-                              const SizedBox(height: 10),
+                              if (features.isExposed(FeatureId.voice)) ...[
+                                _VoiceBookingBanner(
+                                  onTap: () => _showVoiceBookingDialog(context),
+                                ),
+                                const SizedBox(height: 10),
+                              ],
                               _QuickBookCard(
                                 sectionTitle: selectedSection.title,
                                 onQuickBookTap: () {
@@ -776,6 +897,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   /// Venues matching the active section, category, amenities and the
+  List<CategoryConfiguration> _carouselCategories(
+    MainHomeSection selectedSection,
+    List<CategoryConfiguration> db,
+  ) {
+    final sectionId = selectedSection.catalog.id;
+    return CategoryDiscovery.homeChips(
+      db,
+      sectionId: sectionId,
+      fallback: [
+        for (final cat in selectedSection.categoryOptions)
+          CategoryConfiguration(
+            id: cat.id,
+            slug: cat.id,
+            name: cat.label,
+            icon: cat.emoji,
+            sectionId: sectionId,
+          ),
+      ],
+    );
+  }
+
   /// selected search area (distance within radius, when coordinates exist).
   List<Venue> _scopedVenues(List<Venue> venues) {
     final catalog = ref.read(selectedCustomerSectionProvider);
@@ -996,10 +1138,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             FilledButton(
               onPressed: () async {
                 final section = ref.read(selectedCustomerSectionProvider);
-                if (section == null) return;
-                final speech = SpeechToText();
-                final available = await speech.initialize();
-                if (!available) {
+                final aliases = ref.read(categoryAliasIndexProvider);
+                final voice = resolvedVoiceProvider(
+                  ref.read(providerRegistryProvider),
+                );
+                if (voice == null) {
                   if (context.mounted) Navigator.pop(context);
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -1011,40 +1154,58 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     );
                     context.push(
                       AppRoutes.search,
-                      extra: {'section': section.id},
+                      extra: {if (section != null) 'section': section.id},
+                    );
+                  }
+                  return;
+                }
+                try {
+                  await voice.ensureInitialized();
+                } catch (_) {
+                  if (context.mounted) Navigator.pop(context);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Voice is unavailable. Use normal search instead.',
+                        ),
+                      ),
+                    );
+                    context.push(
+                      AppRoutes.search,
+                      extra: {if (section != null) 'section': section.id},
                     );
                   }
                   return;
                 }
                 String transcript = '';
-                final localeId =
-                    Localizations.localeOf(context).languageCode == 'te'
-                    ? 'te_IN'
-                    : 'en_IN';
-                await speech.listen(
-                  localeId: localeId,
-                  onResult: (result) => transcript = result.recognizedWords,
+                await voice.listen(
+                  localeId: VoiceLocale.speechId(
+                    Localizations.localeOf(context),
+                  ),
+                  onResult: (words) => transcript = words,
                 );
                 await Future<void>.delayed(const Duration(seconds: 5));
-                await speech.stop();
+                await voice.stop();
                 if (!context.mounted) return;
                 Navigator.pop(context);
                 final intent = AiSearchIntent.parse(
                   transcript,
                   selectedSection: section,
+                  aliases: aliases,
+                );
+                final selectedCategory = ref.read(
+                  selectedCustomerCategoryProvider,
                 );
                 context.push(
                   AppRoutes.search,
                   extra: {
-                    'section': section.id,
-                    'category': intent.categorySlug,
+                    'section': intent.section?.id ?? section?.id,
                     'query': transcript,
                     'intent': intent,
                     'category':
                         intent.categorySlug ??
-                        (ref.read(selectedCustomerCategoryProvider) == 'all'
-                            ? null
-                            : ref.read(selectedCustomerCategoryProvider)),
+                        (selectedCategory == 'all' ? null : selectedCategory),
                   },
                 );
               },
@@ -1127,16 +1288,26 @@ class _TopHeaderBar extends StatelessWidget {
   const _TopHeaderBar({
     required this.user,
     required this.responsive,
+    required this.showAssistant,
+    required this.showNotifications,
+    this.showCheckIn = true,
     required this.onLoginTap,
     required this.onProfileTap,
     required this.onNotificationsTap,
+    required this.onAssistantTap,
+    required this.onCheckInTap,
   });
 
   final dynamic user;
   final ResponsiveInfo responsive;
+  final bool showAssistant;
+  final bool showNotifications;
+  final bool showCheckIn;
   final VoidCallback onLoginTap;
   final VoidCallback onProfileTap;
   final VoidCallback onNotificationsTap;
+  final VoidCallback onAssistantTap;
+  final VoidCallback onCheckInTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1219,10 +1390,21 @@ class _TopHeaderBar extends StatelessWidget {
                   ),
                 ),
               const SizedBox(width: 8),
-              IconButton.filledTonal(
-                onPressed: onNotificationsTap,
-                icon: const Icon(Icons.notifications_none_rounded, size: 20),
-              ),
+              if (showAssistant)
+                IconButton.filledTonal(
+                  onPressed: onAssistantTap,
+                  icon: const Icon(Icons.auto_awesome, size: 20),
+                ),
+              if (showCheckIn)
+                IconButton.filledTonal(
+                  onPressed: onCheckInTap,
+                  icon: const Icon(Icons.qr_code_scanner_rounded, size: 20),
+                ),
+              if (showNotifications)
+                IconButton.filledTonal(
+                  onPressed: onNotificationsTap,
+                  icon: const Icon(Icons.notifications_none_rounded, size: 20),
+                ),
             ],
           ),
         ],

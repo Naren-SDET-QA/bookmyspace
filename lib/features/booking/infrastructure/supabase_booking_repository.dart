@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/config/app_config.dart';
 import '../../../core/errors/app_exceptions.dart' as app_errors;
 import '../domain/booking.dart';
 import '../domain/booking_repository.dart';
@@ -55,6 +56,13 @@ class SupabaseBookingRepository implements BookingRepository {
     int holdMinutes = 10,
   }) async {
     try {
+      final session = _client.auth.currentSession;
+      final accessToken = session?.accessToken;
+      if (accessToken == null || accessToken.isEmpty) {
+        throw const app_errors.AuthException(
+          'You must be signed in to acquire a booking hold.',
+        );
+      }
       final request = {
         'venue_id': venueId,
         'slot_id': slotId,
@@ -65,6 +73,12 @@ class SupabaseBookingRepository implements BookingRepository {
       };
       final response = await _client.functions.invoke(
         'create-booking-hold',
+        headers: {
+          // The publishable key identifies the Supabase project. The user's
+          // session token is the authentication bearer for the function.
+          'apikey': AppConfig.supabaseAnonKey,
+          'Authorization': 'Bearer $accessToken',
+        },
         body: request,
       );
       final data = response.data;

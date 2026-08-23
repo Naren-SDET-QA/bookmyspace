@@ -23,7 +23,9 @@ class _LocationManagementScreenState
   @override
   void initState() {
     super.initState();
-    _nodesFuture = ref.read(locationRepositoryProvider).managementSearch('');
+    _nodesFuture = ref
+        .read(supabaseLocationRepositoryProvider)
+        .managementSearch('');
   }
 
   @override
@@ -35,7 +37,7 @@ class _LocationManagementScreenState
   void _search() {
     setState(() {
       _nodesFuture = ref
-          .read(locationRepositoryProvider)
+          .read(supabaseLocationRepositoryProvider)
           .managementSearch(_searchController.text);
     });
   }
@@ -80,7 +82,7 @@ class _LocationManagementScreenState
     if (result == null || result.$1.trim().isEmpty) return;
     try {
       await ref
-          .read(locationRepositoryProvider)
+          .read(supabaseLocationRepositoryProvider)
           .submitNode(
             name: result.$1,
             normalizedName: result.$1,
@@ -230,7 +232,7 @@ class _LocationTreeTile extends ConsumerWidget {
       trailing: admin
           ? PopupMenuButton<String>(
               onSelected: (action) async {
-                final repo = ref.read(locationRepositoryProvider);
+                final repo = ref.read(supabaseLocationRepositoryProvider);
                 if (action == 'deactivate')
                   await repo.setNodeStatus(node.id, 'inactive');
                 if (action == 'activate')

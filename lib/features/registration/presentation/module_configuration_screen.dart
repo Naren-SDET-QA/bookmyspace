@@ -65,7 +65,7 @@ class _ModuleConfigurationScreenState
         await client
             .from('module_feature_configs')
             .update({'module_enabled': value})
-            .eq('id', existing['id']);
+            .eq('id', existing['id'] as Object);
       }
     } finally {
       if (mounted) setState(() => _saving = false);

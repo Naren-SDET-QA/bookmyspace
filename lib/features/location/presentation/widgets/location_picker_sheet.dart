@@ -5,6 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../../core/localization/app_localizations.dart';
+import '../../domain/india_pin.dart';
+import '../../domain/location_node.dart';
+import '../../domain/location_query_bounds.dart';
 import '../../domain/search_area.dart';
 import 'cascading_location_selector.dart';
 import '../location_providers.dart';
@@ -43,6 +46,7 @@ class LocationPickerSheet extends ConsumerStatefulWidget {
 class _LocationPickerSheetState extends ConsumerState<LocationPickerSheet> {
   late SearchArea _area;
   final _searchController = TextEditingController();
+  List<LocationNode> _locationMatches = const [];
   Timer? _debounce;
   LatLng _mapPoint = LatLng(
     SearchArea.defaultArea.latitude,
@@ -67,10 +71,49 @@ class _LocationPickerSheetState extends ConsumerState<LocationPickerSheet> {
   }
 
   void _onSearchChanged(String value) {
+    setState(() {
+      if (value.trim().isEmpty) _locationMatches = const [];
+    });
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 500), () {
-      if (!mounted || value.trim().isEmpty) return;
-      ref.invalidate(geocodePlaceProvider(value.trim()));
+    _debounce = Timer(const Duration(milliseconds: 500), () async {
+      final query = value.trim();
+      if (!mounted || query.isEmpty) return;
+      final matches = await ref
+          .read(locationRepositoryProvider)
+          .search(query, limit: LocationQueryBounds.searchPageSize);
+      if (!mounted || _searchController.text.trim() != query) return;
+      setState(() => _locationMatches = matches);
+      if (IndiaPin.normalize(query) == null) {
+        ref.invalidate(geocodePlaceProvider(query));
+      }
+    });
+  }
+
+  void _selectLocationMatch(LocationNode match) {
+    setState(() {
+      _hierarchy = CascadingLocationValue(
+        country: match.level == LocationNodeLevel.country ? match : null,
+        state: match.level == LocationNodeLevel.stateProvince ? match : null,
+        district: match.level == LocationNodeLevel.districtCounty
+            ? match
+            : null,
+        mandal: match.level == LocationNodeLevel.mandalTalukTehsilBlock
+            ? match
+            : null,
+        city: match.level == LocationNodeLevel.cityTown ? match : null,
+        village: match.level == LocationNodeLevel.village ? match : null,
+        area: match.level == LocationNodeLevel.areaLocality ? match : null,
+      );
+      _area = _area.copyWith(
+        label: match.name,
+        locationNodeId: match.id,
+        countryCode: match.countryCode,
+        latitude: match.latitude,
+        longitude: match.longitude,
+      );
+      if (match.latitude != null && match.longitude != null) {
+        _mapPoint = LatLng(match.latitude!, match.longitude!);
+      }
     });
   }
 
@@ -101,9 +144,11 @@ class _LocationPickerSheetState extends ConsumerState<LocationPickerSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final geocode = ref.watch(
-      geocodePlaceProvider(_searchController.text.trim()),
-    );
+    final query = _searchController.text.trim();
+    final pinQuery = IndiaPin.normalize(query);
+    final geocode = query.isEmpty || pinQuery != null
+        ? const AsyncValue<SearchArea?>.data(null)
+        : ref.watch(geocodePlaceProvider(query));
     final theme = Theme.of(context);
 
     return Padding(
@@ -119,12 +164,14 @@ class _LocationPickerSheetState extends ConsumerState<LocationPickerSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Select Location & Search Area',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
+                Expanded(
+                  child: Text(
+                    'Select Location & Search Area',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 IconButton(
@@ -142,6 +189,8 @@ class _LocationPickerSheetState extends ConsumerState<LocationPickerSheet> {
                 final selected =
                     value.area ??
                     value.city ??
+                    value.village ??
+                    value.mandal ??
                     value.district ??
                     value.state ??
                     value.country;
@@ -176,50 +225,66 @@ class _LocationPickerSheetState extends ConsumerState<LocationPickerSheet> {
               onChanged: _onSearchChanged,
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(
-                hintText: 'Search area, locality or landmark…',
+                hintText: 'Search PIN, area, locality or landmark…',
                 prefixIcon: const Icon(Icons.search_rounded),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.clear_rounded),
                         onPressed: () {
                           _searchController.clear();
-                          ref.invalidate(geocodePlaceProvider(''));
+                          setState(() => _locationMatches = const []);
                         },
                       )
                     : null,
               ),
             ),
-            if (_searchController.text.trim().isNotEmpty) ...[
+            if (query.isNotEmpty) ...[
               const SizedBox(height: 8),
-              geocode.when(
-                loading: () => const LinearProgressIndicator(minHeight: 2),
-                error: (e, _) => Text(
-                  'Could not find that place. Try the map below.',
-                  style: TextStyle(color: theme.colorScheme.error),
-                ),
-                data: (area) {
-                  if (area == null) {
-                    return const Text('No matches found. Try the map below.');
-                  }
-                  return ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.place_rounded),
-                    title: Text(
-                      area.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+              Column(
+                children: [
+                  for (final match in _locationMatches)
+                    ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.location_on_outlined),
+                      title: Text(match.name),
+                      subtitle: Text(match.level.name),
+                      onTap: () => _selectLocationMatch(match),
                     ),
-                    trailing: const Icon(Icons.check_circle_rounded),
-                    onTap: () {
-                      setState(() {
-                        _area = area;
-                        _mapPoint = LatLng(area.latitude, area.longitude);
-                      });
-                    },
-                  );
-                },
+                ],
               ),
+              if (pinQuery == null && _locationMatches.isEmpty) ...[
+                const SizedBox(height: 4),
+                geocode.when(
+                  loading: () => const LinearProgressIndicator(minHeight: 2),
+                  error: (e, _) => Text(
+                    'Could not find that place. Try the map below.',
+                    style: TextStyle(color: theme.colorScheme.error),
+                  ),
+                  data: (area) {
+                    if (area == null) {
+                      return const Text('No matches found. Try the map below.');
+                    }
+                    return ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.place_rounded),
+                      title: Text(
+                        area.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: const Icon(Icons.check_circle_rounded),
+                      onTap: () {
+                        setState(() {
+                          _area = area;
+                          _mapPoint = LatLng(area.latitude, area.longitude);
+                        });
+                      },
+                    );
+                  },
+                ),
+              ],
             ],
 
             const SizedBox(height: 8),
@@ -266,29 +331,15 @@ class _LocationPickerSheetState extends ConsumerState<LocationPickerSheet> {
                     radiusKm: _area.radiusKm,
                   );
                 });
-                ref.invalidate(
-                  reverseGeocodeProvider((point.latitude, point.longitude)),
-                );
               },
             ),
             const SizedBox(height: 4),
-            ref
-                .watch(
-                  reverseGeocodeProvider((
-                    _mapPoint.latitude,
-                    _mapPoint.longitude,
-                  )),
-                )
-                .when(
-                  loading: () => const SizedBox.shrink(),
-                  error: (_, _) => const SizedBox.shrink(),
-                  data: (label) => Text(
-                    'Selected: $label',
-                    style: theme.textTheme.bodySmall,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
+            Text(
+              'Selected: ${_area.label}',
+              style: theme.textTheme.bodySmall,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
 
             const SizedBox(height: 12),
 

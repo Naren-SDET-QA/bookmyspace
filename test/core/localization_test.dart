@@ -28,8 +28,18 @@ void main() {
     test('supports English and Telugu', () {
       expect(
         AppLocalizations.supportedLocales.map((l) => l.languageCode),
-        containsAll(['en', 'te']),
+        containsAll(['en', 'te', 'hi']),
       );
+    });
+
+    test('Hindi falls back to English for missing keys', () {
+      final hi = AppLocalizations(const Locale('hi'));
+      final en = AppLocalizations(const Locale('en'));
+      expect(hi.appName, isNot(en.appName));
+      expect(hi.bookNow, isNotEmpty);
+      expect(hi.privacyPolicy, en.privacyPolicy);
+      expect(hi.viewOnMap, isNot(en.viewOnMap));
+      expect(hi.unifiedRegistration, isNot(en.unifiedRegistration));
     });
 
     test('English fallback returns a value for every key', () {

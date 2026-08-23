@@ -1,96 +1,272 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/modular/feature_id.dart';
+import '../../../../core/modular/feature_providers.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/error_view.dart';
-import '../../domain/analytics_event.dart';
+import '../../domain/analytics_display_config.dart';
+import '../../domain/revenue_analytics.dart';
 import '../analytics_providers.dart';
 
-class AnalyticsScreen extends ConsumerWidget {
+class AnalyticsScreen extends ConsumerStatefulWidget {
   const AnalyticsScreen({super.key});
+  @override
+  ConsumerState<AnalyticsScreen> createState() => _AnalyticsScreenState();
+}
+
+class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
+  late DateTimeRange _range;
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _range = DateTimeRange(
+      start: DateTime(now.year, now.month, now.day),
+      end: DateTime(now.year, now.month, now.day),
+    );
+  }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context);
-    final events = ref.watch(recentAnalyticsEventsProvider);
-
+  Widget build(BuildContext context) {
+    final display = AnalyticsDisplayConfig.fromFeature(
+      ref.watch(featureRegistryProvider).configOf(FeatureId.analytics),
+    );
+    final query = ref.watch(
+      revenueAnalyticsProvider((start: _range.start, end: _range.end)),
+    );
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.analytics)),
-      body: events.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => ErrorView(
-          message: e.toString(),
-          onRetry: () => ref.invalidate(recentAnalyticsEventsProvider),
-        ),
-        data: (items) => items.isEmpty
-            ? const EmptyState(
-                icon: Icons.analytics_rounded,
-                title: 'No analytics data',
-                message: 'Analytics events will appear here as you use the app.',
-              )
-            : ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: items.length,
-                itemBuilder: (context, i) {
-                  final event = items[i];
-                  return _AnalyticsTile(event: event);
-                },
+      appBar: AppBar(title: const Text('Revenue & Booking Analytics')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Wrap(
+            spacing: 8,
+            children: [
+              if (display.dateRanges.contains('today'))
+                _button('Today', () => _setDays(0)),
+              if (display.dateRanges.contains('last_7_days'))
+                _button('Last 7 days', () => _setDays(6)),
+              if (display.dateRanges.contains('this_month'))
+                _button('This month', () {
+                  final n = DateTime.now();
+                  setState(
+                    () => _range = DateTimeRange(
+                      start: DateTime(n.year, n.month),
+                      end: DateTime(n.year, n.month + 1, 0),
+                    ),
+                  );
+                }),
+              if (display.dateRanges.contains('custom'))
+                _button('Custom', _customRange),
+            ],
+          ),
+          const SizedBox(height: 16),
+          query.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, _) => ErrorView(
+              message: error.toString(),
+              onRetry: () => ref.invalidate(
+                revenueAnalyticsProvider((
+                  start: _range.start,
+                  end: _range.end,
+                )),
               ),
+            ),
+            data: (data) => data.isEmpty
+                ? const EmptyState(
+                    icon: Icons.analytics_outlined,
+                    title: 'No analytics data',
+                    message:
+                        'There is no booking or payment activity in this range.',
+                  )
+                : _Dashboard(data: data, display: display),
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _button(String label, VoidCallback onTap) =>
+      OutlinedButton(onPressed: onTap, child: Text(label));
+  void _setDays(int days) {
+    final e = DateTime.now();
+    final day = DateTime(e.year, e.month, e.day);
+    setState(
+      () => _range = DateTimeRange(
+        start: day.subtract(Duration(days: days)),
+        end: day,
+      ),
+    );
+  }
+
+  Future<void> _customRange() async {
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      initialDateRange: _range,
+    );
+    if (picked != null) setState(() => _range = picked);
+  }
+}
+
+class _Dashboard extends StatelessWidget {
+  const _Dashboard({required this.data, required this.display});
+  final RevenueAnalytics data;
+  final AnalyticsDisplayConfig display;
+  @override
+  Widget build(BuildContext context) {
+    final kpis = <String, Widget>{
+      'total_revenue': _Kpi('Total Revenue', data.totalRevenue),
+      'successful_bookings': _Kpi(
+        'Successful Bookings',
+        data.successfulBookings,
+      ),
+      'cancelled_bookings': _Kpi('Cancelled Bookings', data.cancelledBookings),
+      'refund_amount': _Kpi('Refund Amount', data.refundAmount),
+      'net_revenue': _Kpi('Net Revenue', data.netRevenue),
+      'average_booking': _Kpi('Average Booking', data.averageBookingValue),
+    };
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (display.showKpis)
+          GridView.count(
+            crossAxisCount: MediaQuery.sizeOf(context).width > 700 ? 3 : 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            childAspectRatio: 1.8,
+            children: [
+              for (final key in display.kpiOrder)
+                if (kpis[key] != null) kpis[key]!,
+            ],
+          ),
+        if (display.showCharts) ...[
+          if (display.showDaily) _Chart('Daily Revenue', data.dailyRevenue),
+          if (display.showWeekly) _Chart('Weekly Revenue', data.weeklyRevenue),
+          if (display.showMonthly)
+            _Chart('Monthly Revenue', data.monthlyRevenue),
+          _Chart('Booking Count', data.bookingTrend, count: true),
+          if (display.showCategoryBreakdown)
+            _Breakdown('Revenue by Category', data.categoryRevenue),
+          if (display.showListingBreakdown)
+            _Breakdown('Revenue by Listing', data.venueRevenue),
+        ],
+      ],
     );
   }
 }
 
-class _AnalyticsTile extends StatelessWidget {
-  const _AnalyticsTile({required this.event});
+class _Kpi extends StatelessWidget {
+  const _Kpi(this.label, this.value);
+  final String label;
+  final Object value;
+  @override
+  Widget build(BuildContext context) => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(label, style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: 6),
+          Text(
+            value is double
+                ? '₹${(value as double).toStringAsFixed(2)}'
+                : '$value',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+        ],
+      ),
+    ),
+  );
+}
 
-  final AnalyticsEvent event;
+class _Chart extends StatelessWidget {
+  const _Chart(this.title, this.points, {this.count = false});
+  final String title;
+  final List<AnalyticsPoint> points;
+  final bool count;
+  @override
+  Widget build(BuildContext context) => Card(
+    margin: const EdgeInsets.only(top: 16),
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 140,
+            child: CustomPaint(
+              painter: _Bars(
+                points,
+                count,
+                Theme.of(context).colorScheme.primary,
+              ),
+              child: const SizedBox.expand(),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _Bars extends CustomPainter {
+  const _Bars(this.points, this.count, this.color);
+  final List<AnalyticsPoint> points;
+  final bool count;
+  final Color color;
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (points.isEmpty) return;
+    final values = points
+        .map((p) => count ? p.count.toDouble() : p.value)
+        .toList();
+    final max = values.fold<double>(
+      0,
+      (current, value) => current > value ? current : value,
+    );
+    final width = size.width / values.length;
+    final paint = Paint()..color = color;
+    for (var i = 0; i < values.length; i++) {
+      final h = max == 0 ? 0.0 : values[i] / max * (size.height - 8);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(i * width + 3, size.height - h, width - 6, h),
+          const Radius.circular(4),
+        ),
+        paint,
+      );
+    }
+  }
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              event.eventType.dbValue.replaceAll('_', ' '),
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'User: ${event.userId ?? "anonymous"}',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            if (event.properties.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(
-                event.properties.toString(),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-            if (event.createdAt != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                event.createdAt!.toIso8601String(),
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
+  bool shouldRepaint(covariant _Bars oldDelegate) =>
+      oldDelegate.points != points;
+}
+
+class _Breakdown extends StatelessWidget {
+  const _Breakdown(this.title, this.items);
+  final String title;
+  final List<AnalyticsBreakdown> items;
+  @override
+  Widget build(BuildContext context) => Card(
+    margin: const EdgeInsets.only(top: 16),
+    child: ExpansionTile(
+      title: Text(title),
+      children: [
+        for (final item in items.take(20))
+          ListTile(
+            title: Text(item.label),
+            subtitle: Text('${item.count} bookings'),
+            trailing: Text('₹${item.value.toStringAsFixed(2)}'),
+          ),
+      ],
+    ),
+  );
 }

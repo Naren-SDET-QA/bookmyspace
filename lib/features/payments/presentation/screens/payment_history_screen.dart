@@ -9,14 +9,30 @@ import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../booking/presentation/booking_providers.dart';
 import '../../domain/payment.dart';
+import '../../domain/payment_history_query.dart';
 import '../payment_providers.dart';
 
 /// Payment history with invoice access for completed Razorpay transactions.
-class PaymentHistoryScreen extends ConsumerWidget {
+class PaymentHistoryScreen extends ConsumerStatefulWidget {
   const PaymentHistoryScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PaymentHistoryScreen> createState() =>
+      _PaymentHistoryScreenState();
+}
+
+class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
+  PaymentHistoryFilter _filter = PaymentHistoryFilter.all;
+  final _query = TextEditingController();
+
+  @override
+  void dispose() {
+    _query.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final payments = ref.watch(myPaymentsProvider);
     final l10n = AppLocalizations.of(context);
     return Scaffold(
@@ -24,26 +40,73 @@ class PaymentHistoryScreen extends ConsumerWidget {
       body: payments.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => ErrorView(message: error.toString()),
-        data: (items) => items.isEmpty
-            ? EmptyState(
-                icon: Icons.payments_outlined,
-                title: l10n.noPaymentHistory,
-                message: l10n.noPaymentHistoryMessage,
-              )
-            : RefreshIndicator(
-                onRefresh: () async {
-                  ref.invalidate(myPaymentsProvider);
-                  await ref.read(myPaymentsProvider.future);
-                },
-                child: ListView.separated(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(16),
-                  itemCount: items.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) =>
-                      _PaymentHistoryCard(payment: items[index]),
+        data: (items) {
+          final visible = PaymentHistoryQuery(
+            filter: _filter,
+            query: _query.text,
+          ).apply(items);
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: TextField(
+                  controller: _query,
+                  decoration: InputDecoration(
+                    hintText: l10n.search,
+                    prefixIcon: const Icon(Icons.search),
+                  ),
+                  onChanged: (_) => setState(() {}),
                 ),
               ),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: Row(
+                  children: [
+                    for (final filter in PaymentHistoryFilter.values)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(filter.name),
+                          selected: _filter == filter,
+                          onSelected: (_) => setState(() => _filter = filter),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: items.isEmpty
+                    ? EmptyState(
+                        icon: Icons.payments_outlined,
+                        title: l10n.noPaymentHistory,
+                        message: l10n.noPaymentHistoryMessage,
+                      )
+                    : visible.isEmpty
+                    ? EmptyState(
+                        icon: Icons.filter_alt_off_outlined,
+                        title: l10n.noResults,
+                        message: l10n.noResultsMessage,
+                      )
+                    : RefreshIndicator(
+                        onRefresh: () async {
+                          ref.invalidate(myPaymentsProvider);
+                          await ref.read(myPaymentsProvider.future);
+                        },
+                        child: ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.all(16),
+                          itemCount: visible.length,
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (context, index) =>
+                              _PaymentHistoryCard(payment: visible[index]),
+                        ),
+                      ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

@@ -25,8 +25,8 @@ class SectionCustomerDetailsForm extends StatelessWidget {
     final nameLabel = section == CustomerSection.pgHostels
         ? l10n.tenantName
         : section == CustomerSection.lodgeRooms
-            ? l10n.guestName
-            : l10n.name;
+        ? l10n.guestName
+        : l10n.name;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
@@ -35,19 +35,16 @@ class SectionCustomerDetailsForm extends StatelessWidget {
         children: [
           Text(
             l10n.bookingDetails,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
           if (fields.contains(CustomerDetailField.fullName))
             TextFormField(
               initialValue: details.fullName,
               textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                labelText: nameLabel,
-                isDense: true,
-              ),
+              decoration: InputDecoration(labelText: nameLabel, isDense: true),
               validator: AppValidators.name,
               onChanged: (v) => onChanged(details.copyWith(fullName: v)),
             ),
@@ -57,10 +54,7 @@ class SectionCustomerDetailsForm extends StatelessWidget {
               initialValue: details.phone,
               keyboardType: TextInputType.phone,
               textInputAction: TextInputAction.next,
-                decoration: InputDecoration(
-                  labelText: l10n.phone,
-                isDense: true,
-              ),
+              decoration: InputDecoration(labelText: l10n.phone, isDense: true),
               validator: AppValidators.phone,
               onChanged: (v) => onChanged(details.copyWith(phone: v)),
             ),
@@ -105,11 +99,8 @@ class SectionCustomerDetailsForm extends StatelessWidget {
                 labelText: l10n.address,
                 isDense: true,
               ),
-              validator: (v) => AppValidators.required(
-                v,
-                fieldName: 'Address',
-                minLength: 8,
-              ),
+              validator: (v) =>
+                  AppValidators.required(v, fieldName: 'Address', minLength: 8),
               onChanged: (v) => onChanged(details.copyWith(address: v)),
             ),
           ],

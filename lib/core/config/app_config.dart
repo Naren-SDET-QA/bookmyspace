@@ -104,6 +104,9 @@ class AppConfig {
   static const String _devTestPasswordDefine = String.fromEnvironment(
     'DEV_TEST_PASSWORD',
   );
+  static const String _webAuthRedirectDefine = String.fromEnvironment(
+    'WEB_AUTH_REDIRECT_URI',
+  );
 
   static AppEnvironment get environment => AppEnvironment.current;
 
@@ -139,6 +142,19 @@ class AppConfig {
   static String get apiBaseUrl => environment.apiBaseUrl;
   static String get devTestEmail => _devTestEmailDefine;
   static String get devTestPassword => _devTestPasswordDefine;
+
+  /// The callback must stay on the origin that created the PKCE verifier.
+  /// A dart-define can pin this for a stable local port; otherwise the
+  /// browser's current origin is used.
+  static String get webAuthRedirectUri {
+    if (_webAuthRedirectDefine.isNotEmpty) return _webAuthRedirectDefine;
+    if (kIsWeb) {
+      final uri = Uri.base;
+      return uri.replace(path: '/', query: '', fragment: '').toString();
+    }
+    return '';
+  }
+
   static String get appName => 'BookMySpace';
 
   /// Environment helpers

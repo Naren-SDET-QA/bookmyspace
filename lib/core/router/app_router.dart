@@ -2,7 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/admin/presentation/screens/admin_app_sections_screen.dart';
+import '../../features/admin/presentation/screens/admin_feature_configuration_screen.dart';
 import '../../features/admin/presentation/screens/admin_audit_screen.dart';
+import '../../features/admin/presentation/screens/admin_categories_screen.dart';
+import '../../features/admin/presentation/screens/admin_dashboard_screen.dart';
+import '../../features/admin/presentation/screens/admin_listing_fields_screen.dart';
+import '../../features/admin/presentation/screens/admin_listings_screen.dart';
+import '../../features/admin/presentation/screens/admin_oversight_screen.dart';
+import '../../features/payments/presentation/screens/payment_health_screen.dart';
+import '../../features/registration/presentation/unified_registration_screen.dart';
+import '../../features/ai/presentation/screens/assistant_screen.dart';
+import '../../features/checkin/presentation/screens/qr_check_in_screen.dart';
+import '../../features/institutes/presentation/screens/institute_detail_screen.dart';
+import '../../features/institutes/presentation/screens/institute_owner_dashboard_screen.dart';
+import '../../features/institutes/presentation/screens/institutes_list_screen.dart';
+import '../../features/saved/presentation/screens/saved_screen.dart';
+import '../../features/settings/presentation/screens/theme_customizer_screen.dart';
 import '../../features/analytics/presentation/screens/analytics_screen.dart';
 import '../../features/auth/domain/auth_user.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
@@ -24,6 +40,7 @@ import '../../features/owner/presentation/screens/registration_field_configurati
 import '../../features/business/presentation/screens/business_pricing_configuration_screen.dart';
 import '../../features/owner_bookings/presentation/screens/create_offline_booking_screen.dart';
 import '../../features/owner_bookings/presentation/screens/owner_bookings_screen.dart';
+import '../../features/owner_bookings/presentation/screens/owner_calendar_screen.dart';
 import '../../features/owner_venues/presentation/screens/create_venue_screen.dart';
 import '../../features/owner_venues/presentation/screens/owner_venues_screen.dart';
 import '../../features/legal/presentation/screens/privacy_policy_screen.dart';
@@ -40,6 +57,10 @@ import '../../features/registration/presentation/module_registration_screen.dart
 import '../../features/registration/presentation/module_submission_status_screen.dart';
 import '../../features/business/presentation/screens/business_plan_configuration_screen.dart';
 import '../config/settings_controller.dart';
+import '../modular/feature_id.dart';
+import '../modular/feature_providers.dart';
+import '../modular/feature_registry.dart';
+import '../modular/shell_destinations.dart';
 import '../../features/search/presentation/screens/map_screen.dart';
 import '../../features/search/presentation/screens/search_screen.dart';
 import '../../features/search/domain/ai_search_intent.dart';
@@ -72,13 +93,31 @@ abstract class AppRoutes {
   static const analytics = '/analytics';
   static const support = '/support';
   static const adminAudit = '/admin/audit';
+  static const adminDashboard = '/admin';
+  static const adminListings = '/admin/listings';
+  static const adminCategories = '/admin/categories';
+  static const adminAppSections = '/admin/app-sections';
+  static const adminFeatureConfiguration = '/admin/features';
+  static const adminBookings = '/admin/bookings';
+  static const adminPayments = '/admin/payments';
+  static const adminRefunds = '/admin/refunds';
+  static const adminPaymentHealth = '/admin/payment-health';
+  static const adminListingFields = '/admin/listing-fields';
+  static const unifiedRegistration = '/register';
   static const adminLocations = '/admin/locations';
+  static const assistant = '/assistant';
+  static const checkIn = '/check-in';
+  static const institutesList = '/institutes';
+  static const instituteDetails = '/institutes/:id';
+  static const ownerInstitute = '/owner/institute';
+  static const themeCustomizer = '/theme';
   static const ownerRegistration = '/owner/register';
   static const ownerDashboard = '/owner';
   static const ownerVenues = '/owner/venues';
   static const ownerVenueCreate = '/owner/venues/create';
   static const ownerVenueEdit = '/owner/venues/:id/edit';
   static const ownerBookings = '/owner/bookings';
+  static const ownerCalendar = '/owner/calendar';
   static const ownerBookingCreate = '/owner/bookings/create';
   static const ownerLocations = '/owner/locations';
   static const adminRegistrationFields = '/admin/registration-fields';
@@ -112,6 +151,7 @@ GoRouter createAppRouter({
   AuthUser? currentUser,
   bool authReady = true,
   bool allowUnauthenticatedTestAccess = false,
+  FeatureRegistry? features,
 }) {
   return GoRouter(
     navigatorKey: rootNavigatorKey,
@@ -121,6 +161,7 @@ GoRouter createAppRouter({
       currentUser: currentUser,
       authReady: authReady,
       allowUnauthenticatedTestAccess: allowUnauthenticatedTestAccess,
+      features: features,
     ),
     routes: [
       GoRoute(
@@ -136,6 +177,101 @@ GoRouter createAppRouter({
         path: AppRoutes.settings,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.themeCustomizer,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const ThemeCustomizerScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.saved,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const SavedScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.assistant,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const AssistantScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.checkIn,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const QrCheckInScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.institutesList,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const InstitutesListScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.instituteDetails,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => InstituteDetailScreen(
+          instituteId: state.pathParameters['id'] ?? '',
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.ownerInstitute,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const InstituteOwnerDashboardScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminDashboard,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const AdminDashboardScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminListings,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const AdminListingsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminCategories,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const AdminCategoriesScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminAppSections,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const AdminAppSectionsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminFeatureConfiguration,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const AdminFeatureConfigurationScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminBookings,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) =>
+            const AdminOversightScreen(kind: AdminOversightKind.bookings),
+      ),
+      GoRoute(
+        path: AppRoutes.adminPayments,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) =>
+            const AdminOversightScreen(kind: AdminOversightKind.payments),
+      ),
+      GoRoute(
+        path: AppRoutes.adminRefunds,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) =>
+            const AdminOversightScreen(kind: AdminOversightKind.refunds),
+      ),
+      GoRoute(
+        path: AppRoutes.adminPaymentHealth,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const PaymentHealthScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminListingFields,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const AdminListingFieldsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.unifiedRegistration,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const UnifiedRegistrationScreen(),
       ),
       GoRoute(
         path: AppRoutes.map,
@@ -245,6 +381,11 @@ GoRouter createAppRouter({
         builder: (context, state) => const OwnerBookingsScreen(),
       ),
       GoRoute(
+        path: AppRoutes.ownerCalendar,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const OwnerCalendarScreen(),
+      ),
+      GoRoute(
         path: AppRoutes.ownerBookingCreate,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const CreateOfflineBookingScreen(),
@@ -307,6 +448,10 @@ GoRouter createAppRouter({
       GoRoute(
         path: AppRoutes.moduleRegistration,
         parentNavigatorKey: rootNavigatorKey,
+        redirect: (context, state) =>
+            state.pathParameters['module'] == 'venue_owner'
+                ? AppRoutes.ownerRegistration
+                : null,
         builder: (context, state) => ModuleRegistrationScreen(
           moduleKey: state.pathParameters['module'] ?? '',
           venueId: state.uri.queryParameters['venue_id'],
@@ -425,21 +570,42 @@ String? resolveAppRedirect({
   required AuthUser? currentUser,
   required bool authReady,
   bool allowUnauthenticatedTestAccess = false,
+  FeatureRegistry? features,
 }) {
   if (!authReady) return null;
   final isPublic =
-      location == AppRoutes.onboarding || location == AppRoutes.login;
+      location == AppRoutes.onboarding ||
+      location == AppRoutes.login ||
+      location == AppRoutes.unifiedRegistration ||
+      location == AppRoutes.ownerRegistration ||
+      location.startsWith('/register/');
   if (currentUser == null && !allowUnauthenticatedTestAccess) {
-    return isPublic ? null : AppRoutes.login;
+    if (!isPublic) return AppRoutes.login;
   }
   if (currentUser != null) {
-    final isAdminRoute = location.startsWith('/admin/');
+    final isAdminRoute =
+        location == AppRoutes.adminDashboard || location.startsWith('/admin/');
     final isOwnerRoute =
         location.startsWith('/owner') || location == AppRoutes.analytics;
     if (isAdminRoute && !currentUser.isAdmin) return AppRoutes.profile;
     if (isOwnerRoute && !currentUser.isOwner) return AppRoutes.profile;
+    if (location == AppRoutes.onboarding || location == AppRoutes.login) {
+      return AppRoutes.shell;
+    }
   }
-  return isPublic ? AppRoutes.shell : null;
+  return _featureRedirect(location, features);
+}
+
+String? _featureRedirect(String location, FeatureRegistry? features) {
+  final registry = features ?? FeatureRegistry.instance;
+  final feature = FeatureRegistry.featureForRoute(location);
+  if (feature != null && !registry.isExposed(feature)) {
+    return AppRoutes.home;
+  }
+  if (location.endsWith('/pay') && !registry.isExposed(FeatureId.razorpay)) {
+    return AppRoutes.home;
+  }
+  return null;
 }
 
 class _AppShell extends ConsumerWidget {
@@ -451,54 +617,63 @@ class _AppShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final simpleMode = ref.watch(simpleModeProvider);
+    final visible = visibleShellDestinations(
+      ref.watch(featureRegistryProvider),
+    );
+    final selected = selectedShellIndex(
+      currentBranch: navigationShell.currentIndex,
+      visible: visible,
+    );
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
         labelBehavior: simpleMode
             ? NavigationDestinationLabelBehavior.alwaysShow
             : NavigationDestinationLabelBehavior.onlyShowSelected,
-        selectedIndex: navigationShell.currentIndex,
+        selectedIndex: selected,
         onDestinationSelected: (index) {
+          final branch = visible[index].branchIndex;
           navigationShell.goBranch(
-            index,
-            initialLocation: index == navigationShell.currentIndex,
+            branch,
+            initialLocation: branch == navigationShell.currentIndex,
           );
         },
         destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.home_outlined),
-            selectedIcon: const Icon(Icons.home_rounded),
-            label: l10n.navHome,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.notifications_outlined),
-            selectedIcon: const Icon(Icons.notifications_rounded),
-            label: l10n.notifications,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.search_outlined),
-            selectedIcon: const Icon(Icons.search_rounded),
-            label: l10n.navSearch,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.receipt_long_outlined),
-            selectedIcon: const Icon(Icons.receipt_long_rounded),
-            label: l10n.navBookings,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.school_outlined),
-            selectedIcon: const Icon(Icons.school_rounded),
-            label: l10n.courses,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.person_outline_rounded),
-            selectedIcon: const Icon(Icons.person_rounded),
-            label: l10n.navProfile,
-          ),
+          for (final item in visible)
+            NavigationDestination(
+              key: ValueKey('shell_${item.id}'),
+              icon: Icon(_shellIcon(item.id, selected: false)),
+              selectedIcon: Icon(_shellIcon(item.id, selected: true)),
+              label: _shellLabel(item.id, l10n),
+            ),
         ],
       ),
     );
   }
+}
+
+IconData _shellIcon(String id, {required bool selected}) {
+  return switch (id) {
+    'notifications' =>
+      selected ? Icons.notifications_rounded : Icons.notifications_outlined,
+    'search' => selected ? Icons.search_rounded : Icons.search_outlined,
+    'bookings' =>
+      selected ? Icons.receipt_long_rounded : Icons.receipt_long_outlined,
+    'courses' => selected ? Icons.school_rounded : Icons.school_outlined,
+    'profile' => selected ? Icons.person_rounded : Icons.person_outline_rounded,
+    _ => selected ? Icons.home_rounded : Icons.home_outlined,
+  };
+}
+
+String _shellLabel(String id, AppLocalizations l10n) {
+  return switch (id) {
+    'notifications' => l10n.notifications,
+    'search' => l10n.navSearch,
+    'bookings' => l10n.navBookings,
+    'courses' => l10n.courses,
+    'profile' => l10n.navProfile,
+    _ => l10n.navHome,
+  };
 }
 
 // Temporary placeholder replaced with a real screen in a later milestone.

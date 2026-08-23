@@ -257,7 +257,7 @@ class SupabaseAuthRepository implements AuthRepository {
           final organization = await _client
               .from('organizations')
               .select('business_verification')
-              .eq('owner_user_id', owner['id'])
+              .eq('owner_user_id', owner['id'] as Object)
               .maybeSingle();
           verification = domain.VerificationStatus.values.firstWhere(
             (status) => status.name == organization?['business_verification'],
@@ -285,7 +285,6 @@ class SupabaseAuthRepository implements AuthRepository {
   }
 
   String _webRedirect() {
-    final url = Uri.parse(AppConfig.supabaseUrl);
-    return '${url.scheme}://${url.host}';
+    return AppConfig.webAuthRedirectUri;
   }
 }

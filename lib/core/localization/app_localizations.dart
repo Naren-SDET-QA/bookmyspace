@@ -10,7 +10,11 @@ class AppLocalizations {
 
   final Locale locale;
 
-  static const List<Locale> supportedLocales = [Locale('en'), Locale('te')];
+  static const List<Locale> supportedLocales = [
+    Locale('en'),
+    Locale('te'),
+    Locale('hi'),
+  ];
 
   static AppLocalizations of(BuildContext context) {
     return Localizations.of<AppLocalizations>(context, AppLocalizations)!;
@@ -126,6 +130,9 @@ class AppLocalizations {
   String get cancelRegistration => _t('cancelRegistration');
   String get cancelRegistrationConfirm => _t('cancelRegistrationConfirm');
   String get registrationCancelled => _t('registrationCancelled');
+  String get searchEvents => _t('searchEvents');
+  String get allEvents => _t('allEvents');
+  String get paidEvent => _t('paidEvent');
 
   // Courses
   String get noCourses => _t('noCourses');
@@ -143,6 +150,17 @@ class AppLocalizations {
   String get dropEnrollment => _t('dropEnrollment');
   String get dropEnrollmentConfirm => _t('dropEnrollmentConfirm');
   String get enrollmentDropped => _t('enrollmentDropped');
+  String get searchCourses => _t('searchCourses');
+  String get allModes => _t('allModes');
+  String get demoSession => _t('demoSession');
+  String get paidCourse => _t('paidCourse');
+  String get searchInstitutes => _t('searchInstitutes');
+  String get institutesAndClasses => _t('institutesAndClasses');
+  String get noInstitutes => _t('noInstitutes');
+  String get noInstitutesMessage => _t('noInstitutesMessage');
+  String get verifiedOnly => _t('verifiedOnly');
+  String get unifiedRegistration => _t('unifiedRegistration');
+  String get unifiedRegistrationHint => _t('unifiedRegistrationHint');
 
   // Booking
   String get selectDate => _t('selectDate');
@@ -157,6 +175,7 @@ class AppLocalizations {
   String get idNumber => _t('idNumber');
   String get payment => _t('payment');
   String get payNow => _t('payNow');
+  String get bookAgain => _t('bookAgain');
   String get paymentSuccess => _t('paymentSuccess');
   String get paymentFailed => _t('paymentFailed');
   String get paymentPending => _t('paymentPending');
@@ -180,6 +199,8 @@ class AppLocalizations {
   String get invoice => _t('invoice');
   String get viewInvoice => _t('viewInvoice');
   String get invoiceFor => _t('invoiceFor');
+  String get invoiceEmailQueued => _t('invoiceEmailQueued');
+  String get invoiceEmailNotQueued => _t('invoiceEmailNotQueued');
   String get bookingRef => _t('bookingRef');
   String get bookingStatus => _t('bookingStatus');
   String get dateOfBooking => _t('dateOfBooking');
@@ -310,7 +331,9 @@ class AppLocalizations {
   String get errorInvalidAmount => _t('errorInvalidAmount');
 
   String _t(String key) =>
-      _translations[locale.languageCode]?[key] ?? _translations['en']![key]!;
+      _translations[locale.languageCode]?[key] ??
+      _translations['en']?[key] ??
+      key;
 
   static const Map<String, Map<String, String>> _translations = {
     'en': {
@@ -414,6 +437,9 @@ class AppLocalizations {
       'cancelRegistrationConfirm':
           'Cancel your registration for this event? Your seat will be released.',
       'registrationCancelled': 'Registration cancelled',
+      'searchEvents': 'Search events, venues, categories…',
+      'allEvents': 'All',
+      'paidEvent': 'Paid',
       'noCourses': 'No courses yet',
       'noCoursesMessage':
           'Courses from verified institutes will appear here when published.',
@@ -431,6 +457,19 @@ class AppLocalizations {
       'dropEnrollmentConfirm':
           'Drop your enrollment in this batch? Your seat will be released.',
       'enrollmentDropped': 'Enrollment dropped',
+      'searchCourses': 'Search courses, institutes, instructors…',
+      'allModes': 'All',
+      'demoSession': 'Demo',
+      'paidCourse': 'Paid',
+      'searchInstitutes': 'Search institutes and classes…',
+      'institutesAndClasses': 'Institutes & Classes',
+      'noInstitutes': 'No institutes yet',
+      'noInstitutesMessage':
+          'Verified institutes appear here when owners publish them.',
+      'verifiedOnly': 'Verified only',
+      'unifiedRegistration': 'Unified registration',
+      'unifiedRegistrationHint':
+          'One registration entry for every module. Fields come from admin-configured forms in Supabase, not from a local field list.',
       'selectDate': 'Select a date',
       'selectTimeSlot': 'Select a time slot',
       'availability': 'Availability',
@@ -443,6 +482,7 @@ class AppLocalizations {
       'idNumber': 'ID number (Aadhaar / Passport)',
       'payment': 'Payment',
       'payNow': 'Pay now',
+      'bookAgain': 'Book again',
       'paymentSuccess': 'Payment successful',
       'paymentFailed': 'Payment failed',
       'paymentPending': 'Payment pending',
@@ -466,6 +506,10 @@ class AppLocalizations {
       'invoice': 'Invoice',
       'viewInvoice': 'View invoice',
       'invoiceFor': 'Booking invoice',
+      'invoiceEmailQueued':
+          'Invoice email queued to your account email. Delivery is handled by the server outbox, not by this device.',
+      'invoiceEmailNotQueued':
+          'No account email is on file, so nothing was queued. Download the PDF instead.',
       'bookingRef': 'Booking reference',
       'bookingStatus': 'Status',
       'dateOfBooking': 'Booking date',
@@ -693,6 +737,9 @@ class AppLocalizations {
       'cancelRegistrationConfirm':
           'ఈ ఈవెంట్‌కు మీ నమోదును రద్దు చేయాలా? మీ సీటు విడుదల అవుతుంది.',
       'registrationCancelled': 'నమోదు రద్దు చేయబడింది',
+      'searchEvents': 'ఈవెంట్లు, వేదికలు, వర్గాలు శోధించండి…',
+      'allEvents': 'అన్నీ',
+      'paidEvent': 'చెల్లింపు',
       'noCourses': 'ఇంకా కోర్సులు లేవు',
       'noCoursesMessage':
           'ధృవీకరించబడిన సంస్థల నుండి కోర్సులు ప్రచురించినప్పుడు ఇక్కడ కనిపిస్తాయి.',
@@ -710,6 +757,19 @@ class AppLocalizations {
       'dropEnrollmentConfirm':
           'ఈ బ్యాచ్‌లో మీ చేరికను వదిలివేయాలా? మీ సీటు విడుదల అవుతుంది.',
       'enrollmentDropped': 'చేరిక విడిచిపెట్టబడింది',
+      'searchCourses': 'కోర్సులు, సంస్థలు, బోధకులు శోధించండి…',
+      'allModes': 'అన్నీ',
+      'demoSession': 'డెమో',
+      'paidCourse': 'చెల్లింపు',
+      'searchInstitutes': 'సంస్థలు మరియు తరగతులు శోధించండి…',
+      'institutesAndClasses': 'సంస్థలు & తరగతులు',
+      'noInstitutes': 'ఇంకా సంస్థలు లేవు',
+      'noInstitutesMessage':
+          'యజమానులు ప్రచురించినప్పుడు ధృవీకరించిన సంస్థలు ఇక్కడ కనిపిస్తాయి.',
+      'verifiedOnly': 'ధృవీకరించినవి మాత్రమే',
+      'unifiedRegistration': 'ఏకీకృత నమోదు',
+      'unifiedRegistrationHint':
+          'ప్రతి మాడ్యూల్‌కు ఒక నమోదు ప్రవేశం. ఫీల్డ్‌లు స్థానిక జాబితా నుండి కాకుండా సుపాబేస్‌లోని నిర్వాహక ఫారమ్‌ల నుండి వస్తాయి.',
       'selectDate': 'తేదీని ఎంచుకోండి',
       'selectTimeSlot': 'టైమ్ స్లాట్ ఎంచుకోండి',
       'availability': 'అందుబాటు',
@@ -722,6 +782,7 @@ class AppLocalizations {
       'idNumber': 'ఐడి నంబర్ (ఆధార్ / పాస్‌పోర్ట్)',
       'payment': 'చెల్లింపు',
       'payNow': 'ఇప్పుడే చెల్లించండి',
+      'bookAgain': 'మళ్లీ బుక్ చేయండి',
       'paymentSuccess': 'చెల్లింపు విజయవంతమైంది',
       'paymentFailed': 'చెల్లింపు విఫలమైంది',
       'paymentPending': 'చెల్లింపు పెండింగ్‌లో ఉంది',
@@ -748,6 +809,10 @@ class AppLocalizations {
       'invoice': 'ఇన్వాయిస్',
       'viewInvoice': 'ఇన్వాయిస్ చూడండి',
       'invoiceFor': 'బుకింగ్ ఇన్వాయిస్',
+      'invoiceEmailQueued':
+          'మీ ఖాతా ఇమెయిల్‌కు ఇన్వాయిస్ ఇమెయిల్ క్యూ చేయబడింది. డెలివరీ సర్వర్ అవుట్‌బాక్స్ నిర్వహిస్తుంది.',
+      'invoiceEmailNotQueued':
+          'ఖాతా ఇమెయిల్ లేదు, కాబట్టి ఏమీ క్యూ కాలేదు. PDF డౌన్‌లోడ్ చేయండి.',
       'bookingRef': 'బుకింగ్ రిఫరెన్స్',
       'bookingStatus': 'స్థితి',
       'dateOfBooking': 'బుకింగ్ తేదీ',
@@ -870,6 +935,66 @@ class AppLocalizations {
       'errorInvalidPhone': 'చెల్లుబాటు అయ్యే ఫోన్ నంబర్ నమోదు చేయండి',
       'errorRequired': 'ఈ ఫీల్డ్ అవసరం',
       'errorInvalidAmount': 'చెల్లుబాటు అయ్యే మొత్తం నమోదు చేయండి',
+    },
+    'hi': {
+      'appName': 'बुकमाईस्पेस',
+      'tagline': 'अपनी जगह खोजें और बुक करें',
+      'retry': 'फिर कोशिश करें',
+      'cancel': 'रद्द करें',
+      'confirm': 'पुष्टि करें',
+      'save': 'सहेजें',
+      'search': 'खोजें',
+      'loading': 'लोड हो रहा है…',
+      'navHome': 'होम',
+      'navSearch': 'खोज',
+      'navBookings': 'बुकिंग',
+      'navSaved': 'सेव्ड',
+      'navProfile': 'प्रोफ़ाइल',
+      'bookNow': 'अभी बुक करें',
+      'nearbyVenues': 'नज़दीकी स्थान',
+      'myBookings': 'मेरी बुकिंग',
+      'login': 'लॉग इन',
+      'logout': 'लॉग आउट',
+      'settings': 'सेटिंग्स',
+      'language': 'भाषा',
+      'notifications': 'सूचनाएँ',
+      'ownerDashboard': 'मालिक डैशबोर्ड',
+      'venues': 'स्थान',
+      'payment': 'भुगतान',
+      'payNow': 'अभी भुगतान करें',
+      'bookAgain': 'फिर बुक करें',
+      'checkIn': 'चेक-इन',
+      'courses': 'कोर्स',
+      'events': 'इवेंट्स',
+      'support': 'सहायता',
+      'admin': 'एडमिन',
+      'searchEvents': 'इवेंट, स्थान, श्रेणियाँ खोजें…',
+      'allEvents': 'सभी',
+      'paidEvent': 'सशुल्क',
+      'searchCourses': 'कोर्स, संस्थान, प्रशिक्षक खोजें…',
+      'allModes': 'सभी',
+      'demoSession': 'डेमो',
+      'paidCourse': 'सशुल्क',
+      'searchInstitutes': 'संस्थान और कक्षाएँ खोजें…',
+      'institutesAndClasses': 'संस्थान और कक्षाएँ',
+      'noInstitutes': 'अभी संस्थान नहीं हैं',
+      'noInstitutesMessage':
+          'मालिक प्रकाशित करने पर सत्यापित संस्थान यहाँ दिखते हैं।',
+      'verifiedOnly': 'केवल सत्यापित',
+      'unifiedRegistration': 'एकीकृत पंजीकरण',
+      'unifiedRegistrationHint':
+          'हर मॉड्यूल के लिए एक पंजीकरण प्रवेश। फ़ील्ड सुपाबेस में एडमिन फ़ॉर्म से आते हैं, स्थानीय सूची से नहीं।',
+      'invoiceEmailQueued':
+          'आपके खाता ईमेल पर इनवॉइस ईमेल कतार में है। डिलीवरी सर्वर आउटबॉक्स करता है।',
+      'invoiceEmailNotQueued':
+          'खाता ईमेल नहीं है, इसलिए कुछ कतार में नहीं गया। PDF डाउनलोड करें।',
+      'viewOnMap': 'मानचित्र पर देखें',
+      'noResults': 'कोई परिणाम नहीं',
+      'noResultsMessage': 'फ़िल्टर या खोज शब्द बदलकर देखें।',
+      'freeEvent': 'मुफ़्त',
+      'modeOnline': 'ऑनलाइन',
+      'modeOffline': 'ऑफ़लाइन',
+      'modeHybrid': 'हाइब्रिड',
     },
   };
 }

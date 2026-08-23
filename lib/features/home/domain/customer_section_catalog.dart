@@ -65,6 +65,8 @@ enum CustomerSection {
       'auditorium',
       'party_hall',
       'venues_function_halls',
+      'temple',
+      'exhibition_hall',
     },
     CustomerSection.lodgeRooms => {
       'hotel_stay',

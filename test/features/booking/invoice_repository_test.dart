@@ -20,5 +20,15 @@ void main() {
 
     expect(invoice.invoiceNumber, 'BMS-2026-FLAT');
     expect(invoice.signedUrl, isNull);
+    expect(invoice.emailQueued, isFalse);
+  });
+
+  test('parses server email_queued without client outbox writes', () {
+    final invoice = InvoiceArtifact.fromJson({
+      'invoice': {'invoice_number': 'BMS-2026-MAIL'},
+      'signed_url': 'https://example.test/signed-invoice',
+      'email_queued': true,
+    });
+    expect(invoice.emailQueued, isTrue);
   });
 }

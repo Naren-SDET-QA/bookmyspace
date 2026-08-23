@@ -170,6 +170,17 @@ class Booking {
 
   bool get canCancel => status == BookingStatus.pending;
 
+  /// Held/pending bookings still need server-verified checkout.
+  bool get canPay =>
+      status == BookingStatus.pending || status == BookingStatus.held;
+
+  /// Book Again still requires a new date/slot and live price on the server.
+  bool get canBookAgain =>
+      status == BookingStatus.confirmed ||
+      status == BookingStatus.completed ||
+      status == BookingStatus.cancelled ||
+      status == BookingStatus.refunded;
+
   /// Confirmed (captured) bookings can be refunded.
   bool get canRefund => status == BookingStatus.confirmed;
 
@@ -191,8 +202,8 @@ class Booking {
     final paymentsRaw = json['payments'];
     final payment = paymentsRaw is List && paymentsRaw.isNotEmpty
         ? paymentsRaw.first is Map
-            ? Map<String, dynamic>.from(paymentsRaw.first as Map)
-            : null
+              ? Map<String, dynamic>.from(paymentsRaw.first as Map)
+              : null
         : paymentsRaw is Map
         ? Map<String, dynamic>.from(paymentsRaw as Map)
         : null;

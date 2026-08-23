@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'theme_tokens.dart';
+
 /// Centralised Material 3 theme for BookMySpace.
 ///
 /// Supports light and dark mode with a warm, trustworthy brand palette.
@@ -10,7 +12,6 @@ class AppTheme {
   static const Color brand = Color(0xFF3F51B5);
   static const Color brandLight = Color(0xFF757DE8);
   static const Color accent = Color(0xFFFF7043);
-  static const Color _surfaceLight = Color(0xFFF7F7FA);
   static const Color _surfaceDark = Color(0xFF131318);
 
   static ThemeData get light => lightFor(brand);
@@ -21,13 +22,14 @@ class AppTheme {
   static ThemeData darkFor(Color seed) => _base(Brightness.dark, seed);
 
   static ThemeData _base(Brightness brightness, Color seed) {
+    final tokens = ThemeTokens.fromSeed(seed, brightness: brightness);
     final isLight = brightness == Brightness.light;
     final scheme = ColorScheme.fromSeed(
       seedColor: seed,
       brightness: brightness,
-      primary: isLight ? brand : brandLight,
-      secondary: accent,
-      surface: isLight ? _surfaceLight : _surfaceDark,
+      primary: tokens.primary,
+      secondary: tokens.secondary,
+      surface: tokens.surface,
     );
 
     return ThemeData(

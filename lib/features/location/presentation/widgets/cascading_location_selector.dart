@@ -9,34 +9,59 @@ class CascadingLocationValue {
     this.country,
     this.state,
     this.district,
+    this.mandal,
     this.city,
+    this.village,
     this.area,
   });
 
   final LocationNode? country;
   final LocationNode? state;
   final LocationNode? district;
+  final LocationNode? mandal;
   final LocationNode? city;
+  final LocationNode? village;
   final LocationNode? area;
 
   String? get selectedLocationId =>
-      area?.id ?? city?.id ?? district?.id ?? state?.id ?? country?.id;
+      area?.id ??
+      village?.id ??
+      city?.id ??
+      mandal?.id ??
+      district?.id ??
+      state?.id ??
+      country?.id;
+
+  List<String> get pathNames => [
+    country,
+    state,
+    district,
+    mandal,
+    city ?? village,
+    area,
+  ].whereType<LocationNode>().map((node) => node.name).toList(growable: false);
 
   CascadingLocationValue copyWith({
     LocationNode? country,
     LocationNode? state,
     LocationNode? district,
+    LocationNode? mandal,
     LocationNode? city,
+    LocationNode? village,
     LocationNode? area,
     bool clearState = false,
     bool clearDistrict = false,
+    bool clearMandal = false,
     bool clearCity = false,
+    bool clearVillage = false,
     bool clearArea = false,
   }) => CascadingLocationValue(
     country: country ?? this.country,
     state: clearState ? null : state ?? this.state,
     district: clearDistrict ? null : district ?? this.district,
+    mandal: clearMandal ? null : mandal ?? this.mandal,
     city: clearCity ? null : city ?? this.city,
+    village: clearVillage ? null : village ?? this.village,
     area: clearArea ? null : area ?? this.area,
   );
 }
@@ -69,7 +94,7 @@ class CascadingLocationSelector extends ConsumerWidget {
         if (value.country != null) ...[
           const SizedBox(height: 12),
           _LocationDropdown(
-            label: 'State / Province',
+            label: 'State / UT',
             level: LocationNodeLevel.stateProvince,
             parentId: value.country!.id,
             selected: value.state,
@@ -82,7 +107,7 @@ class CascadingLocationSelector extends ConsumerWidget {
         if (value.state != null) ...[
           const SizedBox(height: 12),
           _LocationDropdown(
-            label: 'District / County',
+            label: 'District',
             level: LocationNodeLevel.districtCounty,
             parentId: value.state!.id,
             selected: value.district,
@@ -96,13 +121,30 @@ class CascadingLocationSelector extends ConsumerWidget {
             ),
           ),
         ],
-        if (value.district != null ||
-            (value.state != null && value.city == null)) ...[
+        if (value.district != null) ...[
           const SizedBox(height: 12),
           _LocationDropdown(
-            label: 'City / Town',
+            label: 'Mandal / Taluk / Tehsil / Block',
+            level: LocationNodeLevel.mandalTalukTehsilBlock,
+            parentId: value.district!.id,
+            selected: value.mandal,
+            compact: compact,
+            onSelected: (node) => onChanged(
+              CascadingLocationValue(
+                country: value.country,
+                state: value.state,
+                district: value.district,
+                mandal: node,
+              ),
+            ),
+          ),
+        ],
+        if (value.state != null) ...[
+          const SizedBox(height: 12),
+          _LocationDropdown(
+            label: 'Town / City',
             level: LocationNodeLevel.cityTown,
-            parentId: value.district?.id ?? value.state?.id,
+            parentId: value.mandal?.id ?? value.district?.id ?? value.state!.id,
             selected: value.city,
             compact: compact,
             onSelected: (node) => onChanged(
@@ -110,17 +152,37 @@ class CascadingLocationSelector extends ConsumerWidget {
                 country: value.country,
                 state: value.state,
                 district: value.district,
+                mandal: value.mandal,
                 city: node,
               ),
             ),
           ),
         ],
-        if (value.city != null) ...[
+        if (value.district != null || value.mandal != null) ...[
           const SizedBox(height: 12),
           _LocationDropdown(
-            label: 'Area / Locality',
+            label: 'Village',
+            level: LocationNodeLevel.village,
+            parentId: value.mandal?.id ?? value.district?.id,
+            selected: value.village,
+            compact: compact,
+            onSelected: (node) => onChanged(
+              CascadingLocationValue(
+                country: value.country,
+                state: value.state,
+                district: value.district,
+                mandal: value.mandal,
+                village: node,
+              ),
+            ),
+          ),
+        ],
+        if (value.city != null || value.village != null) ...[
+          const SizedBox(height: 12),
+          _LocationDropdown(
+            label: 'Locality',
             level: LocationNodeLevel.areaLocality,
-            parentId: value.city!.id,
+            parentId: (value.city ?? value.village)!.id,
             selected: value.area,
             compact: compact,
             onSelected: (node) => onChanged(
@@ -128,7 +190,9 @@ class CascadingLocationSelector extends ConsumerWidget {
                 country: value.country,
                 state: value.state,
                 district: value.district,
+                mandal: value.mandal,
                 city: value.city,
+                village: value.village,
                 area: node,
               ),
             ),
@@ -188,24 +252,29 @@ class _LocationDropdown extends ConsumerWidget {
             child: const Text('No locations available'),
           );
         }
-        final selectedValue = items.any((item) => item.id == selected?.id)
-            ? selected?.id
-            : null;
-        return DropdownButtonFormField<String>(
-          initialValue: selectedValue,
+        return InputDecorator(
           decoration: InputDecoration(
             labelText: label,
             border: const OutlineInputBorder(),
             isDense: compact,
           ),
-          items: [
-            for (final item in items)
-              DropdownMenuItem(value: item.id, child: Text(item.name)),
-          ],
-          onChanged: (id) {
-            if (id == null) return;
-            onSelected(items.firstWhere((item) => item.id == id));
-          },
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: compact ? 140 : 200),
+            child: SingleChildScrollView(
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final item in items)
+                    ChoiceChip(
+                      label: Text(item.name),
+                      selected: selected?.id == item.id,
+                      onSelected: (_) => onSelected(item),
+                    ),
+                ],
+              ),
+            ),
+          ),
         );
       },
     );

@@ -11,8 +11,12 @@ import '../../../../core/widgets/app_network_image.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/responsive_layout.dart';
+import '../../../../core/modular/feature_id.dart';
+import '../../../../core/modular/feature_providers.dart';
+import '../../../../core/modular/plugins/map_provider.dart';
 import '../../../home/domain/customer_section_catalog.dart';
 import '../../../home/presentation/customer_section_providers.dart';
+import '../../../location/presentation/location_providers.dart';
 import '../../../venues/domain/venue.dart';
 import '../../../venues/presentation/venue_providers.dart';
 
@@ -30,37 +34,115 @@ class SearchMapScreen extends ConsumerStatefulWidget {
 
 class _SearchMapScreenState extends ConsumerState<SearchMapScreen> {
   String? _selectedId;
-  final MapController _mapController = MapController();
+  MapController? _mapController;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!ref.read(featureRegistryProvider).isExposed(FeatureId.maps)) return;
+      _seedFromArea();
+    });
+  }
+
+  void _seedFromArea() {
+    if (!mounted) return;
+    final area = ref.read(searchAreaProvider);
+    final current = ref.read(searchQueryProvider);
+    final section = ref.read(selectedCustomerSectionProvider);
+    if (current.latitude != null &&
+        current.longitude != null &&
+        current.sectionId != null) {
+      return;
+    }
+    ref.read(searchQueryProvider.notifier).state = current.copyWith(
+      latitude: () => current.latitude ?? area.latitude,
+      longitude: () => current.longitude ?? area.longitude,
+      maxDistanceKm: () => current.maxDistanceKm ?? area.radiusKm,
+      sectionId: () => current.sectionId ?? section?.id,
+    );
+  }
 
   @override
   void dispose() {
-    _mapController.dispose();
+    _mapController?.dispose();
     super.dispose();
   }
 
+  MapController _requireController(MapProvider map) {
+    return _mapController ??= map.createController();
+  }
+
   void _focusVenue(Venue venue) {
+    final controller = _mapController;
+    if (controller == null) return;
     setState(() => _selectedId = venue.id);
-    _mapController.move(
+    controller.move(
       LatLng(venue.latitude, venue.longitude),
-      _mapController.camera.zoom >= 13 ? _mapController.camera.zoom : 13,
+      controller.camera.zoom >= 13 ? controller.camera.zoom : 13,
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final registry = ref.watch(featureRegistryProvider);
+    final mapPlugin = resolvedMapProvider(ref.watch(providerRegistryProvider));
+    if (!registry.isExposed(FeatureId.maps) || mapPlugin == null) {
+      return Scaffold(
+        appBar: AppBar(title: Text(l10n.viewOnMap)),
+        body: const EmptyState(
+          key: ValueKey('map_unavailable'),
+          icon: Icons.map_outlined,
+          title: 'Map unavailable',
+          message: 'Maps are turned off for this build.',
+        ),
+      );
+    }
+
     final results = ref.watch(searchResultsProvider);
     final section = ref.watch(selectedCustomerSectionProvider);
+    final visibleSections = [
+      for (final id in registry.visibleHomeSections())
+        if (CustomerSection.fromId(id) case final item?) item,
+    ];
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
           section == null
               ? l10n.viewOnMap
-              : '${section.emoji} ${section.title} · Map',
+              : '${section.emoji} ${section.title} · ${l10n.viewOnMap}',
         ),
       ),
-      body: results.when(
+      body: Column(
+        children: [
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+            child: Row(
+              children: [
+                for (final item in visibleSections)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text('${item.emoji} ${item.title}'),
+                      selected: section == item,
+                      onSelected: (_) {
+                        ref.read(selectedCustomerSectionProvider.notifier).state =
+                            item;
+                        final current = ref.read(searchQueryProvider);
+                        ref.read(searchQueryProvider.notifier).state = current
+                            .copyWith(sectionId: () => item.id);
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: results.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
           message: e.toString(),
@@ -68,11 +150,10 @@ class _SearchMapScreenState extends ConsumerState<SearchMapScreen> {
         ),
         data: (venues) {
           if (venues.isEmpty) {
-            return const EmptyState(
+            return EmptyState(
               icon: Icons.map_outlined,
-              title: 'No results on the map',
-              message:
-                  'Adjust your search, filters or location to see venues here.',
+              title: l10n.noResults,
+              message: l10n.noResultsMessage,
             );
           }
           final selected = venues
@@ -81,7 +162,7 @@ class _SearchMapScreenState extends ConsumerState<SearchMapScreen> {
           return ResponsiveLayoutBuilder(
             builder: (context, responsive) {
               final map = FlutterMap(
-                mapController: _mapController,
+                mapController: _requireController(mapPlugin),
                 options: MapOptions(
                   initialCenter: LatLng(venues.first.latitude, venues.first.longitude),
                   initialZoom: 11,
@@ -95,8 +176,8 @@ class _SearchMapScreenState extends ConsumerState<SearchMapScreen> {
                 ),
                 children: [
                   TileLayer(
-                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.bookmyspace.app',
+                    urlTemplate: mapPlugin.tileUrlTemplate,
+                    userAgentPackageName: mapPlugin.userAgentPackageName,
                   ),
                   MarkerLayer(
                     markers: [
@@ -185,6 +266,9 @@ class _SearchMapScreenState extends ConsumerState<SearchMapScreen> {
             },
           );
         },
+            ),
+          ),
+        ],
       ),
     );
   }

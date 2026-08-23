@@ -36,4 +36,27 @@ void main() {
     expect(intent.bookingIntent, isTrue);
     expect(CustomerSection.institutesClasses.isBookable, isFalse);
   });
+
+  test('parses Telugu hall, guests, budget and booking verbs', () {
+    final intent = AiSearchIntent.parse(
+      'హాల్ లో Hyderabad 200 మంది కింద 40000 బుక్',
+    );
+    expect(intent.section, CustomerSection.functionHalls);
+    expect(intent.city, 'hyderabad');
+    expect(intent.guests, 200);
+    expect(intent.maxPrice, 40000);
+    expect(intent.bookingIntent, isTrue);
+  });
+
+  test('parses Hindi hotel stay and tomorrow', () {
+    final now = DateTime(2026, 8, 20);
+    final intent = AiSearchIntent.parse(
+      'होटल में Hyderabad कल बुक',
+      now: now,
+    );
+    expect(intent.section, CustomerSection.lodgeRooms);
+    expect(intent.city, 'hyderabad');
+    expect(intent.date, DateTime(2026, 8, 21));
+    expect(intent.bookingIntent, isTrue);
+  });
 }

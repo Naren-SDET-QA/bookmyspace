@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:flutter/material.dart';
 import 'package:riverpod/riverpod.dart';
 
 import '../constants/app_constants.dart';
@@ -133,7 +132,7 @@ Color themePaletteColor(String value) =>
         .firstWhere((p) => p.name == value, orElse: () => ThemePalette.indigo)
         .color;
 
-/// Locale controller (en / te), persisted.
+/// Locale controller (en / te / hi), persisted.
 class LocaleNotifier extends Notifier<Locale> {
   @override
   Locale build() {

@@ -30,4 +30,15 @@ void main() {
     final intent = parser.parse('please help me', now: now);
     expect(intent.hasSearchSignal, isFalse);
   });
+
+  test('understands Telugu hall capacity language', () {
+    final intent = parser.parse(
+      'హాల్ లో Hyderabad 200 మంది కింద 30000',
+      now: now,
+    );
+    expect(intent.category, 'function_halls');
+    expect(intent.location, 'Hyderabad');
+    expect(intent.guests, 200);
+    expect(intent.budget, 30000);
+  });
 }

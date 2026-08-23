@@ -1,6 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../domain/india_pin.dart';
 import '../domain/location_node.dart';
+import '../domain/location_query_bounds.dart';
 import '../domain/location_repository.dart';
 
 class SupabaseLocationRepository implements LocationRepository {
@@ -129,35 +131,144 @@ class SupabaseLocationRepository implements LocationRepository {
   Future<List<LocationNode>> children({
     String? parentId,
     required LocationNodeLevel level,
+    int limit = LocationQueryBounds.childrenPageSize,
+    int offset = 0,
   }) async {
+    final bounded = LocationQueryBounds.clamp(
+      limit,
+      cap: LocationQueryBounds.childrenPageSize,
+    );
     final base = _client
         .from('location_nodes')
         .select('*')
         .eq('level', _levelValue(level))
         .eq('status', 'active')
         .not('approved_at', 'is', null);
+    final end = offset + bounded - 1;
     final data = parentId == null
-        ? await base.isFilter('parent_id', null).order('name')
-        : await base.eq('parent_id', parentId).order('name');
+        ? await base
+              .isFilter('parent_id', null)
+              .order('name')
+              .range(offset, end)
+        : await base.eq('parent_id', parentId).order('name').range(offset, end);
     return data.map(LocationNode.fromJson).toList();
   }
 
   @override
-  Future<List<LocationNode>> search(String query, {String? countryCode}) async {
+  Future<List<LocationNode>> search(
+    String query, {
+    String? countryCode,
+    LocationNodeLevel? level,
+    int limit = LocationQueryBounds.searchPageSize,
+    int offset = 0,
+  }) async {
+    final pin = IndiaPin.normalize(query);
+    if (pin != null) {
+      return lookupPin(pin, limit: limit, offset: offset);
+    }
+    final bounded = LocationQueryBounds.clamp(
+      limit,
+      cap: LocationQueryBounds.searchPageSize,
+    );
     var request = _client
         .from('location_nodes')
         .select('*')
         .eq('status', 'active')
         .not('approved_at', 'is', null)
         .or('name.ilike.%$query%,normalized_name.ilike.%$query%');
-    if (countryCode != null && countryCode.isNotEmpty)
+    if (countryCode != null && countryCode.isNotEmpty) {
       request = request.eq('country_code', countryCode);
-    final data = await request.order('name').limit(25);
+    }
+    if (level != null && level != LocationNodeLevel.unknown) {
+      request = request.eq('level', _levelValue(level));
+    }
+    final data = await request
+        .order('name')
+        .range(offset, offset + bounded - 1);
+    return data.map(LocationNode.fromJson).toList();
+  }
+
+  @override
+  Future<List<LocationNode>> lookupPin(
+    String pin, {
+    int limit = LocationQueryBounds.pinPageSize,
+    int offset = 0,
+  }) async {
+    final normalized = IndiaPin.normalize(pin);
+    if (normalized == null) return const [];
+    final bounded = LocationQueryBounds.clamp(
+      limit,
+      cap: LocationQueryBounds.pinPageSize,
+    );
+    final linkRows = await _client
+        .from('location_postal_codes')
+        .select('location_id')
+        .eq('postal_code', normalized)
+        .order('location_id')
+        .range(offset, offset + bounded - 1);
+    final ids = <String>{
+      for (final row in linkRows)
+        if (row['location_id'] is String) row['location_id'] as String,
+    };
+    if (ids.isNotEmpty) {
+      final rows = await _client
+          .from('location_nodes')
+          .select('*')
+          .inFilter('id', ids.toList())
+          .eq('status', 'active')
+          .not('approved_at', 'is', null)
+          .order('name')
+          .range(0, bounded - 1);
+      return rows.map(LocationNode.fromJson).toList();
+    }
+    if (offset != 0) return const [];
+    final data = await _client
+        .from('location_nodes')
+        .select('*')
+        .eq('status', 'active')
+        .not('approved_at', 'is', null)
+        .or(
+          'metadata->>postal_code.eq.$normalized,'
+          'metadata->>pincode.eq.$normalized,'
+          'metadata->postal_codes.cs.{$normalized}',
+        )
+        .order('name')
+        .range(offset, offset + bounded - 1);
     return data.map(LocationNode.fromJson).toList();
   }
 
   @override
   Future<List<LocationNode>> path(String locationId) async {
+    try {
+      final rows = await _client.rpc<List<dynamic>>(
+        'get_location_path',
+        params: {'p_location_id': locationId, 'p_max_depth': 32},
+      );
+      final parsed =
+          rows
+              .whereType<Map<String, dynamic>>()
+              .map(
+                (row) => MapEntry(
+                  (row['depth'] as num?)?.toInt() ?? 0,
+                  LocationNode.fromJson(
+                    Map<String, dynamic>.from(row['node'] as Map),
+                  ),
+                ),
+              )
+              .toList()
+            ..sort((a, b) => b.key.compareTo(a.key));
+      if (parsed.isNotEmpty) {
+        return parsed.map((entry) => entry.value).toList(growable: false);
+      }
+    } catch (_) {
+      // Keep compatibility with environments where the optional RPC
+      // migration has not been applied yet.
+    }
+
+    return _pathLegacy(locationId);
+  }
+
+  Future<List<LocationNode>> _pathLegacy(String locationId) async {
     final result = <LocationNode>[];
     String? currentId = locationId;
     while (currentId != null) {
@@ -175,10 +286,13 @@ class SupabaseLocationRepository implements LocationRepository {
   }
 
   String _levelValue(LocationNodeLevel level) => switch (level) {
+    LocationNodeLevel.unknown => 'unknown',
     LocationNodeLevel.country => 'country',
     LocationNodeLevel.stateProvince => 'state_province',
     LocationNodeLevel.districtCounty => 'district_county',
+    LocationNodeLevel.mandalTalukTehsilBlock => 'mandal_taluk_tehsil_block',
     LocationNodeLevel.cityTown => 'city_town',
+    LocationNodeLevel.village => 'village',
     LocationNodeLevel.areaLocality => 'area_locality',
   };
 }

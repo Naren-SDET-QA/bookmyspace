@@ -59,6 +59,9 @@ class Course {
     this.instituteName = '',
     this.instituteVerified = false,
     this.batches = const [],
+    this.isDemo = false,
+    this.seats,
+    this.scheduleNotes = '',
   });
 
   final String id;
@@ -75,6 +78,9 @@ class Course {
   final String instituteName;
   final bool instituteVerified;
   final List<CourseBatch> batches;
+  final bool isDemo;
+  final int? seats;
+  final String scheduleNotes;
 
   bool get isFree => feeAmount <= 0;
 
@@ -105,6 +111,9 @@ class Course {
       instituteName: institute['name'] as String? ?? '',
       instituteVerified: institute['is_verified'] as bool? ?? false,
       batches: batches,
+      isDemo: json['is_demo'] as bool? ?? false,
+      seats: (json['seats'] as num?)?.toInt(),
+      scheduleNotes: json['schedule_notes'] as String? ?? '',
     );
   }
 }

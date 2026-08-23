@@ -4,8 +4,11 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/modular/feature_id.dart';
+import '../../../../core/modular/feature_providers.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/error_view.dart';
+import '../../domain/invoice_display_config.dart';
 import '../../../venues/presentation/widgets/venue_badges.dart';
 import '../../domain/booking.dart';
 import '../booking_providers.dart';
@@ -191,26 +194,63 @@ class _InvoiceBody extends StatelessWidget {
         const SizedBox(height: 16),
         Consumer(
           builder: (context, ref, _) {
+            final features = ref.watch(featureRegistryProvider);
+            if (!features.isExposed(FeatureId.invoice)) {
+              return const SizedBox.shrink();
+            }
+            final display = InvoiceDisplayConfig.fromFeature(
+              features.configOf(FeatureId.invoice),
+            );
             final artifact = ref.watch(invoiceArtifactProvider(booking.id));
             return artifact.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => Text('Invoice PDF unavailable: $error'),
-              data: (invoice) => Wrap(
-                spacing: 8,
-                runSpacing: 8,
+              data: (invoice) => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Invoice ${invoice.invoiceNumber}',
-                    style: theme.textTheme.titleSmall,
-                  ),
-                  if (invoice.signedUrl != null)
-                    OutlinedButton.icon(
-                      onPressed: () => launchUrl(
-                        Uri.parse(invoice.signedUrl!),
-                        mode: LaunchMode.externalApplication,
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      Text(
+                        'Invoice ${invoice.invoiceNumber}',
+                        style: theme.textTheme.titleSmall,
                       ),
-                      icon: const Icon(Icons.download_outlined),
-                      label: const Text('Open / download PDF'),
+                      if (display.showPdf && invoice.canOpenPdf)
+                        OutlinedButton.icon(
+                          onPressed: () => launchUrl(
+                            Uri.parse(invoice.signedUrl!),
+                            mode: LaunchMode.externalApplication,
+                          ),
+                          icon: const Icon(Icons.download_outlined),
+                          label: const Text('Open / download PDF'),
+                        ),
+                      if ((display.showShare || display.showPrint) &&
+                          invoice.canShare)
+                        OutlinedButton.icon(
+                          onPressed: () => launchUrl(
+                            Uri.parse(invoice.signedUrl!),
+                            mode: LaunchMode.externalApplication,
+                          ),
+                          icon: const Icon(Icons.share_outlined),
+                          label: const Text('Share / print'),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (display.showEmailStatus)
+                    Text(
+                      invoice.emailQueued
+                          ? l10n.invoiceEmailQueued
+                          : l10n.invoiceEmailNotQueued,
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  if (display.showNotificationStatus)
+                    Text(
+                      invoice.notificationQueued
+                          ? 'Notification queued'
+                          : 'Notification not queued',
+                      style: theme.textTheme.bodySmall,
                     ),
                 ],
               ),

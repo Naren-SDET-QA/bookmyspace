@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/search_area.dart';
 import '../domain/location_node.dart';
+import '../domain/location_query_bounds.dart';
+import '../domain/location_repository.dart';
 import '../infrastructure/geocoding_service.dart';
 import '../infrastructure/supabase_location_repository.dart';
 import '../../auth/presentation/auth_providers.dart';
@@ -11,21 +13,33 @@ final geocodingServiceProvider = Provider<GeocodingService>((ref) {
   return GeocodingService();
 });
 
-final locationRepositoryProvider = Provider<SupabaseLocationRepository>((ref) {
-  return SupabaseLocationRepository(ref.watch(supabaseProvider));
+final supabaseLocationRepositoryProvider = Provider<SupabaseLocationRepository>(
+  (ref) {
+    return SupabaseLocationRepository(ref.watch(supabaseProvider));
+  },
+);
+
+final locationRepositoryProvider = Provider<LocationRepository>((ref) {
+  return ref.watch(supabaseLocationRepositoryProvider);
 });
 
 final locationChildrenProvider = FutureProvider.autoDispose
     .family<List<LocationNode>, ({String? parentId, LocationNodeLevel level})>(
       (ref, request) => ref
           .watch(locationRepositoryProvider)
-          .children(parentId: request.parentId, level: request.level),
+          .children(
+            parentId: request.parentId,
+            level: request.level,
+            limit: LocationQueryBounds.childrenPageSize,
+          ),
     );
 
 final locationSearchProvider = FutureProvider.autoDispose
     .family<List<LocationNode>, String>((ref, query) {
       if (query.trim().isEmpty) return const [];
-      return ref.watch(locationRepositoryProvider).search(query.trim());
+      return ref
+          .watch(locationRepositoryProvider)
+          .search(query.trim(), limit: LocationQueryBounds.searchPageSize);
     });
 
 /// The currently selected search area (label + coordinates + radius).

@@ -43,9 +43,24 @@ class OwnerDashboardScreen extends ConsumerWidget {
                     onTap: () => context.push(AppRoutes.ownerBookings),
                   ),
                   _QuickAction(
+                    icon: Icons.calendar_month_rounded,
+                    label: l10n.ownerCalendar,
+                    onTap: () => context.push(AppRoutes.ownerCalendar),
+                  ),
+                  _QuickAction(
                     icon: Icons.storefront_rounded,
                     label: l10n.myVenues,
                     onTap: () => context.push(AppRoutes.ownerVenues),
+                  ),
+                  _QuickAction(
+                    icon: Icons.school_rounded,
+                    label: 'Institute portal',
+                    onTap: () => context.push(AppRoutes.ownerInstitute),
+                  ),
+                  _QuickAction(
+                    icon: Icons.qr_code_scanner_rounded,
+                    label: 'QR check-in',
+                    onTap: () => context.push(AppRoutes.checkIn),
                   ),
                   _QuickAction(
                     icon: Icons.location_on_rounded,

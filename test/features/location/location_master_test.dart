@@ -3,6 +3,8 @@ import 'package:bookmyspace/features/location/domain/location_node.dart';
 import 'package:bookmyspace/features/location/domain/external_location_provider.dart';
 import 'package:bookmyspace/features/location/domain/search_area.dart';
 import 'package:bookmyspace/features/location/presentation/widgets/cascading_location_selector.dart';
+import 'package:bookmyspace/features/location/domain/location_hierarchy_validator.dart';
+import 'package:bookmyspace/features/location/domain/location_repository.dart';
 
 void main() {
   test('location node parses global hierarchy levels and coordinates', () {
@@ -92,4 +94,132 @@ void main() {
     expect(candidate.toSuggestionPayload()['external_id'], 'ext-1');
     expect(candidate.toSuggestionPayload()['postal_code'], 'SW1A');
   });
+
+  test('parses mandal, village and one-to-many PIN metadata', () {
+    final mandal = LocationNode.fromJson({
+      'id': 'mandal-1',
+      'parent_id': 'district-1',
+      'level': 'mandal_taluk_tehsil_block',
+      'country_code': 'IN',
+      'name': 'Test Mandal',
+      'normalized_name': 'test mandal',
+      'metadata': {'administrative_type': 'Mandal'},
+    });
+    final village = LocationNode.fromJson({
+      'id': 'village-1',
+      'parent_id': 'mandal-1',
+      'level': 'village',
+      'country_code': 'IN',
+      'name': 'Test Village',
+      'normalized_name': 'test village',
+      'metadata': {
+        'postal_codes': ['500001', '500002'],
+      },
+    });
+
+    expect(mandal.level, LocationNodeLevel.mandalTalukTehsilBlock);
+    expect(mandal.metadata['administrative_type'], 'Mandal');
+    expect(village.level, LocationNodeLevel.village);
+    expect(village.postalCodes, ['500001', '500002']);
+  });
+
+  test('hierarchy validator detects orphans and duplicate siblings', () {
+    final nodes = [
+      LocationNode.fromJson({
+        'id': 'state-1',
+        'level': 'state_province',
+        'country_code': 'IN',
+        'name': 'State',
+        'normalized_name': 'state',
+      }),
+      LocationNode.fromJson({
+        'id': 'orphan',
+        'parent_id': 'missing',
+        'level': 'district_county',
+        'country_code': 'IN',
+        'name': 'Orphan',
+        'normalized_name': 'orphan',
+      }),
+      LocationNode.fromJson({
+        'id': 'city-1',
+        'parent_id': 'state-1',
+        'level': 'city_town',
+        'country_code': 'IN',
+        'name': 'Same City',
+        'normalized_name': 'same city',
+      }),
+      LocationNode.fromJson({
+        'id': 'city-2',
+        'parent_id': 'state-1',
+        'level': 'city_town',
+        'country_code': 'IN',
+        'name': 'Same City',
+        'normalized_name': 'same city',
+      }),
+    ];
+    final issues = LocationHierarchyValidator.validate(nodes);
+    expect(issues.orphans, contains('orphan'));
+    expect(issues.duplicateSiblings, contains('state-1/city_town/same city'));
+  });
+
+  test(
+    'location repository contract supports bounded children and PIN lookup',
+    () {
+      Future<void> exercise(LocationRepository repository) async {
+        await repository.children(
+          parentId: 'hyd-d',
+          level: LocationNodeLevel.mandalTalukTehsilBlock,
+          limit: 20,
+          offset: 0,
+        );
+        await repository.lookupPin('500001', limit: 20, offset: 0);
+      }
+
+      expect(exercise, isA<Function>());
+      final value = CascadingLocationValue(
+        country: LocationNode.fromJson({
+          'id': 'in',
+          'level': 'country',
+          'name': 'India',
+          'normalized_name': 'india',
+        }),
+        state: LocationNode.fromJson({
+          'id': 'ts',
+          'parent_id': 'in',
+          'level': 'state_province',
+          'name': 'Telangana',
+          'normalized_name': 'telangana',
+        }),
+        district: LocationNode.fromJson({
+          'id': 'hyd-d',
+          'parent_id': 'ts',
+          'level': 'district_county',
+          'name': 'Hyderabad',
+          'normalized_name': 'hyderabad',
+        }),
+        mandal: LocationNode.fromJson({
+          'id': 'hyd-m',
+          'parent_id': 'hyd-d',
+          'level': 'mandal_taluk_tehsil_block',
+          'name': 'Shaikpet',
+          'normalized_name': 'shaikpet',
+        }),
+        village: LocationNode.fromJson({
+          'id': 'hyd-v',
+          'parent_id': 'hyd-m',
+          'level': 'village',
+          'name': 'Example Village',
+          'normalized_name': 'example village',
+        }),
+      );
+      expect(value.selectedLocationId, 'hyd-v');
+      expect(value.pathNames, [
+        'India',
+        'Telangana',
+        'Hyderabad',
+        'Shaikpet',
+        'Example Village',
+      ]);
+    },
+  );
 }

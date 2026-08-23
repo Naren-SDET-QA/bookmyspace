@@ -5,7 +5,7 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../domain/registration_field_config.dart';
 import '../owner_providers.dart';
 
-/// Owner registration form with email/password.
+/// Owner registration form with Supabase email OTP verification.
 class OwnerRegistrationScreen extends ConsumerStatefulWidget {
   const OwnerRegistrationScreen({super.key});
 
@@ -16,10 +16,13 @@ class OwnerRegistrationScreen extends ConsumerStatefulWidget {
 
 class _OwnerRegistrationScreenState
     extends ConsumerState<OwnerRegistrationScreen> {
+  // createOwnerProvider remains registered for backward-compatible callers;
+  // this screen uses the OTP methods on the same Supabase owner repository.
   final _emailController = TextEditingController();
   final _nameController = TextEditingController();
-  final _passwordController = TextEditingController();
-  bool _obscurePassword = true;
+  final _otpController = TextEditingController();
+  bool _otpSent = false;
+  bool _busy = false;
   final Map<String, TextEditingController> _dynamicControllers = {};
   final Map<String, String> _dynamicValues = {};
   List<RegistrationFieldConfig> _configs = const [];
@@ -28,7 +31,7 @@ class _OwnerRegistrationScreenState
   void dispose() {
     _emailController.dispose();
     _nameController.dispose();
-    _passwordController.dispose();
+    _otpController.dispose();
     for (final controller in _dynamicControllers.values) {
       controller.dispose();
     }
@@ -37,6 +40,7 @@ class _OwnerRegistrationScreenState
 
   Future<void> _register() async {
     final l10n = AppLocalizations.of(context);
+    if (mounted) setState(() => _busy = true);
     final missing = _configs.where((field) {
       if (!field.required) return false;
       final value =
@@ -47,23 +51,31 @@ class _OwnerRegistrationScreenState
     }).toList();
     if (_emailController.text.trim().isEmpty ||
         _nameController.text.trim().isEmpty ||
-        _passwordController.text.isEmpty ||
         missing.isNotEmpty) {
+      if (mounted) setState(() => _busy = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Please complete all required fields.')),
       );
       return;
     }
-    final createOwner = ref.read(
-      createOwnerProvider((
+    try {
+      final repository = ref.read(ownerRepositoryProvider);
+      if (!_otpSent) {
+        await repository.requestOwnerOtp(
+          _emailController.text,
+          _nameController.text,
+        );
+        if (mounted) setState(() => _otpSent = true);
+        return;
+      }
+      if (!RegExp(r'^\d{6}$').hasMatch(_otpController.text.trim())) {
+        throw const FormatException('Enter the 6-digit verification code.');
+      }
+      await repository.verifyOwnerOtp(
         email: _emailController.text,
         name: _nameController.text,
-        password: _passwordController.text,
-      )).future,
-    );
-
-    try {
-      await createOwner;
+        token: _otpController.text,
+      );
       final values = <String, String>{
         for (final entry in _dynamicControllers.entries)
           entry.key: entry.value.text.trim(),
@@ -87,18 +99,12 @@ class _OwnerRegistrationScreenState
         );
       }
     }
+    if (mounted) setState(() => _busy = false);
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final createOwner = ref.watch(
-      createOwnerProvider((
-        email: _emailController.text,
-        name: _nameController.text,
-        password: _passwordController.text,
-      )),
-    );
     final fields = ref.watch(ownerRegistrationFieldsProvider);
 
     return Scaffold(
@@ -110,6 +116,7 @@ class _OwnerRegistrationScreenState
           children: [
             TextField(
               controller: _emailController,
+              enabled: !_otpSent && !_busy,
               decoration: InputDecoration(
                 labelText: l10n.email,
                 border: const OutlineInputBorder(),
@@ -124,21 +131,19 @@ class _OwnerRegistrationScreenState
               ),
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: _passwordController,
-              obscureText: _obscurePassword,
-              decoration: InputDecoration(
-                labelText: l10n.password,
-                border: const OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                  ),
-                  onPressed: () =>
-                      setState(() => _obscurePassword = !_obscurePassword),
+            if (_otpSent) ...[
+              TextField(
+                controller: _otpController,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                decoration: const InputDecoration(
+                  labelText: '6-digit verification code',
+                  border: OutlineInputBorder(),
+                  counterText: '',
                 ),
               ),
-            ),
+              const SizedBox(height: 16),
+            ],
             fields.when(
               loading: () => const Padding(
                 padding: EdgeInsets.symmetric(vertical: 12),
@@ -163,8 +168,8 @@ class _OwnerRegistrationScreenState
             ),
             const SizedBox(height: 24),
             FilledButton(
-              onPressed: createOwner.isLoading ? null : _register,
-              child: Text(createOwner.isLoading ? l10n.loading : l10n.signUp),
+              onPressed: _busy ? null : _register,
+              child: Text(_busy ? l10n.loading : (_otpSent ? 'Verify & create owner' : 'Send verification code')),
             ),
           ],
         ),

@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../../../core/modular/feature_providers.dart';
+import '../../../../core/modular/plugins/map_provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_network_image.dart';
 import '../../../../core/widgets/responsive_layout.dart';
@@ -14,7 +16,10 @@ import '../../../location/presentation/widgets/cascading_location_selector.dart'
 import '../../../location/domain/location_node.dart';
 import '../../../location/domain/search_area.dart';
 import '../../../location/presentation/location_providers.dart';
+import '../../../venues/domain/category_configuration.dart';
+import '../../../venues/domain/listing_field_requirements.dart';
 import '../../../venues/domain/venue.dart';
+import '../../../venues/presentation/category_configuration_providers.dart';
 import '../../../venues/presentation/venue_providers.dart';
 import '../../domain/owner_listing_draft.dart';
 import '../providers/owner_venue_providers.dart';
@@ -48,7 +53,7 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
   final _lngController = TextEditingController(
     text: SearchArea.defaultArea.longitude.toStringAsFixed(4),
   );
-  final _mapController = MapController();
+  MapController? _mapController;
 
   CustomerSection _section = CustomerSection.functionHalls;
   String? _catalogCategoryId;
@@ -81,6 +86,7 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
     _photoUrlController.dispose();
     _latController.dispose();
     _lngController.dispose();
+    _mapController?.dispose();
     super.dispose();
   }
 
@@ -126,7 +132,9 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
       country: at(LocationNodeLevel.country),
       state: at(LocationNodeLevel.stateProvince),
       district: at(LocationNodeLevel.districtCounty),
+      mandal: at(LocationNodeLevel.mandalTalukTehsilBlock),
       city: at(LocationNodeLevel.cityTown),
+      village: at(LocationNodeLevel.village),
       area: at(LocationNodeLevel.areaLocality),
     );
   }
@@ -315,6 +323,40 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
       return;
     }
 
+    try {
+      final configs =
+          ref.read(categoryConfigurationsProvider).valueOrNull ?? const [];
+      CategoryConfiguration? selectedConfig;
+      for (final config in configs) {
+        if (config.slug == _catalogCategoryId) {
+          selectedConfig = config;
+          break;
+        }
+      }
+      final requirements = ListingFieldRequirements.from(selectedConfig);
+      final missing = requirements.missing(
+        name: _nameController.text,
+        city: _cityController.text,
+        description: _descriptionController.text,
+        address: _addressController.text,
+        locationId: _locationValue.selectedLocationId,
+        capacity: int.tryParse(_capacityController.text),
+        price: double.tryParse(_priceController.text),
+        photoCount: _photos.length,
+        amenityCount: _amenityIds.length,
+      );
+      if (missing.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Required listing fields: ${missing.join(', ')}'),
+          ),
+        );
+        return;
+      }
+    } catch (_) {
+      // Category metadata is optional; existing form validators still apply.
+    }
+
     final categories = await ref.read(venueCategoriesProvider.future);
     late final VenueCategory dbCategory;
     try {
@@ -483,6 +525,12 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
                         const SizedBox(height: 12),
                         const _InstituteNotice(),
                       ],
+                      const SizedBox(height: 8),
+                      Text(
+                        'Required/optional listing fields come from admin '
+                        'category configuration in Supabase.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
                       const SizedBox(height: 16),
                       TextFormField(
                         key: const Key('owner_listing_name'),
@@ -533,6 +581,8 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
                             _locationValue = value;
                             if (value.city != null) {
                               _cityController.text = value.city!.name;
+                            } else if (value.village != null) {
+                              _cityController.text = value.village!.name;
                             }
                             if (value.state != null) {
                               _stateController.text = value.state!.name;
@@ -706,19 +756,25 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      _OwnerMapPicker(
-                        latitude: _latitude,
-                        longitude: _longitude,
-                        controller: _mapController,
-                        onPicked: (point) {
-                          setState(() {
-                            _latController.text = point.latitude
-                                .toStringAsFixed(4);
-                            _lngController.text = point.longitude
-                                .toStringAsFixed(4);
-                          });
-                        },
-                      ),
+                      if (resolvedMapProvider(
+                            ref.watch(providerRegistryProvider),
+                          )
+                          case final map?)
+                        _OwnerMapPicker(
+                          latitude: _latitude,
+                          longitude: _longitude,
+                          controller: _mapController ??= map.createController(),
+                          tileUrlTemplate: map.tileUrlTemplate,
+                          userAgentPackageName: map.userAgentPackageName,
+                          onPicked: (point) {
+                            setState(() {
+                              _latController.text = point.latitude
+                                  .toStringAsFixed(4);
+                              _lngController.text = point.longitude
+                                  .toStringAsFixed(4);
+                            });
+                          },
+                        ),
                       const SizedBox(height: 16),
                       SwitchListTile(
                         key: const Key('owner_listing_publish_switch'),
@@ -945,12 +1001,16 @@ class _OwnerMapPicker extends StatelessWidget {
     required this.latitude,
     required this.longitude,
     required this.controller,
+    required this.tileUrlTemplate,
+    required this.userAgentPackageName,
     required this.onPicked,
   });
 
   final double latitude;
   final double longitude;
   final MapController controller;
+  final String tileUrlTemplate;
+  final String userAgentPackageName;
   final ValueChanged<LatLng> onPicked;
 
   @override
@@ -975,8 +1035,8 @@ class _OwnerMapPicker extends StatelessWidget {
           ),
           children: [
             TileLayer(
-              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-              userAgentPackageName: 'com.bookmyspace.app',
+              urlTemplate: tileUrlTemplate,
+              userAgentPackageName: userAgentPackageName,
             ),
             MarkerLayer(
               markers: [
