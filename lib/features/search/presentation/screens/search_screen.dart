@@ -346,18 +346,75 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         'Try a different keyword, category, price range or location.',
                   );
                 }
-                return ResponsiveLayoutBuilder(
-                  builder: (context, responsive) {
-                    return GridView.builder(
-                      padding: EdgeInsets.all(responsive.horizontalPadding),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: responsive.resultsColumns,
-                        mainAxisSpacing: responsive.gridSpacing,
-                        crossAxisSpacing: responsive.gridSpacing,
-                        childAspectRatio: responsive.resultsAspectRatio,
-                      ),
-                      itemCount: venues.length,
-                      itemBuilder: (context, i) => VenueCard(venue: venues[i]),
+                final isFunctionHall =
+                    section == CustomerSection.functionHalls;
+                if (!isFunctionHall) {
+                  return ResponsiveLayoutBuilder(
+                    builder: (context, responsive) {
+                      return GridView.builder(
+                        padding: EdgeInsets.all(responsive.horizontalPadding),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: responsive.resultsColumns,
+                          mainAxisSpacing: responsive.gridSpacing,
+                          crossAxisSpacing: responsive.gridSpacing,
+                          childAspectRatio: responsive.resultsAspectRatio,
+                        ),
+                        itemCount: venues.length,
+                        itemBuilder: (context, i) => VenueCard(venue: venues[i]),
+                      );
+                    },
+                  );
+                }
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    final desktop = constraints.maxWidth >= 900;
+                    final list = ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                      itemCount: venues.length + 1,
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        if (index == 0) {
+                          return _FunctionHallResultsHeader(
+                            areaLabel: area.label,
+                            count: venues.length,
+                            query: query,
+                            onSortChanged: (sort) => ref
+                                .read(searchQueryProvider.notifier)
+                                .state = query.copyWith(sortBy: sort),
+                          );
+                        }
+                        return FunctionHallListCard(venue: venues[index - 1]);
+                      },
+                    );
+                    if (!desktop) return list;
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: 220,
+                          child: Card(
+                            margin: const EdgeInsets.fromLTRB(16, 0, 4, 0),
+                            child: Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Filters', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                                  const SizedBox(height: 6),
+                                  Text('Location, price, rating, capacity and amenities', style: Theme.of(context).textTheme.bodySmall),
+                                  const SizedBox(height: 14),
+                                  FilledButton.tonalIcon(
+                                    onPressed: _openFilters,
+                                    icon: const Icon(Icons.tune_rounded),
+                                    label: const Text('All filters'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(child: list),
+                      ],
                     );
                   },
                 );
@@ -371,6 +428,59 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _FunctionHallResultsHeader extends StatelessWidget {
+  const _FunctionHallResultsHeader({
+    required this.areaLabel,
+    required this.count,
+    required this.query,
+    required this.onSortChanged,
+  });
+
+  final String areaLabel;
+  final int count;
+  final VenueSearchQuery query;
+  final ValueChanged<VenueSortBy> onSortChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Function Halls in $areaLabel',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              Text('$count verified results', style: theme.textTheme.bodySmall),
+            ],
+          ),
+        ),
+        DropdownButtonHideUnderline(
+          child: DropdownButton<VenueSortBy>(
+            value: query.sortBy,
+            isDense: true,
+            onChanged: (value) {
+              if (value != null) onSortChanged(value);
+            },
+            items: const [
+              DropdownMenuItem(value: VenueSortBy.relevance, child: Text('Recommended')),
+              DropdownMenuItem(value: VenueSortBy.priceAsc, child: Text('Price: low')),
+              DropdownMenuItem(value: VenueSortBy.priceDesc, child: Text('Price: high')),
+              DropdownMenuItem(value: VenueSortBy.rating, child: Text('Top rated')),
+              DropdownMenuItem(value: VenueSortBy.distance, child: Text('Nearest')),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
