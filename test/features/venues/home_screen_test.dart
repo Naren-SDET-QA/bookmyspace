@@ -91,7 +91,12 @@ void main() {
     expect(find.text('Try again'), findsWidgets);
 
     repo.failRequests = false;
-    await tester.tap(find.text('Try again').first);
+    final retry = find.widgetWithText(FilledButton, 'Try again');
+    expect(retry, findsOneWidget);
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -250));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(retry);
+    await tester.tap(retry);
     await tester.pumpAndSettle();
     expect(find.text('Sunrise Function Hall'), findsOneWidget);
   });
