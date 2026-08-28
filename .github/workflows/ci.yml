@@ -86,6 +86,20 @@ jobs:
           name: release-web
           path: build/web/
 
+  build-ios:
+    name: Build iOS (no codesign)
+    runs-on: macos-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter build ios --release --no-codesign
+
   sql-tests:
     name: SQL Migration Tests
     runs-on: ubuntu-latest
