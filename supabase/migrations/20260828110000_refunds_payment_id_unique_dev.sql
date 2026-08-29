@@ -1,0 +1,43 @@
+-- ============================================================
+-- BookMySpace — DEV-only hardening: refunds.payment_id has no
+-- uniqueness backstop for the reject-refund idempotency guard.
+--
+-- Found while verifying refund idempotency (Phase 16.7A, backend
+-- gaps pass). owner-booking-manage/index.ts's refundRejectedBooking()
+-- guards against issuing a second refund for the same payment with a
+-- plain application-layer check:
+--
+--   select ... from refunds where payment_id = :id  -- 1
+--   if found: return early
+--   insert into refunds (...) values (...)            -- 2
+--
+-- Steps 1 and 2 are not atomic — this is a classic check-then-act
+-- race. Every other idempotency guard already in this codebase is
+-- backed by a real database constraint, not just an application-layer
+-- check: webhook_events unique(provider, event_id), payments
+-- unique(provider, provider_order_id), booking_approval_events
+-- unique(booking_id, action). refunds.payment_id was the one
+-- exception — only an index (idx_refunds_payment, 0004_payments.sql),
+-- never a unique constraint.
+--
+-- In the current call graph this is a narrow, likely-unreachable
+-- window: owner_decide_booking()'s own `select ... for update` row
+-- lock plus its `status not in ('pending','pending_owner_approval')`
+-- check already stop a second concurrent reject on the same booking
+-- from ever reaching refundRejectedBooking() at all (the loser gets
+-- 'invalid transition' before any refund logic runs — see TEST 7).
+-- This migration closes the gap anyway, matching the codebase's own
+-- standing pattern of backing every idempotency guard with a real
+-- constraint rather than relying solely on a read-then-write check,
+-- and turns a theoretical double-refund-to-Razorpay into a normal,
+-- handled unique-violation error instead.
+--
+-- No application logic changed: refundRejectedBooking() already
+-- performs its own existence check first and only reaches the insert
+-- when it found nothing, so this constraint should never actually
+-- fire in the current code path — it is a backstop, not a new
+-- behavior.
+-- ============================================================
+
+alter table public.refunds
+  add constraint refunds_payment_id_unique unique (payment_id);

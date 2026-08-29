@@ -39,6 +39,56 @@ class SupabasePaymentRepository implements PaymentRepository {
   }
 
   @override
+  Future<BookingStatus> selectPayAtVenue({required String bookingId}) async {
+    try {
+      final data = await _client.rpc<Object?>(
+        'select_pay_at_venue',
+        params: {'p_booking_id': bookingId},
+      );
+      final status = data is Map<String, dynamic>
+          ? data['status'] as String? ?? 'pending_owner_approval'
+          : 'pending_owner_approval';
+      return BookingStatus.fromDb(status);
+    } on PostgrestException catch (e) {
+      throw _mapPayAtVenueError(e);
+    } catch (e) {
+      throw app_errors.mapError(e);
+    }
+  }
+
+  /// Maps the stable error strings raised by `select_pay_at_venue` (see
+  /// the Phase 18 migration) to typed exceptions. The RPC never trusts a
+  /// client-supplied amount — it always re-reads `bookings.total_amount`.
+  app_errors.AppException _mapPayAtVenueError(PostgrestException e) {
+    return switch (e.message) {
+      'unauthorized' => const app_errors.AuthException(
+        'You must be signed in to choose a payment method.',
+        code: 'unauthorized',
+      ),
+      'booking_not_found' => const app_errors.NotFoundException(
+        'Booking not found.',
+        code: 'booking_not_found',
+      ),
+      'not_booking_owner' => const app_errors.BusinessException(
+        'This booking does not belong to you.',
+        code: 'not_booking_owner',
+      ),
+      'invalid_booking_state' => const app_errors.BusinessException(
+        'This booking can no longer choose a payment method.',
+        code: 'invalid_booking_state',
+      ),
+      'payment_in_progress' => const app_errors.BusinessException(
+        'A payment for this booking is already in progress.',
+        code: 'payment_in_progress',
+      ),
+      _ => app_errors.ServerException(
+        'Could not select pay at venue.',
+        code: e.message,
+      ),
+    };
+  }
+
+  @override
   Future<BookingStatus> bookingStatus(String bookingId) async {
     try {
       final user = _client.auth.currentUser;

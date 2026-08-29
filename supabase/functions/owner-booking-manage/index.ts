@@ -22,6 +22,12 @@ import { enqueueEmail, userEmail } from '../_shared/email_outbox.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+// Only needed for the reject-with-refund path below. If unset in this
+// environment, refund attempts fail closed (see refundRejectedBooking) and
+// the booking rejection itself still succeeds — the refund can then be
+// retried/actioned manually, matching create-refund's behavior.
+const RAZORPAY_KEY_ID = Deno.env.get('RAZORPAY_KEY_ID') ?? '';
+const RAZORPAY_KEY_SECRET = Deno.env.get('RAZORPAY_KEY_SECRET') ?? '';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -69,6 +75,9 @@ Deno.serve(async (req) => {
     if (body?.action === 'update_status') {
       return await updateBookingStatus(supabase, user.id, body);
     }
+    if (body?.action === 'approve' || body?.action === 'reject') {
+      return await decideBooking(supabase, user.id, body);
+    }
     return json({ error: 'invalid_action' }, 400);
   } catch (e) {
     return json({ error: 'internal', detail: String(e) }, 500);
@@ -96,6 +105,139 @@ async function ownVenue(
     return { venue: null, response: json({ error: 'not_owner' }, 403) };
   }
   return { venue, response: null };
+}
+
+// Mirrors create-refund/index.ts's Razorpay call exactly (same provider,
+// same auth scheme). Duplicated locally rather than imported so this
+// function's dependency surface stays self-contained.
+async function createRazorpayRefund(
+  paymentId: string,
+  amountPaise: number,
+  reason: string,
+): Promise<{ id: string }> {
+  const body = new URLSearchParams({
+    amount: String(amountPaise),
+    notes: reason || 'booking_owner_rejected',
+  });
+  const res = await fetch(
+    `https://api.razorpay.com/v1/payments/${paymentId}/refund`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${btoa(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`)}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body,
+    },
+  );
+  if (!res.ok) {
+    throw new Error(`razorpay refund error ${res.status}: ${await res.text()}`);
+  }
+  return res.json();
+}
+
+// Verified-fix: owner_decide_booking() (SQL) correctly marks the booking
+// 'rejected' but — being plpgsql — cannot call the Razorpay HTTP API, so no
+// refund was ever issued on rejection. This runs after a successful reject
+// decision and issues the refund the same way create-refund does for
+// customer-initiated refunds, then links it back to the approval event the
+// RPC already inserted. Refund failure here does NOT undo the rejection —
+// the booking is correctly rejected either way — but is reported in the
+// response so the caller can prompt for a manual refund.
+async function refundRejectedBooking(
+  supabase: SupabaseClient,
+  bookingId: string,
+  approvalEventId: string | null,
+): Promise<{ refund_status: string; refund_id?: string; detail?: string }> {
+  const { data: payment, error: paymentError } = await supabase
+    .from('payments')
+    .select('id, provider_payment_id, amount, status, method')
+    .eq('booking_id', bookingId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (paymentError || !payment) {
+    return { refund_status: 'not_applicable', detail: 'no payment found for booking' };
+  }
+  if (payment.method === 'offline') {
+    return { refund_status: 'not_applicable', detail: 'offline payment — settle with customer directly' };
+  }
+  if (payment.status !== 'captured' || !payment.provider_payment_id) {
+    return { refund_status: 'not_applicable', detail: `payment status is '${payment.status}', nothing to refund` };
+  }
+
+  const { data: existingRefund } = await supabase
+    .from('refunds')
+    .select('id, status')
+    .eq('payment_id', payment.id)
+    .maybeSingle();
+  if (existingRefund) {
+    return { refund_status: existingRefund.status, refund_id: existingRefund.id, detail: 'refund already existed for this payment' };
+  }
+
+  if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
+    return { refund_status: 'failed', detail: 'RAZORPAY_KEY_ID/RAZORPAY_KEY_SECRET not configured in this environment' };
+  }
+
+  const { data: initiatedRefund, error: initiatedError } = await supabase
+    .from('refunds')
+    .insert({
+      payment_id: payment.id,
+      booking_id: bookingId,
+      amount: Number(payment.amount),
+      reason: 'owner_rejected_booking',
+      status: 'requested',
+    })
+    .select('id')
+    .single();
+  if (initiatedError || !initiatedRefund) {
+    return { refund_status: 'failed', detail: initiatedError?.message ?? 'refund_insert_failed' };
+  }
+
+  try {
+    const refund = await createRazorpayRefund(
+      payment.provider_payment_id,
+      Math.round(Number(payment.amount) * 100),
+      'owner_rejected_booking',
+    );
+    await supabase
+      .from('refunds')
+      .update({ status: 'processed', provider_refund_id: refund.id, processed_at: new Date().toISOString() })
+      .eq('id', initiatedRefund.id);
+    await supabase.from('payments').update({ status: 'refunded' }).eq('id', payment.id);
+    if (approvalEventId) {
+      await supabase.from('booking_approval_events').update({ refund_id: initiatedRefund.id }).eq('id', approvalEventId);
+    }
+    return { refund_status: 'processed', refund_id: initiatedRefund.id };
+  } catch (e) {
+    // Refund row stays 'requested' so it's visible for manual follow-up
+    // (matches create-refund's approach of never silently losing a
+    // refund request).
+    return { refund_status: 'failed', refund_id: initiatedRefund.id, detail: String(e) };
+  }
+}
+
+async function decideBooking(supabase: SupabaseClient, userId: string, body: Record<string, unknown>): Promise<Response> {
+  const bookingId = String(body.booking_id ?? '').trim();
+  const decision = body.action === 'approve' ? 'approve' : 'reject';
+  if (!bookingId) return json({ error: 'missing_fields' }, 400);
+  const { data, error } = await supabase.rpc('owner_decide_booking', {
+    p_booking_id: bookingId,
+    p_decision: decision,
+  });
+  if (error) {
+    if (error.code === '42501') return json({ error: 'not_owner' }, 403);
+    if (error.code === '23P01') return json({ error: 'slot_unavailable' }, 409);
+    if (error.code === '55000') return json({ error: 'invalid_transition' }, 409);
+    return json({ error: 'decision_failed' }, 500);
+  }
+  const result = (data ?? { booking_id: bookingId, status: decision === 'approve' ? 'confirmed' : 'rejected' }) as Record<string, unknown>;
+  if (decision === 'reject') {
+    const approvalEventId = typeof result.approval_event_id === 'string' ? result.approval_event_id : null;
+    const refundResult = await refundRejectedBooking(supabase, bookingId, approvalEventId);
+    return json({ ...result, ...refundResult }, 200);
+  }
+  return json(result, 200);
 }
 
 async function createOfflineBooking(

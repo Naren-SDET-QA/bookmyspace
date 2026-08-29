@@ -48,4 +48,18 @@ abstract interface class BookingRepository {
 
   /// Cancels a booking still in `pending` status.
   Future<void> cancelBooking(String bookingId);
+
+  /// Applies promo [code] to [bookingId] (server-validated: expiry,
+  /// minimum amount, usage limits, discount cap — the discount is
+  /// always computed on the server, never on the client). [bookingId]
+  /// must belong to the signed-in user and still be `pending`.
+  /// Returns the booking with its updated `discountAmount`/
+  /// `totalAmount`. Calling again with the same code is a no-op;
+  /// calling with a different code replaces the prior one.
+  Future<Booking> applyCoupon({required String bookingId, required String code});
+
+  /// Clears any coupon applied to [bookingId], restoring the
+  /// undiscounted total. [bookingId] must belong to the signed-in user
+  /// and still be `pending`.
+  Future<Booking> removeCoupon(String bookingId);
 }

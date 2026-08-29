@@ -110,6 +110,7 @@ class AppLocalizations {
   String get parking => _t('parking');
   String get taxRate => _t('taxRate');
   String get basePrice => _t('basePrice');
+  String get discount => _t('discount');
   String get viewOnMap => _t('viewOnMap');
   String get gallery => _t('gallery');
   String get explore => _t('explore');
@@ -188,6 +189,12 @@ class AppLocalizations {
   String get myBookings => _t('myBookings');
   String get noSlotsForDate => _t('noSlotsForDate');
   String get total => _t('total');
+  String get promoCode => _t('promoCode');
+  String get promoCodeHint => _t('promoCodeHint');
+  String get promoCodeApplied => _t('promoCodeApplied');
+  String get remove => _t('remove');
+  String get paymentMethod => _t('paymentMethod');
+  String get payAtVenue => _t('payAtVenue');
   String get bookingConfirmed => _t('bookingConfirmed');
   String get noBookings => _t('noBookings');
   String get noBookingsMessage => _t('noBookingsMessage');
@@ -234,6 +241,9 @@ class AppLocalizations {
   String get statusCancelled => _t('statusCancelled');
   String get statusRefunded => _t('statusRefunded');
   String get statusNoShow => _t('statusNoShow');
+  String get statusPendingOwnerApproval =>
+      _t('statusPendingOwnerApproval');
+  String get statusRejected => _t('statusRejected');
   String get slotBooked => _t('slotBooked');
   String get slotUnavailable => _t('slotUnavailable');
   String get slotBlocked => _t('slotBlocked');
@@ -261,6 +271,14 @@ class AppLocalizations {
   String get noOwnerVenuesMessage => _t('noOwnerVenuesMessage');
   String get completeBooking => _t('completeBooking');
   String get markNoShow => _t('markNoShow');
+  String get approveBooking => _t('approveBooking');
+  String get rejectBooking => _t('rejectBooking');
+  String get approveBookingConfirm => _t('approveBookingConfirm');
+  String get rejectBookingConfirm => _t('rejectBookingConfirm');
+  String get bookingApproved => _t('bookingApproved');
+  String get bookingRejected => _t('bookingRejected');
+  String get bookingRejectedRefundRequested =>
+      _t('bookingRejectedRefundRequested');
 
   // Profile / Auth
   String get login => _t('login');
@@ -417,6 +435,7 @@ class AppLocalizations {
       'parking': 'Parking',
       'taxRate': 'GST',
       'basePrice': 'Base price',
+      'discount': 'Discount',
       'viewOnMap': 'View on map',
       'gallery': 'Gallery',
       'explore': 'Explore',
@@ -482,6 +501,8 @@ class AppLocalizations {
       'idNumber': 'ID number (Aadhaar / Passport)',
       'payment': 'Payment',
       'payNow': 'Pay now',
+      'paymentMethod': 'Payment method',
+      'payAtVenue': 'Pay at venue',
       'bookAgain': 'Book again',
       'paymentSuccess': 'Payment successful',
       'paymentFailed': 'Payment failed',
@@ -497,6 +518,10 @@ class AppLocalizations {
       'myBookings': 'My bookings',
       'noSlotsForDate': 'No slots available on this date',
       'total': 'Total',
+      'promoCode': 'Promo code',
+      'promoCodeHint': 'Enter promo code',
+      'promoCodeApplied': 'Promo applied',
+      'remove': 'Remove',
       'bookingConfirmed': 'Booking confirmed —',
       'noBookings': 'No bookings yet',
       'noBookingsMessage': 'When you book a venue, it will show up here.',
@@ -544,6 +569,8 @@ class AppLocalizations {
       'statusCancelled': 'Cancelled',
       'statusRefunded': 'Refunded',
       'statusNoShow': 'No show',
+      'statusPendingOwnerApproval': 'Awaiting approval',
+      'statusRejected': 'Rejected',
       'slotBooked': 'Booked',
       'slotUnavailable': 'Unavailable',
       'slotBlocked': 'Blocked',
@@ -572,6 +599,15 @@ class AppLocalizations {
           'You need at least one venue before managing bookings.',
       'completeBooking': 'Mark completed',
       'markNoShow': 'Mark no-show',
+      'approveBooking': 'Approve',
+      'rejectBooking': 'Reject',
+      'approveBookingConfirm':
+          'Approve this booking? The customer will be notified and the booking confirmed.',
+      'rejectBookingConfirm':
+          "Reject this booking? If the customer paid online, a refund will be requested automatically.",
+      'bookingApproved': 'Booking approved',
+      'bookingRejected': 'Booking rejected',
+      'bookingRejectedRefundRequested': 'Booking rejected. Refund requested.',
       'login': 'Log in',
       'signUp': 'Sign up',
       'logout': 'Log out',
@@ -717,6 +753,7 @@ class AppLocalizations {
       'parking': 'పార్కింగ్',
       'taxRate': 'GST',
       'basePrice': 'ప్రాథమిక ధర',
+      'discount': 'తగ్గింపు',
       'viewOnMap': 'మ్యాప్‌లో చూడండి',
       'gallery': 'గ్యాలరీ',
       'explore': 'అన్వేషించండి',
@@ -782,6 +819,8 @@ class AppLocalizations {
       'idNumber': 'ఐడి నంబర్ (ఆధార్ / పాస్‌పోర్ట్)',
       'payment': 'చెల్లింపు',
       'payNow': 'ఇప్పుడే చెల్లించండి',
+      'paymentMethod': 'చెల్లింపు విధానం',
+      'payAtVenue': 'వేదిక వద్ద చెల్లించండి',
       'bookAgain': 'మళ్లీ బుక్ చేయండి',
       'paymentSuccess': 'చెల్లింపు విజయవంతమైంది',
       'paymentFailed': 'చెల్లింపు విఫలమైంది',
@@ -799,6 +838,10 @@ class AppLocalizations {
       'myBookings': 'నా బుకింగ్స్',
       'noSlotsForDate': 'ఈ తేదీన స్లాట్‌లు అందుబాటులో లేవు',
       'total': 'మొత్తం',
+      'promoCode': 'ప్రోమో కోడ్',
+      'promoCodeHint': 'ప్రోమో కోడ్ నమోదు చేయండి',
+      'promoCodeApplied': 'ప్రోమో వర్తించబడింది',
+      'remove': 'తీసివేయి',
       'bookingConfirmed': 'బుకింగ్ నిర్ధారించబడింది —',
       'noBookings': 'ఇంకా బుకింగ్స్ లేవు',
       'noBookingsMessage':
@@ -847,6 +890,8 @@ class AppLocalizations {
       'statusCancelled': 'రద్దు చేయబడింది',
       'statusRefunded': 'వాపసు చేయబడింది',
       'statusNoShow': 'నో-షో',
+      'statusPendingOwnerApproval': 'ఆమోదం కోసం వేచి ఉంది',
+      'statusRejected': 'తిరస్కరించబడింది',
       'slotBooked': 'బుక్ చేయబడింది',
       'slotUnavailable': 'అందుబాటులో లేదు',
       'slotBlocked': 'బ్లాక్ చేయబడింది',
@@ -875,6 +920,16 @@ class AppLocalizations {
           'బుకింగ్స్ నిర్వహించడానికి మీకు కనీసం ఒక వేదిక అవసరం.',
       'completeBooking': 'పూర్తి చేసినట్లు గుర్తించండి',
       'markNoShow': 'నో-షో గుర్తించండి',
+      'approveBooking': 'ఆమోదించండి',
+      'rejectBooking': 'తిరస్కరించండి',
+      'approveBookingConfirm':
+          'ఈ బుకింగ్‌ను ఆమోదించాలా? కస్టమర్‌కు తెలియజేయబడుతుంది మరియు బుకింగ్ నిర్ధారించబడుతుంది.',
+      'rejectBookingConfirm':
+          'ఈ బుకింగ్‌ను తిరస్కరించాలా? కస్టమర్ ఆన్‌లైన్‌లో చెల్లించి ఉంటే, రీఫండ్ స్వయంచాలకంగా అభ్యర్థించబడుతుంది.',
+      'bookingApproved': 'బుకింగ్ ఆమోదించబడింది',
+      'bookingRejected': 'బుకింగ్ తిరస్కరించబడింది',
+      'bookingRejectedRefundRequested':
+          'బుకింగ్ తిరస్కరించబడింది. రీఫండ్ అభ్యర్థించబడింది.',
       'login': 'లాగిన్',
       'signUp': 'సైన్ అప్',
       'logout': 'లాగ్ అవుట్',
@@ -962,6 +1017,10 @@ class AppLocalizations {
       'venues': 'स्थान',
       'payment': 'भुगतान',
       'payNow': 'अभी भुगतान करें',
+      'paymentMethod': 'भुगतान का तरीका',
+      'onlinePayment': 'ऑनलाइन भुगतान (Razorpay)',
+      'payAtVenue': 'स्थान पर भुगतान करें',
+      'confirmBooking': 'बुकिंग की पुष्टि करें',
       'bookAgain': 'फिर बुक करें',
       'checkIn': 'चेक-इन',
       'courses': 'कोर्स',

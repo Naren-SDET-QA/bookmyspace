@@ -10,9 +10,14 @@ class MockOwnerBookingRepository implements OwnerBookingRepository {
 
   bool failCreateOffline = false;
   bool failUpdateStatus = false;
+  bool failDecideBooking = false;
+  Object? decideBookingError;
+  String? decideBookingRefundStatus;
   Booking? lastCreated;
   String? lastUpdatedBookingId;
   OwnerBookingAction? lastAction;
+  String? lastDecidedBookingId;
+  OwnerBookingDecision? lastDecision;
 
   @override
   Future<List<Booking>> myVenueBookings() async => List.of(_bookings);
@@ -93,5 +98,53 @@ class MockOwnerBookingRepository implements OwnerBookingRepository {
       metadata: current.metadata,
     );
     return _bookings[index];
+  }
+
+  @override
+  Future<BookingDecisionOutcome> decideBooking(
+    String bookingId,
+    OwnerBookingDecision decision,
+  ) async {
+    lastDecidedBookingId = bookingId;
+    lastDecision = decision;
+    if (failDecideBooking) {
+      throw decideBookingError ?? Exception('decide failed');
+    }
+    final index = _bookings.indexWhere((b) => b.id == bookingId);
+    if (index < 0) throw Exception('Booking not found: $bookingId');
+    final next = decision == OwnerBookingDecision.approve
+        ? BookingStatus.confirmed
+        : BookingStatus.rejected;
+    final current = _bookings[index];
+    final updated = Booking(
+      id: current.id,
+      bookingRef: current.bookingRef,
+      venueId: current.venueId,
+      slotId: current.slotId,
+      bookDate: current.bookDate,
+      startTime: current.startTime,
+      endTime: current.endTime,
+      status: next,
+      amount: current.amount,
+      taxAmount: current.taxAmount,
+      totalAmount: current.totalAmount,
+      venueName: current.venueName,
+      venueCity: current.venueCity,
+      slotLabel: current.slotLabel,
+      customerName: current.customerName,
+      customerPhone: current.customerPhone,
+      isOffline: current.isOffline,
+      paymentMethod: current.paymentMethod,
+      paymentRef: current.paymentRef,
+      paidAt: current.paidAt,
+      metadata: current.metadata,
+    );
+    _bookings[index] = updated;
+    return BookingDecisionOutcome(
+      booking: updated,
+      refundStatus: decision == OwnerBookingDecision.reject
+          ? decideBookingRefundStatus
+          : null,
+    );
   }
 }

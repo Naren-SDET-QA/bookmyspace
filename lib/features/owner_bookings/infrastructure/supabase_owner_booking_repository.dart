@@ -126,6 +126,44 @@ class SupabaseOwnerBookingRepository implements OwnerBookingRepository {
     }
   }
 
+  @override
+  Future<BookingDecisionOutcome> decideBooking(
+    String bookingId,
+    OwnerBookingDecision decision,
+  ) async {
+    try {
+      final response = await _client.functions.invoke(
+        'owner-booking-manage',
+        body: {'action': decision.dbValue, 'booking_id': bookingId},
+      );
+      final data = response.data;
+      if (data is! Map<String, dynamic>) {
+        throw const app_errors.ServerException(
+          'Owner booking service returned an empty response.',
+          code: 'empty_owner_booking_response',
+        );
+      }
+      // The decision endpoint returns the RPC's lightweight result
+      // ({status, booking_id, order_id?, approval_event_id, refund_status?}),
+      // not a full booking row (unlike update_status), so re-fetch the
+      // booking the same way myVenueBookings() does to hand the UI a
+      // fully-populated Booking.
+      final row = await _client
+          .from('bookings')
+          .select(_bookingSelect)
+          .eq('id', bookingId)
+          .single();
+      return BookingDecisionOutcome(
+        booking: Booking.fromJson(row),
+        refundStatus: data['refund_status'] as String?,
+      );
+    } on FunctionException catch (e) {
+      throw _mapFunctionException(e);
+    } catch (e) {
+      throw app_errors.mapError(e);
+    }
+  }
+
   app_errors.AppException _mapFunctionException(FunctionException e) {
     final details = e.details;
     final error = details is Map<String, dynamic>

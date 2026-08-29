@@ -282,10 +282,12 @@ class _InvoiceBody extends StatelessWidget {
     return switch (status) {
       BookingStatus.held => l10n.statusHeld,
       BookingStatus.pending => l10n.statusPending,
+      BookingStatus.pendingOwnerApproval => l10n.statusPending,
       BookingStatus.confirmed => l10n.statusConfirmed,
       BookingStatus.completed => l10n.statusCompleted,
       BookingStatus.cancelled => l10n.statusCancelled,
       BookingStatus.refunded => l10n.statusRefunded,
+      BookingStatus.rejected => l10n.statusCancelled,
       BookingStatus.noShow => l10n.statusNoShow,
     };
   }

@@ -15,6 +15,30 @@ enum OwnerBookingAction {
   };
 }
 
+/// An owner's decision on a booking awaiting their sign-off
+/// (`BookingStatus.pendingOwnerApproval` — the customer has already paid).
+enum OwnerBookingDecision {
+  approve,
+  reject;
+
+  String get dbValue => switch (this) {
+    OwnerBookingDecision.approve => 'approve',
+    OwnerBookingDecision.reject => 'reject',
+  };
+}
+
+/// Outcome of [OwnerBookingRepository.decideBooking].
+///
+/// `refundStatus` mirrors the server's `refund_status` field on a reject
+/// decision (e.g. `requested`, `not_applicable`) and is null for an
+/// approve decision.
+class BookingDecisionOutcome {
+  const BookingDecisionOutcome({required this.booking, this.refundStatus});
+
+  final Booking booking;
+  final String? refundStatus;
+}
+
 /// Contract for owner-side booking management.
 ///
 /// Reads run through RLS (owners can select bookings of their venues); all
@@ -38,4 +62,14 @@ abstract interface class OwnerBookingRepository {
 
   /// Applies a server-validated status transition to [bookingId].
   Future<Booking> updateStatus(String bookingId, OwnerBookingAction action);
+
+  /// Approves or rejects a booking awaiting owner sign-off
+  /// (`status == pending_owner_approval`). Approve moves it to `confirmed`
+  /// (the server also creates a `booking_orders` row); reject moves it to
+  /// `rejected` and, for a captured online payment, triggers the existing
+  /// server-side refund flow.
+  Future<BookingDecisionOutcome> decideBooking(
+    String bookingId,
+    OwnerBookingDecision decision,
+  );
 }

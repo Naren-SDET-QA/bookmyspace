@@ -1,0 +1,36 @@
+-- ============================================================
+-- BookMySpace — DEV-only fix: missing base table GRANT for
+-- booking_orders / booking_approval_events.
+--
+-- Found while re-verifying RLS (Phase 16.7A, TEST 11) against a
+-- real local Supabase stack: `select ... from public.booking_orders`
+-- as the `authenticated` role failed with "permission denied for
+-- table booking_orders", even though the intended RLS policies
+-- (booking_orders_customer_read / _owner_read / _admin_read, from
+-- 20260827122210_booking_owner_approval_token_flow.sql) already
+-- correctly scope which rows each caller may see.
+--
+-- Root cause: an RLS policy is necessary but not sufficient in
+-- Postgres — a role also needs the underlying SQL-standard table
+-- privilege (GRANT SELECT) before RLS is even evaluated. The
+-- migration that created booking_orders and booking_approval_events
+-- enabled RLS and defined SELECT policies for `authenticated`, but
+-- never issued the accompanying `grant select ... to authenticated`.
+-- Every functional test that touched these tables did so through
+-- owner_decide_booking, a SECURITY DEFINER function that runs as
+-- its owning role and bypasses grants entirely — so the gap stayed
+-- invisible until a direct SELECT was attempted as the real
+-- `authenticated` role (TEST 11).
+--
+-- Fix: grant SELECT ONLY — matching the read-only policies already
+-- defined. Neither table has an INSERT/UPDATE/DELETE policy for
+-- authenticated; both are populated exclusively by the SECURITY
+-- DEFINER owner_decide_booking() function, and that stays true here.
+-- This does not widen WHICH rows anyone can see (RLS still fully
+-- governs that, unchanged) and does not touch owner_decide_booking
+-- or any other booking logic — it only unblocks the read path the
+-- existing policies already describe.
+-- ============================================================
+
+grant select on public.booking_orders to authenticated;
+grant select on public.booking_approval_events to authenticated;

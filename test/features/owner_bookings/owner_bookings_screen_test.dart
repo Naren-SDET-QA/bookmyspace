@@ -60,6 +60,7 @@ Booking _booking({
   String id = 'b1',
   BookingStatus status = BookingStatus.pending,
   bool offline = true,
+  String paymentMethod = '',
 }) {
   return Booking(
     id: id,
@@ -78,6 +79,7 @@ Booking _booking({
     customerName: offline ? 'Ravi Kumar' : '',
     customerPhone: offline ? '9876543210' : '',
     isOffline: offline,
+    paymentMethod: paymentMethod,
   );
 }
 
@@ -148,6 +150,108 @@ void main() {
     expect(find.text('Mark completed'), findsOneWidget);
   });
 
+  testWidgets(
+    'pending_owner_approval booking shows Approve/Reject and approving confirms it',
+    (tester) async {
+      final bookingRepo = MockOwnerBookingRepository(
+        bookings: [_booking(status: BookingStatus.pendingOwnerApproval)],
+      );
+      final ownerVenueRepo = MockOwnerVenueRepository();
+
+      await tester.pumpWidget(_app(bookingRepo, ownerVenueRepo));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Approve'), findsOneWidget);
+      expect(find.text('Reject'), findsOneWidget);
+      // Confirm/Cancel actions are not offered while awaiting owner approval.
+      expect(find.text('Confirmed'), findsNothing);
+      expect(find.text('Cancel booking'), findsNothing);
+
+      await tester.tap(find.text('Approve'));
+      await tester.pumpAndSettle();
+
+      // Confirmation dialog title + button both read "Approve".
+      expect(find.text('Approve'), findsNWidgets(3));
+      await tester.tap(find.text('Approve').last);
+      await tester.pumpAndSettle();
+
+      expect(bookingRepo.lastDecidedBookingId, 'b1');
+      expect(bookingRepo.lastDecision, OwnerBookingDecision.approve);
+      expect(find.text('Booking approved'), findsOneWidget);
+      // The booking is now confirmed, so Approve/Reject disappear.
+      expect(find.text('Approve'), findsNothing);
+      expect(find.text('Reject'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'rejecting a pending_owner_approval booking with a refund shows the refund message',
+    (tester) async {
+      final bookingRepo = MockOwnerBookingRepository(
+        bookings: [_booking(status: BookingStatus.pendingOwnerApproval)],
+      )..decideBookingRefundStatus = 'initiated';
+      final ownerVenueRepo = MockOwnerVenueRepository();
+
+      await tester.pumpWidget(_app(bookingRepo, ownerVenueRepo));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Reject'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Reject'), findsNWidgets(3));
+      await tester.tap(find.text('Reject').last);
+      await tester.pumpAndSettle();
+
+      expect(bookingRepo.lastDecidedBookingId, 'b1');
+      expect(bookingRepo.lastDecision, OwnerBookingDecision.reject);
+      expect(find.text('Booking rejected. Refund requested.'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'rejecting an unpaid pending_owner_approval booking shows the plain rejected message',
+    (tester) async {
+      final bookingRepo = MockOwnerBookingRepository(
+        bookings: [_booking(status: BookingStatus.pendingOwnerApproval)],
+      );
+      final ownerVenueRepo = MockOwnerVenueRepository();
+
+      await tester.pumpWidget(_app(bookingRepo, ownerVenueRepo));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Reject'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Reject').last);
+      await tester.pumpAndSettle();
+
+      expect(bookingRepo.lastDecision, OwnerBookingDecision.reject);
+      expect(find.text('Booking rejected'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'a failed decision shows the error and leaves status unchanged',
+    (tester) async {
+      final bookingRepo = MockOwnerBookingRepository(
+        bookings: [_booking(status: BookingStatus.pendingOwnerApproval)],
+      )..failDecideBooking = true;
+      final ownerVenueRepo = MockOwnerVenueRepository();
+
+      await tester.pumpWidget(_app(bookingRepo, ownerVenueRepo));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Approve'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Approve').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Exception: decide failed'), findsOneWidget);
+      // Buttons remain because the status never changed.
+      expect(find.text('Approve'), findsOneWidget);
+      expect(find.text('Reject'), findsOneWidget);
+    },
+  );
+
   testWidgets('shows empty state when the owner has no venues', (tester) async {
     final bookingRepo = MockOwnerBookingRepository();
     final ownerVenueRepo = MockOwnerVenueRepository();
@@ -162,4 +266,46 @@ void main() {
     );
     expect(find.text('New offline booking'), findsNothing);
   });
+
+  testWidgets(
+    'shows a Pay at venue chip for a customer booking that chose it, and '
+    'no chip for one that did not',
+    (tester) async {
+      final bookingRepo = MockOwnerBookingRepository(
+        bookings: [
+          _booking(
+            id: 'b1',
+            offline: false,
+            paymentMethod: 'pay_at_venue',
+            status: BookingStatus.pendingOwnerApproval,
+          ),
+          _booking(id: 'b2', offline: false, status: BookingStatus.confirmed),
+        ],
+      );
+      final ownerVenueRepo = MockOwnerVenueRepository()
+        ..venues.add(
+          const Venue(
+            id: 'v1',
+            name: 'Sunrise Function Hall',
+            city: 'Hyderabad',
+            state: 'Telangana',
+            latitude: 17.38,
+            longitude: 78.48,
+            capacity: 500,
+            pricingBaseAmount: 35000,
+            category: VenueCategory(
+              id: 'cat-1',
+              slug: 'function_hall',
+              name: 'Function Hall',
+            ),
+          ),
+        );
+
+      await tester.pumpWidget(_app(bookingRepo, ownerVenueRepo));
+      await tester.pumpAndSettle();
+
+      // Only the booking that actually chose pay-at-venue shows the chip.
+      expect(find.text('Pay at venue'), findsOneWidget);
+    },
+  );
 }

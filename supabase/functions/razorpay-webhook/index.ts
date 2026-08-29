@@ -238,33 +238,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (booking.status !== 'confirmed') {
-      const { error: confirmError } = await supabase.rpc('confirm_booking', {
-        p_booking_id: payment.booking_id,
-        p_payment_ref: paymentId,
-      });
-      if (confirmError) {
-        await releaseEvent();
-        return new Response(JSON.stringify({ error: 'booking_confirmation_failed' }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-    }
-
-    const { data: confirmedBooking, error: confirmedBookingError } = await supabase
-      .from('bookings')
-      .select('status')
-      .eq('id', payment.booking_id)
-      .single();
-    if (confirmedBookingError || confirmedBooking?.status !== 'confirmed') {
-      await releaseEvent();
-      return new Response(JSON.stringify({ error: 'booking_confirmation_failed' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
     const { error: paymentUpdateError } = await supabase
       .from('payments')
       .update({ status: 'captured', provider_payment_id: paymentId })
@@ -277,17 +250,42 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Verified-fix: previously this handler updated `payments` only and
+    // returned the string 'pending_owner_approval' without ever writing it
+    // to `bookings.status`. The booking's real status never advanced, so
+    // the owner-approval queue never received it even though the customer
+    // and owner were told the booking was confirmed. This update is the
+    // actual state transition; `.eq('status', 'pending')` keeps it
+    // idempotent against webhook redelivery. A 23P01 here means the
+    // bookings_no_overlap exclusion constraint rejected the transition
+    // because another booking already occupies this slot in
+    // pending_owner_approval/confirmed — acquire_booking_hold should have
+    // prevented this upstream, so treat it as a conflict needing manual
+    // reconciliation rather than silently continuing.
+    const { error: bookingStatusError } = await supabase
+      .from('bookings')
+      .update({ status: 'pending_owner_approval' })
+      .eq('id', payment.booking_id)
+      .eq('status', 'pending');
+    if (bookingStatusError) {
+      await releaseEvent();
+      return new Response(JSON.stringify({ error: 'booking_status_conflict', detail: bookingStatusError.message }), {
+        status: 409,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const customer = await userEmail(supabase, booking.user_id);
     if (customer) {
       await enqueueEmail(supabase, {
-        eventKey: `booking.confirmed.customer.${payment.booking_id}`,
-        eventType: 'booking.confirmed',
+        eventKey: `booking.pending_owner_approval.customer.${payment.booking_id}`,
+        eventType: 'booking.pending_owner_approval',
         recipientEmail: customer.email,
         recipientName: customer.name,
         bookingId: payment.booking_id,
         paymentId: payment.id,
-        templateName: 'booking-confirmed',
-        payload: { title: 'Booking confirmed', message: 'Your payment was verified and your booking is confirmed.', booking_ref: booking.booking_ref, amount: booking.total_amount },
+        templateName: 'booking-pending-owner-approval',
+        payload: { title: 'Payment received — awaiting venue approval', message: 'Your payment was verified. The venue owner will approve or reject this booking shortly.', booking_ref: booking.booking_ref, amount: booking.total_amount },
       });
       await enqueueEmail(supabase, {
         eventKey: `payment.receipt.customer.${payment.id}`,
@@ -306,14 +304,14 @@ Deno.serve(async (req) => {
       if (organization?.owner_user_id) {
         const owner = await userEmail(supabase, organization.owner_user_id);
         if (owner) await enqueueEmail(supabase, {
-          eventKey: `booking.received.owner.${payment.booking_id}`,
-          eventType: 'booking.received',
+          eventKey: `booking.awaiting_approval.owner.${payment.booking_id}`,
+          eventType: 'booking.awaiting_approval',
           recipientEmail: owner.email,
           recipientName: owner.name,
           bookingId: payment.booking_id,
           paymentId: payment.id,
-          templateName: 'owner-new-booking',
-          payload: { title: 'New booking received', message: 'A paid booking was confirmed for your listing.', booking_ref: booking.booking_ref, amount: booking.total_amount },
+          templateName: 'owner-booking-awaiting-approval',
+          payload: { title: 'New booking awaiting your approval', message: 'A customer has paid the booking token. Approve or reject it from your dashboard.', booking_ref: booking.booking_ref, amount: booking.total_amount },
         });
       }
     }
@@ -326,9 +324,9 @@ Deno.serve(async (req) => {
     if (confirmedBooking?.user_id) {
       await supabase.from('notifications').insert({
         user_id: confirmedBooking.user_id,
-        title: 'Booking confirmed',
-        body: `Your booking ${confirmedBooking.booking_ref ?? ''} is confirmed.`,
-        type: 'booking_confirmed',
+        title: 'Payment received',
+        body: `Your payment for booking ${confirmedBooking.booking_ref ?? ''} was received. Awaiting venue approval.`,
+        type: 'payment_received',
         data: { booking_id: payment.booking_id },
       });
     }
@@ -342,7 +340,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ status: 'confirmed' }), {
+    return new Response(JSON.stringify({ status: 'pending_owner_approval' }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

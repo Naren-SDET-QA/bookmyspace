@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../admin/presentation/admin_settings_providers.dart';
+import '../../../admin/domain/admin_settings.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -8,6 +10,7 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_network_image.dart';
+import '../../../../core/widgets/configurable_banner.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/responsive_layout.dart';
@@ -23,6 +26,9 @@ import '../../../venues/presentation/venue_providers.dart';
 import '../../../venues/presentation/widgets/venue_badges.dart';
 import '../../domain/context_aware_help.dart';
 import '../../domain/customer_section_catalog.dart';
+import '../../domain/home_category_catalog.dart';
+import '../../domain/category_group.dart';
+import '../../domain/bookmyspace_module.dart';
 import '../../../ai/domain/voice_locale.dart';
 import '../../../../core/modular/feature_id.dart';
 import '../../../../core/modular/feature_providers.dart';
@@ -31,7 +37,9 @@ import '../../../search/domain/ai_search_intent.dart';
 import '../../../venues/domain/category_configuration.dart';
 import '../../../venues/domain/category_discovery.dart';
 import '../../../venues/presentation/category_configuration_providers.dart';
+import '../../../promotions/presentation/widgets/promotion_strip.dart';
 import '../customer_section_providers.dart';
+import '../customer_category_preferences_providers.dart';
 import '../widgets/category_carousel.dart';
 import '../widgets/home_discovery_widgets.dart';
 
@@ -153,9 +161,96 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   List<MainHomeSection> _visibleHomeSections(WidgetRef ref) {
     final ids = ref.watch(featureRegistryProvider).visibleHomeSections();
+    final preferences = ref.watch(customerCategoryPreferencesProvider);
     return MainHomeSection.values
-        .where((section) => ids.contains(section.id))
+        .where(
+          (section) =>
+              ids.contains(section.id) && preferences.isEnabled(section.id),
+        )
         .toList();
+  }
+
+  List<HomeCategoryItem> _visibleConfiguredHomeCategories(WidgetRef ref) {
+    final configured = ref.watch(categoryConfigurationsProvider).valueOrNull;
+    final fallback = configured == null || configured.isEmpty
+        ? const [
+            CategoryConfiguration(
+              id: 'lodge_rooms',
+              slug: 'lodge_rooms',
+              name: 'Stay',
+              sectionId: 'lodge_rooms',
+              icon: '🏨',
+              homeVisible: true,
+              sortOrder: 10,
+            ),
+            CategoryConfiguration(
+              id: 'function_halls',
+              slug: 'function_halls',
+              name: 'Spaces & Events',
+              sectionId: 'function_halls',
+              icon: '🏛️',
+              homeVisible: true,
+              sortOrder: 20,
+            ),
+            CategoryConfiguration(
+              id: 'institutes_classes',
+              slug: 'institutes_classes',
+              name: 'Learning & Classes',
+              sectionId: 'institutes_classes',
+              icon: '🎓',
+              homeVisible: true,
+              sortOrder: 30,
+            ),
+            CategoryConfiguration(
+              id: 'pg_hostels',
+              slug: 'pg_hostels',
+              name: 'PG / Hostels',
+              sectionId: 'pg_hostels',
+              icon: '🏠',
+              homeVisible: true,
+              sortOrder: 40,
+            ),
+          ]
+        : configured;
+    final preferences = ref.watch(customerCategoryPreferencesProvider);
+    final featureVisibleIds = ref
+        .watch(featureRegistryProvider)
+        .visibleHomeSections()
+        .toSet();
+    final mainSectionIds = MainHomeSection.values.map((s) => s.id).toSet();
+    final groups = CategoryGroup.fromConfigurations(fallback);
+    return groups
+        .where(
+          (group) =>
+              !mainSectionIds.contains(group.id) ||
+              featureVisibleIds.contains(group.id),
+        )
+        .where((group) => preferences.isEnabled(group.id))
+        .map(
+          (group) => HomeCategoryItem(
+            CategoryConfiguration(
+              id: group.id,
+              slug: group.slug,
+              name: group.name,
+              icon: group.icon,
+              sectionId: group.id,
+              sortOrder: group.sortOrder,
+              homeVisible: group.isActive,
+            ),
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  void _openConfiguredHomeCategory(HomeCategoryItem item) {
+    final section = CustomerSection.fromId(
+      item.sectionId.isNotEmpty ? item.sectionId : item.configuration.slug,
+    );
+    if (section != null) {
+      selectCustomerSection(ref, section);
+    } else {
+      context.push(AppRoutes.search);
+    }
   }
 
   @override
@@ -176,11 +271,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final l10n = AppLocalizations.of(context);
     final authState = ref.watch(authNotifierProvider);
     final user = authState.user;
-    final popularVenuesAsync = ref.watch(popularVenuesProvider);
     final selectedCatalog = ref.watch(selectedCustomerSectionProvider);
     final selectedCategorySlug = ref.watch(selectedCustomerCategoryProvider);
+    // Do not query venue data while the modular Home catalog is being shown.
+    // Category-scoped data is resolved by the selected module only.
+    final popularVenuesAsync = selectedCatalog == null
+        ? const AsyncValue.data(<Venue>[])
+        : ref.watch(
+            moduleVenuesProvider(
+              selectedCategorySlug == null || selectedCategorySlug == 'all'
+                  ? selectedCatalog.id
+                  : selectedCategorySlug,
+            ),
+          );
     final area = ref.watch(searchAreaProvider);
     final features = ref.watch(featureRegistryProvider);
+    final adminSettings =
+        ref.watch(adminSettingsProvider).valueOrNull ?? AdminSettings.defaults;
+    final homeConfig = adminSettings.home;
     final selectedSection = selectedCatalog == null
         ? null
         : MainHomeSection.values.firstWhere(
@@ -220,6 +328,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       onCheckInTap: () => context.push(AppRoutes.checkIn),
                     ),
                   ),
+                  if (AdminSettings.flag(
+                    homeConfig['home_banner_visible'],
+                    fallback: true,
+                  ))
+                    const SliverToBoxAdapter(child: PromotionStrip()),
+                  if (AdminSettings.flag(
+                    homeConfig['home_banner_visible'],
+                    fallback: true,
+                  ))
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: responsive.horizontalPadding,
+                        ),
+                        child: ConfigurableBanner(settings: homeConfig),
+                      ),
+                    ),
 
                   // =========================================================
                   // 🌟 FIRST SCREEN: EXACTLY 4 MAIN SECTIONS ONLY
@@ -248,7 +373,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Book Your Space',
+                              AdminSettings.text(
+                                homeConfig['hero_title'],
+                                'Book Your Space',
+                              ),
                               style: theme.textTheme.headlineMedium?.copyWith(
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: -0.5,
@@ -257,7 +385,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Select what you are looking for to get started:',
+                              AdminSettings.text(
+                                homeConfig['hero_subtitle'],
+                                'Select what you are looking for to get started:',
+                              ),
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: theme.colorScheme.onSurfaceVariant,
                               ),
@@ -268,64 +399,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                     ),
 
-                    if (responsive.isCompact)
-                      SliverToBoxAdapter(
-                        child: SizedBox(
-                          height: 158,
-                          child: ListView.separated(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: responsive.horizontalPadding,
-                            ),
-                            scrollDirection: Axis.horizontal,
-                            itemCount: _visibleHomeSections(ref).length,
-                            separatorBuilder: (_, _) =>
-                                SizedBox(width: responsive.gridSpacing),
-                            itemBuilder: (context, index) {
-                              final section = _visibleHomeSections(ref)[index];
-                              return SizedBox(
-                                width: 252,
-                                child: _MainSectionHeroCard(
-                                  key: ValueKey('section_${section.id}'),
-                                  section: section,
-                                  isTabletOrWide: false,
-                                  onTap: () => selectCustomerSection(
-                                    ref,
-                                    section.catalog,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      )
-                    else
-                      SliverPadding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: responsive.horizontalPadding,
-                        ),
-                        sliver: SliverGrid(
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: responsive.categoryColumns,
-                            mainAxisSpacing: responsive.gridSpacing,
-                            crossAxisSpacing: responsive.gridSpacing,
-                            childAspectRatio: responsive.categoryAspectRatio,
-                          ),
-                          delegate: SliverChildBuilderDelegate((context, index) {
-                            final visible = _visibleHomeSections(ref);
-                            final section = visible[index];
-                            return _MainSectionHeroCard(
-                              key: ValueKey('section_${section.id}'),
-                              section: section,
-                              isTabletOrWide: responsive.isTabletOrLandscape,
-                              onTap: () => selectCustomerSection(
-                                ref,
-                                section.catalog,
-                              ),
-                            );
-                          }, childCount: _visibleHomeSections(ref).length),
-                        ),
-                      ),
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: EdgeInsets.fromLTRB(
@@ -371,6 +444,73 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                       ),
                     ),
+
+                    if (responsive.isCompact)
+                      SliverToBoxAdapter(
+                        child: SizedBox(
+                          height: 158,
+                          child: ListView.separated(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: responsive.horizontalPadding,
+                            ),
+                            scrollDirection: Axis.horizontal,
+                            itemCount: _visibleConfiguredHomeCategories(
+                              ref,
+                            ).length,
+                            separatorBuilder: (_, _) =>
+                                SizedBox(width: responsive.gridSpacing),
+                            itemBuilder: (context, index) {
+                              final section = _visibleConfiguredHomeCategories(
+                                ref,
+                              )[index];
+                              return SizedBox(
+                                width: 252,
+                                child: _MainSectionHeroCard(
+                                  key: ValueKey('section_${section.id}'),
+                                  category: section,
+                                  isTabletOrWide: false,
+                                  onTap: () =>
+                                      _openConfiguredHomeCategory(section),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      )
+                    else
+                      SliverPadding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: responsive.horizontalPadding,
+                        ),
+                        sliver: SliverGrid(
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: responsive.categoryColumns,
+                                mainAxisSpacing: responsive.gridSpacing,
+                                crossAxisSpacing: responsive.gridSpacing,
+                                childAspectRatio:
+                                    responsive.categoryAspectRatio,
+                              ),
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final visible = _visibleConfiguredHomeCategories(
+                                ref,
+                              );
+                              final section = visible[index];
+                              return _MainSectionHeroCard(
+                                key: ValueKey('section_${section.id}'),
+                                category: section,
+                                isTabletOrWide: responsive.isTabletOrLandscape,
+                                onTap: () =>
+                                    _openConfiguredHomeCategory(section),
+                              );
+                            },
+                            childCount: _visibleConfiguredHomeCategories(
+                              ref,
+                            ).length,
+                          ),
+                        ),
+                      ),
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: EdgeInsets.symmetric(
@@ -665,6 +805,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               ],
                               _QuickBookCard(
                                 sectionTitle: selectedSection.title,
+                                ctaLabel: AdminSettings.text(
+                                  homeConfig['primary_booking_button_text'],
+                                  'Book',
+                                ),
                                 onQuickBookTap: () {
                                   final match = _scopedVenues(
                                     popularVenuesAsync.value ?? const [],
@@ -830,10 +974,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   selectedSection.catalog.isBookable;
                               return _SectionVenueCard(
                                 venue: venue,
-                                bookLabel:
-                                    CustomerSectionCatalog.bookingCtaLabel(
-                                      selectedSection.catalog,
-                                    ),
+                                bookLabel: AdminSettings.text(
+                                  homeConfig['primary_booking_button_text'],
+                                  CustomerSectionCatalog.bookingCtaLabel(
+                                    selectedSection.catalog,
+                                  ),
+                                ),
                                 onTap: () => context.push(
                                   AppRoutes.venueDetails.replaceAll(
                                     ':id',
@@ -878,8 +1024,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           padding: const EdgeInsets.all(16),
                           child: ErrorView(
                             message: err.toString(),
-                            onRetry: () =>
-                                ref.invalidate(popularVenuesProvider),
+                            onRetry: () {
+                              if (selectedCatalog == null) {
+                                ref.invalidate(popularVenuesProvider);
+                              } else {
+                                ref.invalidate(
+                                  moduleVenuesProvider(
+                                    selectedCategorySlug == null ||
+                                            selectedCategorySlug == 'all'
+                                        ? selectedCatalog.id
+                                        : selectedCategorySlug,
+                                  ),
+                                );
+                              }
+                            },
                           ),
                         ),
                       ),
@@ -1036,8 +1194,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       location: area.label,
                     );
                   }),
-                  decoration: const InputDecoration(
-                    labelText: 'Ask about search, availability or booking',
+                  decoration: InputDecoration(
+                    labelText: AdminSettings.text(
+                      AdminSettings.defaults.home['search_placeholder'],
+                      'Search hotels, PGs, venues...',
+                    ),
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -1418,12 +1579,12 @@ class _TopHeaderBar extends StatelessWidget {
 class _MainSectionHeroCard extends StatelessWidget {
   const _MainSectionHeroCard({
     super.key,
-    required this.section,
+    required this.category,
     required this.isTabletOrWide,
     required this.onTap,
   });
 
-  final MainHomeSection section;
+  final HomeCategoryItem category;
   final bool isTabletOrWide;
   final VoidCallback onTap;
 
@@ -1447,7 +1608,10 @@ class _MainSectionHeroCard extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             // Background Image
-            AppNetworkImage(url: section.imageUrl, fit: BoxFit.cover),
+            AppNetworkImage(
+              url: category.configuration.imageUrl,
+              fit: BoxFit.cover,
+            ),
 
             // High-Contrast Gradient Scrim
             Container(
@@ -1485,7 +1649,9 @@ class _MainSectionHeroCard extends StatelessWidget {
                     ),
                     alignment: Alignment.center,
                     child: Text(
-                      section.emoji,
+                      category.configuration.icon.isNotEmpty
+                          ? category.configuration.icon
+                          : '✨',
                       style: TextStyle(fontSize: isTabletOrWide ? 28 : 24),
                     ),
                   ),
@@ -1498,7 +1664,7 @@ class _MainSectionHeroCard extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          section.title,
+                          category.title,
                           style: TextStyle(
                             fontSize: isTabletOrWide ? 18 : 16.5,
                             fontWeight: FontWeight.w900,
@@ -1510,7 +1676,12 @@ class _MainSectionHeroCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          section.subtitle,
+                          category.configuration.sectionId.isNotEmpty
+                              ? (CustomerSection.fromId(
+                                      category.configuration.sectionId,
+                                    )?.subtitle ??
+                                    'Explore available spaces near you')
+                              : 'Explore available spaces near you',
                           style: TextStyle(
                             fontSize: isTabletOrWide ? 12 : 11.5,
                             color: Colors.white.withValues(alpha: 0.85),
@@ -1660,10 +1831,12 @@ class _QuickBookCard extends StatelessWidget {
   const _QuickBookCard({
     required this.sectionTitle,
     required this.onQuickBookTap,
+    required this.ctaLabel,
   });
 
   final String sectionTitle;
   final VoidCallback onQuickBookTap;
+  final String ctaLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -1713,8 +1886,8 @@ class _QuickBookCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               minimumSize: const Size(70, 36),
             ),
-            child: const Text(
-              'Book',
+            child: Text(
+              ctaLabel,
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
             ),
           ),

@@ -12,6 +12,14 @@ abstract interface class PaymentRepository {
   /// amount against the DB and returns the order id for checkout).
   Future<PaymentOrder> createOrder({required String bookingId});
 
+  /// Commits a `pending` booking owned by the caller to "pay at venue"
+  /// instead of an online Razorpay charge. No Razorpay order is ever
+  /// created; the server records the payment method and advances the
+  /// booking straight into the same owner-approval queue a captured
+  /// online payment reaches. Returns the booking's new status
+  /// (`pending_owner_approval` on success).
+  Future<BookingStatus> selectPayAtVenue({required String bookingId});
+
   /// Refreshes the current status of [bookingId] (used to reflect the
   /// webhook-driven transition from `pending` to `confirmed`/`cancelled`).
   Future<BookingStatus> bookingStatus(String bookingId);

@@ -71,6 +71,57 @@ class _OwnerBookingsScreenState extends ConsumerState<OwnerBookingsScreen> {
     }
   }
 
+  Future<void> _applyDecision(
+    Booking booking,
+    OwnerBookingDecision decision,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+    final isApprove = decision == OwnerBookingDecision.approve;
+    final title = isApprove ? l10n.approveBooking : l10n.rejectBooking;
+    final message = isApprove
+        ? l10n.approveBookingConfirm
+        : l10n.rejectBookingConfirm;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(title),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      final outcome = await ref
+          .read(ownerBookingRepositoryProvider)
+          .decideBooking(booking.id, decision);
+      ref.invalidate(ownerBookingsProvider);
+      if (!mounted) return;
+      final resultMessage = isApprove
+          ? l10n.bookingApproved
+          : (outcome.refundStatus != null
+                ? l10n.bookingRejectedRefundRequested
+                : l10n.bookingRejected);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(resultMessage)));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
   String _actionLabel(OwnerBookingAction action, AppLocalizations l10n) {
     return switch (action) {
       OwnerBookingAction.confirm => l10n.statusConfirmed,
@@ -148,6 +199,20 @@ class _OwnerBookingsScreenState extends ConsumerState<OwnerBookingsScreen> {
                           list[i].status == BookingStatus.confirmed
                       ? () => _applyStatus(list[i], OwnerBookingAction.cancel)
                       : null,
+                  onApprove: list[i].status ==
+                          BookingStatus.pendingOwnerApproval
+                      ? () => _applyDecision(
+                          list[i],
+                          OwnerBookingDecision.approve,
+                        )
+                      : null,
+                  onReject: list[i].status ==
+                          BookingStatus.pendingOwnerApproval
+                      ? () => _applyDecision(
+                          list[i],
+                          OwnerBookingDecision.reject,
+                        )
+                      : null,
                 ),
               ),
             ),
@@ -166,6 +231,8 @@ class _OwnerBookingCard extends StatelessWidget {
     this.onComplete,
     this.onNoShow,
     this.onCancel,
+    this.onApprove,
+    this.onReject,
   });
 
   final Booking booking;
@@ -174,6 +241,8 @@ class _OwnerBookingCard extends StatelessWidget {
   final VoidCallback? onComplete;
   final VoidCallback? onNoShow;
   final VoidCallback? onCancel;
+  final VoidCallback? onApprove;
+  final VoidCallback? onReject;
 
   @override
   Widget build(BuildContext context) {
@@ -264,6 +333,11 @@ class _OwnerBookingCard extends StatelessWidget {
                   ),
                   if (booking.slotLabel.isNotEmpty)
                     _InfoChip(icon: Icons.layers_rounded, label: booking.slotLabel),
+                  if (booking.paymentMethod == 'pay_at_venue')
+                    _InfoChip(
+                      icon: Icons.storefront_rounded,
+                      label: l10n.payAtVenue,
+                    ),
                 ],
               ),
               const SizedBox(height: 10),
@@ -290,12 +364,28 @@ class _OwnerBookingCard extends StatelessWidget {
               if (onConfirm != null ||
                   onComplete != null ||
                   onNoShow != null ||
-                  onCancel != null) ...[
+                  onCancel != null ||
+                  onApprove != null ||
+                  onReject != null) ...[
                 const SizedBox(height: 12),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
                   children: [
+                    if (onApprove != null)
+                      FilledButton(
+                        onPressed: onApprove,
+                        child: Text(l10n.approveBooking),
+                      ),
+                    if (onReject != null)
+                      OutlinedButton(
+                        onPressed: onReject,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: theme.colorScheme.error,
+                          side: BorderSide(color: theme.colorScheme.error),
+                        ),
+                        child: Text(l10n.rejectBooking),
+                      ),
                     if (onConfirm != null)
                       FilledButton.tonal(
                         onPressed: onConfirm,

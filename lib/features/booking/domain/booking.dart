@@ -77,19 +77,23 @@ class SlotAvailability {
 enum BookingStatus {
   held,
   pending,
+  pendingOwnerApproval,
   confirmed,
   completed,
   cancelled,
   refunded,
+  rejected,
   noShow;
 
   static BookingStatus fromDb(String value) => switch (value) {
     'held' => BookingStatus.held,
     'pending' => BookingStatus.pending,
+    'pending_owner_approval' => BookingStatus.pendingOwnerApproval,
     'confirmed' => BookingStatus.confirmed,
     'completed' => BookingStatus.completed,
     'cancelled' => BookingStatus.cancelled,
     'refunded' => BookingStatus.refunded,
+    'rejected' => BookingStatus.rejected,
     'no_show' => BookingStatus.noShow,
     _ => BookingStatus.pending,
   };
@@ -97,10 +101,12 @@ enum BookingStatus {
   String get dbValue => switch (this) {
     BookingStatus.held => 'held',
     BookingStatus.pending => 'pending',
+    BookingStatus.pendingOwnerApproval => 'pending_owner_approval',
     BookingStatus.confirmed => 'confirmed',
     BookingStatus.completed => 'completed',
     BookingStatus.cancelled => 'cancelled',
     BookingStatus.refunded => 'refunded',
+    BookingStatus.rejected => 'rejected',
     BookingStatus.noShow => 'no_show',
   };
 }
@@ -119,6 +125,7 @@ class Booking {
     required this.amount,
     required this.taxAmount,
     required this.totalAmount,
+    this.discountAmount = 0,
     this.venueName = '',
     this.venueCity = '',
     this.slotLabel = '',
@@ -143,6 +150,11 @@ class Booking {
   final double amount;
   final double taxAmount;
   final double totalAmount;
+
+  /// Discount applied by a redeemed coupon (0 when none). Always the
+  /// server-computed value persisted on the `bookings` row — never
+  /// derived on the client.
+  final double discountAmount;
 
   /// Hydrated venue display fields (empty when not joined).
   final String venueName;
@@ -225,6 +237,7 @@ class Booking {
       amount: (json['amount'] as num?)?.toDouble() ?? 0,
       taxAmount: (json['tax_amount'] as num?)?.toDouble() ?? 0,
       totalAmount: (json['total_amount'] as num?)?.toDouble() ?? 0,
+      discountAmount: (json['discount_amount'] as num?)?.toDouble() ?? 0,
       createdAt: DateTime.tryParse(json['created_at'] as String? ?? ''),
       venueName: venueRaw is Map<String, dynamic>
           ? (venueRaw['name'] as String? ?? '')

@@ -11,11 +11,24 @@ class MockPaymentRepository implements PaymentRepository {
   bool failRefund = false;
   bool failStatus = false;
 
+  /// Set to make [selectPayAtVenue] throw. Defaults to a generic
+  /// [Exception]; set [payAtVenueError] for a specific typed exception
+  /// (e.g. to simulate a server-side rejection like
+  /// `payment_in_progress`).
+  bool failSelectPayAtVenue = false;
+  Object? payAtVenueError;
+
   BookingStatus statusResult = BookingStatus.confirmed;
   int statusCalls = 0;
 
+  /// Result returned by a successful [selectPayAtVenue] call. Pay-at-venue
+  /// never auto-confirms — it always lands in the owner-approval queue,
+  /// same as a captured online payment.
+  BookingStatus payAtVenueResult = BookingStatus.pendingOwnerApproval;
+
   Refund? createdRefund;
   String? lastOrderBookingId;
+  String? lastPayAtVenueBookingId;
   String? lastRefundBookingId;
   double? lastRefundAmount;
 
@@ -49,6 +62,15 @@ class MockPaymentRepository implements PaymentRepository {
     if (failCreateOrder) throw Exception('order creation failed');
     lastOrderBookingId = bookingId;
     return sampleOrder();
+  }
+
+  @override
+  Future<BookingStatus> selectPayAtVenue({required String bookingId}) async {
+    if (failSelectPayAtVenue) {
+      throw payAtVenueError ?? Exception('pay at venue failed');
+    }
+    lastPayAtVenueBookingId = bookingId;
+    return payAtVenueResult;
   }
 
   @override

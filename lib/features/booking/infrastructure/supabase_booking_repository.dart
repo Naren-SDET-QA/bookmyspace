@@ -132,6 +132,14 @@ class SupabaseBookingRepository implements BookingRepository {
       final start = slot?['start_time'] as String? ?? '';
       final end = slot?['end_time'] as String? ?? '';
 
+      // Verified-fix (Phase 16.9 E2E audit): this used to insert the row
+      // already at 'pending_owner_approval', which skipped the payment step
+      // entirely. `create-payment-order`'s bookingDecision() only authorizes
+      // a charge for a booking whose status is 'pending', and the Razorpay
+      // webhook's own transition (`.eq('status', 'pending')`) advances a
+      // captured payment from 'pending' to 'pending_owner_approval'. Booking
+      // must therefore start at 'pending' so the customer can actually pay;
+      // the webhook is what moves it into the owner's approval queue.
       final row = await _client
           .from('bookings')
           .insert({
@@ -249,6 +257,96 @@ class SupabaseBookingRepository implements BookingRepository {
       if (e is app_errors.BookingConflictException) rethrow;
       throw app_errors.mapError(e);
     }
+  }
+
+  @override
+  Future<Booking> applyCoupon({
+    required String bookingId,
+    required String code,
+  }) async {
+    try {
+      await _client.rpc<Object?>(
+        'apply_booking_coupon',
+        params: {'p_booking_id': bookingId, 'p_code': code},
+      );
+      return await bookingById(bookingId);
+    } on PostgrestException catch (e) {
+      throw _mapCouponError(e);
+    } catch (e) {
+      throw app_errors.mapError(e);
+    }
+  }
+
+  @override
+  Future<Booking> removeCoupon(String bookingId) async {
+    try {
+      await _client.rpc<Object?>(
+        'remove_booking_coupon',
+        params: {'p_booking_id': bookingId},
+      );
+      return await bookingById(bookingId);
+    } on PostgrestException catch (e) {
+      throw _mapCouponError(e);
+    } catch (e) {
+      throw app_errors.mapError(e);
+    }
+  }
+
+  /// Maps the stable error strings raised by `apply_booking_coupon` /
+  /// `remove_booking_coupon` (see the Phase 17 migration) to typed
+  /// exceptions. Both functions validate and compute the discount
+  /// entirely server-side; nothing here trusts a client-supplied amount.
+  app_errors.AppException _mapCouponError(PostgrestException e) {
+    return switch (e.message) {
+      'unauthorized' => const app_errors.AuthException(
+        'You must be signed in to apply a promo code.',
+        code: 'unauthorized',
+      ),
+      'booking_not_found' => const app_errors.NotFoundException(
+        'Booking not found.',
+        code: 'booking_not_found',
+      ),
+      'not_booking_owner' => const app_errors.BusinessException(
+        'This booking does not belong to you.',
+        code: 'not_booking_owner',
+      ),
+      'invalid_booking_state' => const app_errors.BusinessException(
+        'This booking can no longer be changed.',
+        code: 'invalid_booking_state',
+      ),
+      'coupon_not_found' => const app_errors.BusinessException(
+        'That promo code was not found.',
+        code: 'coupon_not_found',
+      ),
+      'coupon_inactive' => const app_errors.BusinessException(
+        'That promo code is no longer active.',
+        code: 'coupon_inactive',
+      ),
+      'coupon_not_started' => const app_errors.BusinessException(
+        'That promo code is not active yet.',
+        code: 'coupon_not_started',
+      ),
+      'coupon_expired' => const app_errors.BusinessException(
+        'That promo code has expired.',
+        code: 'coupon_expired',
+      ),
+      'coupon_min_amount_not_met' => const app_errors.BusinessException(
+        'Your booking does not meet the minimum amount for this promo code.',
+        code: 'coupon_min_amount_not_met',
+      ),
+      'coupon_usage_limit_reached' => const app_errors.BusinessException(
+        'That promo code has reached its usage limit.',
+        code: 'coupon_usage_limit_reached',
+      ),
+      'coupon_already_used_by_user' => const app_errors.BusinessException(
+        "You've already used that promo code.",
+        code: 'coupon_already_used_by_user',
+      ),
+      _ => app_errors.ServerException(
+        'Promo code service error.',
+        code: e.message,
+      ),
+    };
   }
 
   /// Formats a date as the local `YYYY-MM-DD` the DB expects.

@@ -47,6 +47,27 @@ void main() {
       final payment = Payment.fromJson({'status': 'refunded'});
       expect(payment.isRefundable, isFalse);
     });
+
+    test(
+      'a pay-at-venue payment is authorized, not refundable, and nothing '
+      'was ever charged',
+      () {
+        final payment = Payment.fromJson({
+          'id': 'p2',
+          'booking_id': 'b2',
+          'amount': 41300,
+          'currency': 'INR',
+          'status': 'authorized',
+          'method': 'pay_at_venue',
+        });
+        expect(payment.status, PaymentStatus.authorized);
+        expect(payment.method, 'pay_at_venue');
+        // Nothing was captured, so there is nothing to refund — matches
+        // owner-booking-manage's refundRejectedBooking(), which treats any
+        // non-captured payment as "nothing to refund".
+        expect(payment.isRefundable, isFalse);
+      },
+    );
   });
 
   group('Refund', () {
