@@ -56,6 +56,8 @@ dependencies:
   firebase_crashlytics: ^4.3.0
   firebase_performance: ^0.10.0
   firebase_analytics: ^11.6.0
+  flutter_local_notifications: ^18.0.1
+  onesignal_flutter: ^5.6.8
   speech_to_text: ^7.3.0
 
 dev_dependencies:

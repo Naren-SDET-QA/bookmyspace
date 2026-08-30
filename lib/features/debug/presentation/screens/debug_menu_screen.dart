@@ -114,13 +114,13 @@ class _DebugMenuScreenState extends ConsumerState<DebugMenuScreen> {
             child: ListTile(
               leading: const Icon(Icons.wifi_tethering_outlined),
               title: const Text('Push debug'),
-              subtitle: const Text('Firebase Messaging token / payload log'),
+              subtitle: const Text('OneSignal subscription id / payload log'),
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text(
-                      'Push debug: no FCM token yet. Check Firebase console.',
+                      'Push debug: no OneSignal subscription yet. Check the OneSignal dashboard.',
                     ),
                   ),
                 );

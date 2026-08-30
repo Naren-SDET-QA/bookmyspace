@@ -36,6 +36,10 @@
 	<string>BookMySpace does not save photos to your library; this is required by the photo picker on some iOS versions.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>BookMySpace uses your location to find halls, stays, PGs and institutes near you.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

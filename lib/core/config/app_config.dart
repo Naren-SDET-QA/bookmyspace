@@ -108,6 +108,14 @@ class AppConfig {
     'WEB_AUTH_REDIRECT_URI',
   );
 
+  /// OneSignal App ID (public client identifier, not a secret). Sourced
+  /// from --dart-define=ONESIGNAL_APP_ID=... at build time; never hardcode
+  /// a real value here. Empty means push registration is disabled (mirrors
+  /// how Firebase push silently no-op'd without native config).
+  static const String _oneSignalAppIdDefine = String.fromEnvironment(
+    'ONESIGNAL_APP_ID',
+  );
+
   static AppEnvironment get environment => AppEnvironment.current;
 
   /// Returns active [EnvModel] populated from environment and dart-defines.
@@ -142,6 +150,7 @@ class AppConfig {
   static String get apiBaseUrl => environment.apiBaseUrl;
   static String get devTestEmail => _devTestEmailDefine;
   static String get devTestPassword => _devTestPasswordDefine;
+  static String get oneSignalAppId => _oneSignalAppIdDefine;
 
   /// The callback must stay on the origin that created the PKCE verifier.
   /// A dart-define can pin this for a stable local port; otherwise the

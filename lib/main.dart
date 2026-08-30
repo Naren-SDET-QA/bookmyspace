@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
 import 'core/firebase/error_logger.dart';
+import 'core/notifications/onesignal_push_service.dart';
 import 'features/auth/presentation/auth_providers.dart';
 import 'features/owner/infrastructure/supabase_owner_repository.dart';
 
@@ -12,6 +13,11 @@ Future<void> main() async {
 
   // Initialize Firebase services (Crashlytics, Performance, Analytics)
   await ErrorLogger.init();
+
+  // Initialize push notifications (OneSignal). No-op when
+  // ONESIGNAL_APP_ID is not configured, e.g. in this dev environment or
+  // in flutter test.
+  await OneSignalPushService.instance.init();
 
   // Initialize Supabase
   await initSupabase();

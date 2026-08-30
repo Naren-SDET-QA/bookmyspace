@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthUser;
 
 import '../../../core/config/app_config.dart';
+import '../../../core/notifications/onesignal_push_service.dart';
 import '../domain/auth_repository.dart';
 import '../domain/auth_user.dart';
 import '../infrastructure/supabase_auth_repository.dart';
@@ -93,6 +94,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> signOut() async {
+    // Drop the OneSignal push-subscription registration and log this
+    // device out of its OneSignal External ID association while the
+    // session is still valid, so RLS can delete the device_tokens row
+    // and this device stops being targetable as this user. After
+    // signOut(), auth.uid() is null.
+    await OneSignalPushService.instance.onSignedOut();
     await _repository.signOut();
     state = const AuthState(user: null);
   }

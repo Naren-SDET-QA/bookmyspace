@@ -1,0 +1,15 @@
+-- Remove the broad organizations read policy introduced in 0014_owner_registration.sql.
+-- It only checked whether the caller owns ANY organization
+-- (public.get_owner_user_id() is not null), not whether they own THIS row -- the
+-- same IDOR pattern already fixed for owner_profiles in
+-- 20260830100000_fix_owner_profiles_select_rls.sql. Because Postgres combines
+-- multiple permissive policies for the same command with OR, this policy silently
+-- widened access even though organizations_select_owner_or_admin
+-- (0005_rls_policies.sql) already scopes reads correctly to
+-- auth.uid() = owner_user_id or an administrator role.
+--
+-- organizations_owner_write (also added in 0014) is left untouched: it already
+-- compares against the row's own owner_user_id
+-- (public.get_owner_user_id() = owner_user_id), not just "is an owner", so it is
+-- not part of this vulnerability.
+drop policy if exists organizations_owner_read on public.organizations;
