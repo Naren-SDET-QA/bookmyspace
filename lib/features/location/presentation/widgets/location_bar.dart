@@ -120,6 +120,8 @@ class LocationFooterCard extends StatelessWidget {
                   ),
                   Text(
                     'Tap to change search area (within ${area.radiusKm.toInt()} km)',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 11.5,
                       color: theme.colorScheme.onSurfaceVariant,

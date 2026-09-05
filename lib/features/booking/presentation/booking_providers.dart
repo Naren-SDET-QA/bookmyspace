@@ -4,13 +4,19 @@ import '../../auth/presentation/auth_providers.dart';
 import '../domain/booking.dart';
 import '../domain/booking_repository.dart';
 import '../infrastructure/supabase_booking_repository.dart';
+import '../infrastructure/caching_booking_repository.dart';
+import '../../../core/offline/offline_providers.dart';
 import '../domain/invoice_repository.dart';
 import '../infrastructure/supabase_invoice_repository.dart';
 
 /// Booking repository instance.
 final bookingRepositoryProvider = Provider<BookingRepository>((ref) {
   final client = ref.watch(supabaseProvider);
-  return SupabaseBookingRepository(client);
+  return CachingBookingRepository(
+    SupabaseBookingRepository(client),
+    ref.watch(offlineCacheProvider),
+    cacheScope: ref.watch(currentUserProvider)?.id,
+  );
 });
 
 final invoiceRepositoryProvider = Provider<InvoiceRepository>((ref) {
@@ -31,8 +37,14 @@ final slotAvailabilityProvider = FutureProvider.autoDispose
     });
 
 /// The signed-in user's bookings, newest first.
-final myBookingsProvider = FutureProvider<List<Booking>>((ref) {
-  return ref.watch(bookingRepositoryProvider).myBookings();
+final myBookingsProvider = FutureProvider<List<Booking>>((ref) async {
+  final bookings = await ref.watch(bookingRepositoryProvider).myBookings();
+  try {
+    await ref.read(bookingReminderSchedulerProvider).sync(bookings);
+  } catch (_) {
+    // Local reminders must never block the bookings list or email outbox.
+  }
+  return bookings;
 });
 
 /// A single booking by id (used by the invoice screen).

@@ -78,6 +78,24 @@ class SupabaseAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<domain.AuthUser> signInWithPassword(
+    String email,
+    String password,
+  ) async {
+    try {
+      final response = await _client.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+      final user = response.user;
+      if (user == null) throw const AppAuthException('Login failed.');
+      return _toUser(user);
+    } catch (error) {
+      throw mapError(error);
+    }
+  }
+
+  @override
   Future<domain.AuthUser> verifyPhoneOtp(String phone, String token) async {
     try {
       final res = await _client.auth.verifyOTP(
@@ -94,11 +112,49 @@ class SupabaseAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<void> requestPasswordReset(String email) async {
+    try {
+      await _client.auth.resetPasswordForEmail(
+        email,
+        redirectTo: kIsWeb
+            ? AppConfig.passwordResetRedirectUri
+            : AppConfig.nativeAuthRedirectUri,
+      );
+    } on AuthException catch (e) {
+      throw AppAuthException(e.message);
+    } catch (e) {
+      throw mapError(e);
+    }
+  }
+
+  @override
+  Future<void> updatePassword(String newPassword) async {
+    try {
+      await _client.auth.updateUser(UserAttributes(password: newPassword));
+    } on AuthException catch (e) {
+      throw AppAuthException(e.message);
+    } catch (e) {
+      throw mapError(e);
+    }
+  }
+
+  @override
+  Stream<bool> passwordRecoveryState() {
+    return _client.auth.onAuthStateChange
+        .where(
+          (data) =>
+              data.event == AuthChangeEvent.passwordRecovery ||
+              data.event == AuthChangeEvent.signedOut,
+        )
+        .map((data) => data.event == AuthChangeEvent.passwordRecovery);
+  }
+
+  @override
   Future<domain.AuthUser> signInWithGoogle() async {
     try {
       await _client.auth.signInWithOAuth(
         OAuthProvider.google,
-        redirectTo: kIsWeb ? _webRedirect() : null,
+        redirectTo: kIsWeb ? _webRedirect() : AppConfig.nativeAuthRedirectUri,
       );
       final user = _client.auth.currentUser;
       if (user == null) {
@@ -117,7 +173,7 @@ class SupabaseAuthRepository implements AuthRepository {
     try {
       await _client.auth.signInWithOAuth(
         OAuthProvider.apple,
-        redirectTo: kIsWeb ? _webRedirect() : null,
+        redirectTo: kIsWeb ? _webRedirect() : AppConfig.nativeAuthRedirectUri,
       );
       final user = _client.auth.currentUser;
       if (user == null) {

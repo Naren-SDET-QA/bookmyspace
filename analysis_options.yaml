@@ -15,6 +15,9 @@ analyzer:
     # The legacy owner demo has no standalone pubspec and is not part of the
     # production Flutter target.
     - example/**
+    - android/**
+    - ios/**
+    - web/**
 
 linter:
   rules:

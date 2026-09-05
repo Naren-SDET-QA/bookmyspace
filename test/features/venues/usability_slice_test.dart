@@ -113,11 +113,15 @@ void main() {
   });
 
   test('theme tokens accept a secondary color without a second engine', () {
+    const seed = Color(0xFF3F51B5);
     final tokens = ThemeTokens.fromSeed(
-      const Color(0xFF3F51B5),
+      seed,
       secondary: const Color(0xFFFF7043),
     );
-    expect(tokens.primary, const Color(0xFF3F51B5));
+    expect(
+      tokens.primary,
+      ThemeTokens.colorSchemeFor(seed, Brightness.light).primary,
+    );
     expect(tokens.secondary, const Color(0xFFFF7043));
     final accent = const CategoryConfiguration(
       id: '1',

@@ -62,6 +62,29 @@ class SupabaseCategoryConfigurationRepository
   }
 
   @override
+  Future<CategoryConfiguration> createCategory({
+    required String slug,
+    required String name,
+    String icon = '',
+    Map<String, dynamic> metadata = const {},
+  }) async {
+    try {
+      final row = await _client.rpc<Map<String, dynamic>>(
+        'admin_create_category',
+        params: {
+          'p_slug': slug,
+          'p_name': name,
+          'p_icon': icon,
+          'p_metadata': metadata,
+        },
+      );
+      return CategoryConfiguration.fromCategory(VenueCategory.fromJson(row));
+    } catch (e) {
+      throw mapError(e);
+    }
+  }
+
+  @override
   Future<AppSectionConfig> updateSectionVisibility({
     required String sectionId,
     required bool visible,

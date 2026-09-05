@@ -60,6 +60,35 @@ Deno.serve(async (req) => {
       });
     }
 
+    const { data: venue, error: venueError } = await supabase
+      .from('venues')
+      .select('id, category_id, is_active, venue_categories(metadata)')
+      .eq('id', venue_id)
+      .eq('is_active', true)
+      .maybeSingle();
+    if (venueError || !venue) {
+      return new Response(JSON.stringify({ error: 'invalid_venue' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const categoryRow = Array.isArray(venue.venue_categories)
+      ? venue.venue_categories[0]
+      : venue.venue_categories;
+    const metadata = (categoryRow?.metadata ?? {}) as Record<string, unknown>;
+    if (metadata.active !== true || metadata.bookable !== true) {
+      return new Response(JSON.stringify({ error: 'category_booking_disabled' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (metadata.availability_enabled !== true) {
+      return new Response(JSON.stringify({ error: 'category_availability_disabled' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Server-side amount validation: always re-fetch the authoritative price.
     const { data: slot, error: slotError } = await supabase
       .from('time_slots')
@@ -102,8 +131,21 @@ Deno.serve(async (req) => {
       });
     }
 
+    const { data: holdRow } = await supabase
+      .from('booking_holds')
+      .select('id, expires_at')
+      .eq('id', holdId)
+      .maybeSingle();
+    const holdMinutes = hold_minutes ?? 10;
+    const expiresAt = holdRow?.expires_at
+      ?? new Date(Date.now() + holdMinutes * 60_000).toISOString();
+
     return new Response(
-      JSON.stringify({ hold_id: holdId, expires_in_minutes: hold_minutes ?? 10 }),
+      JSON.stringify({
+        hold_id: holdId,
+        expires_at: expiresAt,
+        expires_in_minutes: holdMinutes,
+      }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (e) {

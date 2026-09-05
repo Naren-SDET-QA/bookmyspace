@@ -9,8 +9,8 @@ import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_network_image.dart';
 import '../../../../core/widgets/responsive_layout.dart';
-import '../../domain/auth_user.dart';
 import '../../../venues/presentation/venue_providers.dart';
+import '../../domain/auth_user.dart';
 import '../auth_providers.dart';
 import '../widgets/edit_profile_modal.dart';
 
@@ -260,7 +260,8 @@ class ProfileScreen extends ConsumerWidget {
                       child: _MetricCard(
                         icon: Icons.favorite_rounded,
                         title: 'Saved Spaces',
-                        count: '${ref.watch(favoritesProvider).valueOrNull?.length ?? 0} Saved',
+                        count:
+                            '${ref.watch(favoritesProvider).valueOrNull?.length ?? 0} Saved',
                         color: Colors.pink,
                         onTap: () => context.push(AppRoutes.saved),
                       ),
@@ -297,7 +298,7 @@ class ProfileScreen extends ConsumerWidget {
                 if (features.isExposed(FeatureId.payments))
                   _ProfileMenuTile(
                     icon: Icons.payments_outlined,
-                    title: 'Payment History',
+                    title: l10n.paymentHistory,
                     subtitle: 'View completed transactions and invoices',
                     onTap: () => context.push(AppRoutes.paymentHistory),
                   ),
@@ -309,48 +310,48 @@ class ProfileScreen extends ConsumerWidget {
                 ),
                 _ProfileMenuTile(
                   icon: Icons.insights_outlined,
-                  title: 'Spending & Usage',
+                  title: l10n.analytics,
                   subtitle: 'Review your bookings and spending trends',
                   onTap: () => context.push(AppRoutes.customerAnalytics),
                 ),
                 if (features.isExposed(FeatureId.notifications))
                   _ProfileMenuTile(
                     icon: Icons.notifications_none_rounded,
-                    title: 'Notifications & Alerts',
+                    title: l10n.notifications,
                     subtitle: 'Booking updates, reminders, and offers',
                     onTap: () => context.push(AppRoutes.notifications),
                   ),
                 _ProfileMenuTile(
                   icon: Icons.tune_rounded,
-                  title: 'App Preferences',
+                  title: l10n.settings,
                   subtitle: 'Theme, language, and display options',
                   onTap: () => context.push(AppRoutes.settings),
                 ),
                 if (user?.isOwner == true)
                   _ProfileMenuTile(
                     icon: Icons.storefront_outlined,
-                    title: 'Partner / Venue Owner Hub',
+                    title: l10n.ownerDashboard,
                     subtitle: 'List your spaces, halls, and classes',
                     onTap: () => context.push(AppRoutes.ownerDashboard),
                   ),
                 if (user?.isOwner == true)
                   _ProfileMenuTile(
                     icon: Icons.school_outlined,
-                    title: 'Institute owner portal',
+                    title: l10n.instituteOwnerPortal,
                     subtitle: 'Faculty, classes, demo sessions and plans',
                     onTap: () => context.push(AppRoutes.ownerInstitute),
                   ),
                 if (user?.isOwner == true)
                   _ProfileMenuTile(
                     icon: Icons.qr_code_scanner_rounded,
-                    title: 'QR check-in',
+                    title: l10n.checkIn,
                     subtitle: 'Verify a confirmed booking pass',
                     onTap: () => context.push(AppRoutes.checkIn),
                   ),
                 if (user?.isAdmin == true)
                   _ProfileMenuTile(
                     icon: Icons.admin_panel_settings_outlined,
-                    title: 'Admin dashboard',
+                    title: l10n.admin,
                     subtitle: 'Approvals, categories, payments and audit',
                     onTap: () => context.push(AppRoutes.adminDashboard),
                   ),
@@ -371,13 +372,13 @@ class ProfileScreen extends ConsumerWidget {
                 if (features.isExposed(FeatureId.institutes))
                   _ProfileMenuTile(
                     icon: Icons.school_outlined,
-                    title: 'Institutes & classes',
+                    title: l10n.classes,
                     subtitle: 'Browse academies, faculty and demo sessions',
                     onTap: () => context.push(AppRoutes.institutesList),
                   ),
                 _ProfileMenuTile(
                   icon: Icons.headset_mic_outlined,
-                  title: 'Support & Help Desk',
+                  title: l10n.support,
                   subtitle: 'Get quick assistance with bookings',
                   onTap: () => context.push(AppRoutes.support),
                 ),

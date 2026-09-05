@@ -27,6 +27,8 @@ class MyBookingsScreen extends ConsumerStatefulWidget {
 }
 
 class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
+  int _selectedTab = 0;
+
   Future<void> _refresh() async {
     ref.invalidate(myBookingsProvider);
     await ref.read(myBookingsProvider.future);
@@ -141,64 +143,109 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(message: e.toString(), onRetry: _refresh),
         data: (list) {
-          if (list.isEmpty) {
+          final filtered = switch (_selectedTab) {
+            0 => list
+                .where(
+                  (booking) =>
+                      booking.status == BookingStatus.confirmed ||
+                      booking.status == BookingStatus.pending ||
+                      booking.status == BookingStatus.held,
+                )
+                .toList(),
+            1 => list
+                .where((booking) => booking.status == BookingStatus.completed)
+                .toList(),
+            _ => list
+                .where((booking) => booking.status == BookingStatus.cancelled)
+                .toList(),
+          };
+          if (list.isEmpty || filtered.isEmpty) {
             return EmptyState(
               icon: Icons.receipt_long_rounded,
-              title: l10n.noBookings,
+              title: list.isEmpty ? l10n.noBookings : _emptyTabTitle(l10n),
               message: l10n.noBookingsMessage,
             );
           }
-          return RefreshIndicator(
-            onRefresh: _refresh,
-            child: ListView.builder(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16),
-              itemCount: list.length,
-              itemBuilder: (context, i) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _BookingCard(
-                  booking: list[i],
+          return Column(
+            children: [
+              Material(
+                color: Colors.transparent,
+                child: DefaultTabController(
+                  length: 3,
+                  initialIndex: _selectedTab,
+                  child: TabBar(
+                    onTap: (index) => setState(() => _selectedTab = index),
+                    tabs: [
+                      Tab(text: l10n.upcomingEvents),
+                      Tab(text: l10n.statusCompleted),
+                      Tab(text: l10n.statusCancelled),
+                    ],
+                    isScrollable: true,
+                    tabAlignment: TabAlignment.start,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: _refresh,
+                  child: ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16),
+                    itemCount: filtered.length,
+                    itemBuilder: (context, i) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _BookingCard(
+                        booking: filtered[i],
                   onShowPass:
-                      (list[i].status == BookingStatus.confirmed ||
-                          list[i].status == BookingStatus.completed)
-                      ? () => _showEntryPass(list[i])
+                      (filtered[i].status == BookingStatus.confirmed ||
+                          filtered[i].status == BookingStatus.completed)
+                      ? () => _showEntryPass(filtered[i])
                       : null,
-                  onInvoice: list[i].canViewInvoice
+                  onInvoice: filtered[i].canViewInvoice
                       ? () => context.push(
-                          '/bookings/${list[i].id}/invoice',
-                          extra: list[i],
+                          '/bookings/${filtered[i].id}/invoice',
+                          extra: filtered[i],
                         )
                       : null,
-                  onCancel: list[i].canCancel
-                      ? () => _cancelBooking(list[i])
+                  onCancel: filtered[i].canCancel
+                      ? () => _cancelBooking(filtered[i])
                       : null,
-                  onRefund: list[i].canRefund
-                      ? () => _requestRefund(list[i])
+                  onRefund: filtered[i].canRefund
+                      ? () => _requestRefund(filtered[i])
                       : null,
                   onPay:
-                      list[i].canPay &&
+                      filtered[i].canPay &&
                           isCheckoutExposed(ref.watch(featureRegistryProvider))
                       ? () => context.push(
-                          AppRoutes.paymentFlow.replaceFirst(':id', list[i].id),
-                          extra: list[i],
+                          AppRoutes.paymentFlow.replaceFirst(':id', filtered[i].id),
+                          extra: filtered[i],
                         )
                       : null,
-                  onBookAgain: list[i].canBookAgain
+                  onBookAgain: filtered[i].canBookAgain
                       ? () => context.push(
                           AppRoutes.venueDetails.replaceFirst(
                             ':id',
-                            list[i].venueId,
+                            filtered[i].venueId,
                           ),
                         )
                       : null,
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
+            ],
           );
         },
       ),
     );
   }
+
+  String _emptyTabTitle(AppLocalizations l10n) => switch (_selectedTab) {
+    0 => l10n.noUpcomingEvents,
+    1 => l10n.statusCompleted,
+    _ => l10n.statusCancelled,
+  };
 
   void _showEntryPass(Booking booking) {
     final theme = Theme.of(context);

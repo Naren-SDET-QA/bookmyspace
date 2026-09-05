@@ -1,18 +1,23 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 import 'app.dart';
-import 'core/firebase/error_logger.dart';
+import 'core/config/settings_controller.dart';
 import 'core/notifications/onesignal_push_service.dart';
+import 'core/offline/offline_providers.dart';
+import 'core/offline/preferences_offline_store.dart';
 import 'features/auth/presentation/auth_providers.dart';
+import 'features/booking/domain/booking_reminder_scheduler.dart';
 import 'features/owner/infrastructure/supabase_owner_repository.dart';
+import 'core/health/app_health.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize Firebase services (Crashlytics, Performance, Analytics)
-  await ErrorLogger.init();
 
   // Initialize push notifications (OneSignal). No-op when
   // ONESIGNAL_APP_ID is not configured, e.g. in this dev environment or
@@ -36,5 +41,29 @@ Future<void> main() async {
     debugPrint('DEV test sign-in unavailable: $error');
   }
 
-  runApp(const ProviderScope(child: BookMySpaceApp()));
+  runApp(
+    ProviderScope(
+      overrides: [
+        offlineStoreProvider.overrideWithValue(
+          PreferencesOfflineStore(Preferences(const FlutterSecureStorage())),
+        ),
+        localReminderGatewayProvider.overrideWithValue(
+          FlutterLocalReminderGateway(),
+        ),
+      ],
+      child: const BookMySpaceApp(),
+    ),
+  );
+  // Health is deliberately started after the first frame boundary and is
+  // never awaited by startup or allowed to prevent UI rendering.
+  unawaited(_scanAppHealth());
+}
+
+Future<void> _scanAppHealth() async {
+  final container = ProviderContainer();
+  try {
+    await container.read(appHealthProvider.future);
+  } finally {
+    container.dispose();
+  }
 }

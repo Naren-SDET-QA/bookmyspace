@@ -27,10 +27,10 @@ class OwnerDashboardScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(currentOwnerProvider),
         ),
         data: (ownerData) => ownerData == null
-            ? const EmptyState(
+            ? EmptyState(
                 icon: Icons.person_add_rounded,
-                title: 'Not an owner',
-                message: 'Register as an owner to access the dashboard.',
+                title: l10n.notAnOwner,
+                message: l10n.registerAsOwnerHint,
               )
             : ListView(
                 padding: const EdgeInsets.all(16),
@@ -54,17 +54,17 @@ class OwnerDashboardScreen extends ConsumerWidget {
                   ),
                   _QuickAction(
                     icon: Icons.school_rounded,
-                    label: 'Institute portal',
+                    label: l10n.institutePortal,
                     onTap: () => context.push(AppRoutes.ownerInstitute),
                   ),
                   _QuickAction(
                     icon: Icons.qr_code_scanner_rounded,
-                    label: 'QR check-in',
+                    label: l10n.qrCheckIn,
                     onTap: () => context.push(AppRoutes.checkIn),
                   ),
                   _QuickAction(
                     icon: Icons.location_on_rounded,
-                    label: 'Location submissions',
+                    label: l10n.locationSubmissions,
                     onTap: () => context.push('/owner/locations'),
                   ),
                   _QuickAction(
@@ -76,6 +76,11 @@ class OwnerDashboardScreen extends ConsumerWidget {
                     icon: Icons.analytics_rounded,
                     label: l10n.analytics,
                     onTap: () => context.push(AppRoutes.analytics),
+                  ),
+                  _QuickAction(
+                    icon: Icons.auto_graph_rounded,
+                    label: l10n.venueOptimizer,
+                    onTap: () => context.push(AppRoutes.ownerOptimizer),
                   ),
                   _QuickAction(
                     icon: Icons.headset_mic_rounded,

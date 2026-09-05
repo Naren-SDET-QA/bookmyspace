@@ -16,8 +16,15 @@ class MockAuthRepository implements AuthRepository {
   bool failSignIn = false;
   bool failVerify = false;
   bool failSignOut = false;
+  bool failPasswordReset = false;
+  bool failUpdatePassword = false;
   int signInCount = 0;
   int verifyCount = 0;
+  int passwordResetCount = 0;
+  int updatePasswordCount = 0;
+  String? lastResetEmail;
+  String? lastNewPassword;
+  final _recovery = StreamController<bool>.broadcast();
 
   @override
   AuthUser? get currentUser => _user;
@@ -46,6 +53,34 @@ class MockAuthRepository implements AuthRepository {
       throw Exception('OTP send failed');
     }
   }
+
+  @override
+  Future<AuthUser> signInWithPassword(String email, String password) async {
+    if (failSignIn) throw Exception('sign in failed');
+    final user = AuthUser(id: 'mock-user', email: email);
+    _user = user;
+    _controller.add(user);
+    return user;
+  }
+
+  @override
+  Future<void> requestPasswordReset(String email) async {
+    passwordResetCount++;
+    lastResetEmail = email;
+    if (failPasswordReset) throw Exception('reset failed');
+  }
+
+  @override
+  Future<void> updatePassword(String newPassword) async {
+    updatePasswordCount++;
+    lastNewPassword = newPassword;
+    if (failUpdatePassword) throw Exception('update failed');
+  }
+
+  @override
+  Stream<bool> passwordRecoveryState() => _recovery.stream;
+
+  void emitPasswordRecovery() => _recovery.add(true);
 
   Future<AuthUser> _signIn() async {
     signInCount++;
@@ -102,7 +137,8 @@ class MockAuthRepository implements AuthRepository {
 
   @override
   Future<AuthUser> updateProfile({String? fullName, String? avatarUrl}) async {
-    final current = _user ?? const AuthUser(id: 'mock-user', email: 'mock@test.com');
+    final current =
+        _user ?? const AuthUser(id: 'mock-user', email: 'mock@test.com');
     _user = AuthUser(
       id: current.id,
       email: current.email,
@@ -113,5 +149,8 @@ class MockAuthRepository implements AuthRepository {
     return _user!;
   }
 
-  void dispose() => _controller.close();
+  void dispose() {
+    _controller.close();
+    _recovery.close();
+  }
 }

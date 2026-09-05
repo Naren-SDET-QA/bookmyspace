@@ -4,15 +4,16 @@ import 'theme_tokens.dart';
 
 /// Centralised Material 3 theme for BookMySpace.
 ///
-/// Supports light and dark mode with a warm, trustworthy brand palette.
+/// Supports light and dark mode using the native BookMySpace visual language.
 class AppTheme {
   AppTheme._();
 
   /// Brand colours exposed for use across widgets.
-  static const Color brand = Color(0xFF3F51B5);
-  static const Color brandLight = Color(0xFF757DE8);
-  static const Color accent = Color(0xFFFF7043);
-  static const Color _surfaceDark = Color(0xFF131318);
+  static const Color brand = Color(0xFF4F46E5);
+  static const Color brandLight = Color(0xFF818CF8);
+  static const Color accent = Color(0xFFFF6B4A);
+  static const Color _surfaceLight = Color(0xFFF8FAFC);
+  static const Color _surfaceDark = Color(0xFF081A2B);
 
   static ThemeData get light => lightFor(brand);
 
@@ -22,23 +23,19 @@ class AppTheme {
   static ThemeData darkFor(Color seed) => _base(Brightness.dark, seed);
 
   static ThemeData _base(Brightness brightness, Color seed) {
-    final tokens = ThemeTokens.fromSeed(seed, brightness: brightness);
     final isLight = brightness == Brightness.light;
-    final scheme = ColorScheme.fromSeed(
-      seedColor: seed,
-      brightness: brightness,
-      primary: tokens.primary,
-      secondary: tokens.secondary,
-      surface: tokens.surface,
-    );
+    // Native-parity palette: ports the Android Native app's custom HSL-based
+    // `generateBookMySpaceColorScheme` instead of Material 3's generic
+    // seeded tonal palette (see ThemeTokens.colorSchemeFor).
+    final scheme = ThemeTokens.colorSchemeFor(seed, brightness);
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
-      scaffoldBackgroundColor: scheme.surface,
+      scaffoldBackgroundColor: isLight ? _surfaceLight : _surfaceDark,
       appBarTheme: AppBarTheme(
         centerTitle: false,
-        backgroundColor: scheme.surface,
+        backgroundColor: isLight ? _surfaceLight : _surfaceDark,
         elevation: 0,
         scrolledUnderElevation: 0.5,
         titleTextStyle: TextStyle(
@@ -49,7 +46,7 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         elevation: 0,
-        color: isLight ? Colors.white : _surfaceDark,
+        color: isLight ? Colors.white : const Color(0xFF102A43),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.4)),

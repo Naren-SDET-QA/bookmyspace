@@ -24,6 +24,12 @@ abstract interface class InstituteRepository {
     String specialization,
   });
 
+  Future<void> deleteFaculty(String facultyId);
+
+  Future<void> deleteClass(String classId);
+
+  Future<Course> updateClassStatus(String classId, String status);
+
   Future<Course> saveClass({
     required String instituteId,
     String? courseId,

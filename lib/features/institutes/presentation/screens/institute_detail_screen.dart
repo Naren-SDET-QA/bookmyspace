@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_network_image.dart';
 import '../../../../core/widgets/error_view.dart';
+import '../../../courses/domain/course.dart';
 import '../institute_providers.dart';
 
 class InstituteDetailScreen extends ConsumerWidget {
@@ -16,14 +18,14 @@ class InstituteDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final detail = ref.watch(instituteDetailProvider(instituteId));
     return Scaffold(
       body: detail.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
           message: e.toString(),
-          onRetry: () =>
-              ref.invalidate(instituteDetailProvider(instituteId)),
+          onRetry: () => ref.invalidate(instituteDetailProvider(instituteId)),
         ),
         data: (institute) => CustomScrollView(
           slivers: [
@@ -47,9 +49,9 @@ class InstituteDetailScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (institute.isVerified)
-                      const Chip(
-                        avatar: Icon(Icons.verified, size: 16),
-                        label: Text('Verified institute'),
+                      Chip(
+                        avatar: const Icon(Icons.verified, size: 16),
+                        label: Text(l10n.verifiedInstitute),
                       ),
                     const SizedBox(height: 8),
                     Text(institute.description),
@@ -57,9 +59,11 @@ class InstituteDetailScreen extends ConsumerWidget {
                         institute.city.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       Text(
-                        [institute.address, institute.city, institute.state]
-                            .where((s) => s.isNotEmpty)
-                            .join(', '),
+                        [
+                          institute.address,
+                          institute.city,
+                          institute.state,
+                        ].where((s) => s.isNotEmpty).join(', '),
                       ),
                     ],
                     const SizedBox(height: 12),
@@ -68,11 +72,10 @@ class InstituteDetailScreen extends ConsumerWidget {
                       children: [
                         if (institute.phone.isNotEmpty)
                           FilledButton.icon(
-                            onPressed: () => launchUrl(
-                              Uri.parse('tel:${institute.phone}'),
-                            ),
+                            onPressed: () =>
+                                launchUrl(Uri.parse('tel:${institute.phone}')),
                             icon: const Icon(Icons.call),
-                            label: const Text('Call'),
+                            label: Text(l10n.call),
                           ),
                         if (institute.whatsapp.isNotEmpty)
                           OutlinedButton.icon(
@@ -82,20 +85,20 @@ class InstituteDetailScreen extends ConsumerWidget {
                               ),
                             ),
                             icon: const Icon(Icons.chat),
-                            label: const Text('WhatsApp'),
+                            label: Text(l10n.whatsapp),
                           ),
                       ],
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      'Gallery',
+                      l10n.gallery,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 8),
                     SizedBox(
                       height: 88,
                       child: institute.media.isEmpty
-                          ? const Text('No gallery images yet.')
+                          ? Text(l10n.noGalleryYet)
                           : ListView.separated(
                               scrollDirection: Axis.horizontal,
                               itemCount: institute.media.length,
@@ -122,12 +125,12 @@ class InstituteDetailScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      'Faculty',
+                      l10n.faculty,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 8),
                     if (institute.faculty.isEmpty)
-                      const Text('Faculty profiles will appear here.'),
+                      Text(l10n.facultyPlaceholder),
                     ...institute.faculty.map(
                       (f) => ListTile(
                         contentPadding: EdgeInsets.zero,
@@ -149,23 +152,22 @@ class InstituteDetailScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Classes & courses',
+                      l10n.classesAndCourses,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 8),
                     if (institute.courses.isEmpty)
-                      const Text('No published classes yet.'),
+                      Text(l10n.noPublishedClasses),
                     ...institute.courses.map(
                       (course) => Card(
                         child: ListTile(
                           title: Text(course.title),
                           subtitle: Text(
                             [
-                              course.mode.name,
-                              if (course.isDemo) 'Demo session',
+                              _modeLabel(l10n, course.mode),
+                              if (course.isDemo) l10n.demoSession,
                               '₹${course.feeAmount.toStringAsFixed(0)}',
-                              if (course.seats != null)
-                                '${course.seats} seats',
+                              if (course.seats != null) '${course.seats} seats',
                             ].join(' · '),
                           ),
                           trailing: const Icon(Icons.chevron_right),
@@ -187,4 +189,11 @@ class InstituteDetailScreen extends ConsumerWidget {
       ),
     );
   }
+
+  static String _modeLabel(AppLocalizations l10n, CourseMode mode) =>
+      switch (mode) {
+        CourseMode.online => l10n.modeOnline,
+        CourseMode.offline => l10n.modeOffline,
+        CourseMode.hybrid => l10n.modeHybrid,
+      };
 }

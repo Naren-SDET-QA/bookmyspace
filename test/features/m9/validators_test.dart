@@ -78,6 +78,11 @@ void main() {
         expect(AppValidators.password('pass1'), isNotNull);
       });
 
+      test('confirmPassword requires a match', () {
+        expect(AppValidators.confirmPassword('password1', 'password1'), isNull);
+        expect(AppValidators.confirmPassword('password1', 'otherpass1'), isNotNull);
+      });
+
       test('returns error for password without letter', () {
         expect(AppValidators.password('12345678'), isNotNull);
       });

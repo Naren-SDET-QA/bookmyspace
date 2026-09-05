@@ -4,6 +4,8 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide AuthUser;
 import '../../../core/config/app_config.dart';
 import '../../../core/notifications/onesignal_push_service.dart';
 import '../domain/auth_repository.dart';
+import '../domain/auth_configuration.dart';
+import '../infrastructure/supabase_auth_configuration_repository.dart';
 import '../domain/auth_user.dart';
 import '../infrastructure/supabase_auth_repository.dart';
 
@@ -45,10 +47,23 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return SupabaseAuthRepository(ref.watch(supabaseProvider));
 });
 
+final authConfigurationRepositoryProvider = Provider((ref) {
+  return SupabaseAuthConfigurationRepository(ref.watch(supabaseProvider));
+});
+
+final authConfigurationProvider = FutureProvider<AuthConfiguration>((ref) {
+  return ref.watch(authConfigurationRepositoryProvider).load();
+});
+
 /// Streams the current authentication state.
 final authStateProvider = StreamProvider<AuthUser?>((ref) {
   final repo = ref.watch(authRepositoryProvider);
   return repo.authStateChanges();
+});
+
+/// Emits when a recovery email deep-link establishes a session.
+final passwordRecoveryProvider = StreamProvider<bool>((ref) {
+  return ref.watch(authRepositoryProvider).passwordRecoveryState();
 });
 
 /// Auth state holder.
@@ -73,7 +88,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
   AuthNotifier(this._repository)
     : super(AuthState(user: _repository.currentUser)) {
     _repository.authStateChanges().listen((user) {
-      state = state.copyWith(user: user, isLoading: false);
+      // Auth stream null is a real logout transition and must clear the
+      // current user instead of being swallowed by copyWith's nullable
+      // update semantics.
+      state = AuthState(user: user, isLoading: false);
     });
   }
 

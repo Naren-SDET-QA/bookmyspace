@@ -4,6 +4,8 @@ import 'feature_id.dart';
 import 'feature_registry.dart';
 import 'provider_registry.dart';
 import 'register_default_plugins.dart';
+import 'plugins/ai_provider_plugin.dart';
+import '../../features/auth/presentation/auth_providers.dart';
 
 final _featureRegistryTickProvider = StateProvider<int>((ref) => 0);
 
@@ -29,6 +31,9 @@ final providerRegistryProvider = Provider<ProviderRegistry>((ref) {
   final plugins = ProviderRegistry(
     features: ref.watch(featureRegistryProvider),
   );
-  registerDefaultPlugins(plugins);
+  registerDefaultPlugins(
+    plugins,
+    aiFactory: () => SupabaseAiProvider(ref.read(supabaseProvider)),
+  );
   return plugins;
 });

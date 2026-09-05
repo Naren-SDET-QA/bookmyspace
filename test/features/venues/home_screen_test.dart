@@ -4,7 +4,6 @@ import 'package:bookmyspace/features/auth/presentation/auth_providers.dart';
 import 'package:bookmyspace/features/courses/presentation/course_providers.dart';
 import 'package:bookmyspace/features/events/presentation/event_providers.dart';
 import 'package:bookmyspace/features/home/domain/customer_section_catalog.dart';
-import 'package:bookmyspace/features/home/presentation/customer_section_providers.dart';
 import 'package:bookmyspace/features/home/presentation/screens/home_screen.dart';
 import 'package:bookmyspace/features/venues/presentation/venue_providers.dart';
 import 'package:flutter/material.dart';
@@ -53,10 +52,11 @@ void main() {
     await tester.pumpWidget(_app(repo));
     await tester.pumpAndSettle();
 
-    expect(find.text('Function Halls'), findsWidgets);
-    expect(find.text('Lodge / Rooms'), findsOneWidget);
+    expect(find.text('Spaces & Events'), findsWidgets);
+    expect(find.text('Stay'), findsOneWidget);
+    expect(find.text('Learning & Classes'), findsOneWidget);
     expect(find.text('PG / Hostels'), findsOneWidget);
-    expect(find.text('Institutes / Classes'), findsOneWidget);
+    expect(find.text('Student Hostel'), findsNothing);
     expect(find.text('Sunrise Function Hall'), findsNothing);
     expect(find.text('The Work Nest'), findsNothing);
   });
@@ -99,6 +99,45 @@ void main() {
     await tester.tap(retry);
     await tester.pumpAndSettle();
     expect(find.text('Sunrise Function Hall'), findsOneWidget);
+  });
+
+  Future<void> setCompactAndroidView(WidgetTester tester) async {
+    tester.view.physicalSize = const Size(412, 915);
+    tester.view.devicePixelRatio = 1.0;
+    tester.view.padding = const FakeViewPadding(top: 48, bottom: 24);
+    tester.view.viewPadding = const FakeViewPadding(top: 48, bottom: 24);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPadding);
+    addTearDown(tester.view.resetViewPadding);
+  }
+
+  testWidgets('compact 412-wide first screen does not overflow', (
+    tester,
+  ) async {
+    await setCompactAndroidView(tester);
+    await tester.pumpWidget(
+      _app(MockVenueRepository(), authRepo: MockAuthRepository()),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('BookMySpace'), findsOneWidget);
+    expect(find.text('Sign In'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('compact 412-wide section drill-down does not overflow', (
+    tester,
+  ) async {
+    await setCompactAndroidView(tester);
+    await tester.pumpWidget(
+      _app(MockVenueRepository(), section: CustomerSection.institutesClasses),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('All Spaces'), findsOneWidget);
+    expect(find.text('Choose Category'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('lodge section does not show halls or pgs', (tester) async {

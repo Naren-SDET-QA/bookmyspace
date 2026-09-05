@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
     // The booking must belong to the user and be confirmed (refundable).
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
-      .select('id, user_id, status, total_amount')
+      .select('id, user_id, status, total_amount, venue_id, venues(category_id, venue_categories(metadata))')
       .eq('id', booking_id)
       .single();
     if (bookingError || !booking) {
@@ -95,6 +95,17 @@ Deno.serve(async (req) => {
     }
     if (booking.user_id !== user.id || booking.status !== 'confirmed') {
       return new Response(JSON.stringify({ error: 'not_refundable' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const venueRow = Array.isArray(booking.venues) ? booking.venues[0] : booking.venues;
+    const categoryRow = Array.isArray(venueRow?.venue_categories)
+      ? venueRow.venue_categories[0]
+      : venueRow?.venue_categories;
+    const categoryMetadata = (categoryRow?.metadata ?? {}) as Record<string, unknown>;
+    if (categoryMetadata.active !== true || categoryMetadata.payments_enabled !== true) {
+      return new Response(JSON.stringify({ error: 'category_payments_disabled' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

@@ -19,6 +19,12 @@ class AdminDashboardScreen extends ConsumerWidget {
         route: AppRoutes.adminListings,
       ),
       _AdminTile(
+        icon: Icons.travel_explore_rounded,
+        title: 'Venue discovery review',
+        subtitle: 'Review OSM-discovered venues before they become drafts',
+        route: AppRoutes.adminVenueDiscoveryReview,
+      ),
+      _AdminTile(
         icon: Icons.category_rounded,
         title: 'Category configuration',
         subtitle: 'Aliases, visibility, booking mode, media',
@@ -37,6 +43,18 @@ class AdminDashboardScreen extends ConsumerWidget {
         route: AppRoutes.adminFeatureConfiguration,
       ),
       _AdminTile(
+        icon: Icons.local_offer_rounded,
+        title: 'Promotions',
+        subtitle: 'Create, edit, schedule and publish promotions',
+        route: AppRoutes.adminPromotions,
+      ),
+      _AdminTile(
+        icon: Icons.settings_suggest_rounded,
+        title: 'Tenant configuration',
+        subtitle: 'Branding, runtime features, language and notifications',
+        route: AppRoutes.adminTenantConfiguration,
+      ),
+      _AdminTile(
         icon: Icons.receipt_long_rounded,
         title: 'Booking oversight',
         subtitle: 'Server booking records',
@@ -53,6 +71,30 @@ class AdminDashboardScreen extends ConsumerWidget {
         title: 'Payment & self-healing',
         subtitle: 'Live Razorpay health and stale pending reconcile',
         route: AppRoutes.adminPaymentHealth,
+      ),
+      _AdminTile(
+        icon: Icons.monitor_heart_rounded,
+        title: 'Observability',
+        subtitle: 'Verified health, errors, alerts and recovery visibility',
+        route: AppRoutes.adminObservability,
+      ),
+      _AdminTile(
+        icon: Icons.hub_rounded,
+        title: 'Observability providers',
+        subtitle: 'Provider health and safe connection tests',
+        route: AppRoutes.adminObservabilityProviders,
+      ),
+      _AdminTile(
+        icon: Icons.settings_rounded,
+        title: 'Platform settings',
+        subtitle: 'Home UI, colors and module configuration',
+        route: AppRoutes.adminSettings,
+      ),
+      _AdminTile(
+        icon: Icons.help_center_rounded,
+        title: 'Help Center',
+        subtitle: 'Searchable configuration and troubleshooting help',
+        route: AppRoutes.adminHelp,
       ),
       _AdminTile(
         icon: Icons.tune_rounded,

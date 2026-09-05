@@ -4,6 +4,8 @@
 <dict>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>BookMySpace uses the microphone to understand voice search requests.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>BookMySpace uses speech recognition to turn your voice search into text.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
@@ -79,6 +81,17 @@
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.bookmyspace.bookmyspace</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.bookmyspace.bookmyspace</string>
+			</array>
+		</dict>
 	</array>
 </dict>
 </plist>

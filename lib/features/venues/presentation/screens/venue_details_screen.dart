@@ -8,12 +8,15 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/modular/feature_providers.dart';
 import '../../../../core/modular/plugins/map_provider.dart';
+import '../../../../core/offline/map_tile_cache.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_network_image.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../home/domain/customer_section_catalog.dart';
 import '../../domain/venue.dart';
 import '../venue_providers.dart';
+import '../../../reviews/presentation/screens/venue_reviews_section.dart';
+import '../widgets/pg_rent_calculator_card.dart';
 import '../widgets/venue_badges.dart';
 
 /// Opens the venue location in the device's Google Maps app (or web fallback).
@@ -49,6 +52,25 @@ Future<void> _openWhatsApp(BuildContext context, Venue venue) async {
       context,
     ).showSnackBar(const SnackBar(content: Text('Could not open WhatsApp.')));
   }
+}
+
+void _showGallery(BuildContext context, Venue venue) {
+  final images = venue.galleryImageUrls;
+  if (images.isEmpty) return;
+  showDialog<void>(
+    context: context,
+    builder: (context) => Dialog.fullscreen(
+      child: Scaffold(
+        appBar: AppBar(title: Text('${images.length} Photos')),
+        body: PageView.builder(
+          itemCount: images.length,
+          itemBuilder: (context, index) => InteractiveViewer(
+            child: AppNetworkImage(url: images[index], fit: BoxFit.contain),
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 /// Full venue details: gallery, about, amenities, hours, pricing and map.
@@ -98,11 +120,11 @@ class _VenueDetailsBody extends ConsumerWidget {
             background: Stack(
               fit: StackFit.expand,
               children: [
-                if (venue.images.isNotEmpty)
+                if (venue.galleryImageUrls.isNotEmpty)
                   PageView.builder(
-                    itemCount: venue.images.length,
+                    itemCount: venue.galleryImageUrls.length,
                     itemBuilder: (context, i) => AppNetworkImage(
-                      url: venue.images[i].url,
+                      url: venue.galleryImageUrls[i],
                       fit: BoxFit.cover,
                     ),
                   )
@@ -117,25 +139,39 @@ class _VenueDetailsBody extends ConsumerWidget {
                       ),
                     ),
                   ),
-                if (venue.images.length > 1)
-                  Positioned(
-                    bottom: 12,
-                    right: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '${venue.images.length}',
-                        style: const TextStyle(color: Colors.white),
+                Positioned(
+                  bottom: 12,
+                  right: 12,
+                  child: Material(
+                    color: Colors.black.withValues(alpha: 0.65),
+                    borderRadius: BorderRadius.circular(8),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: () => _showGallery(context, venue),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.photo_camera_outlined,
+                              size: 16,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${venue.galleryImageUrls.length} Photos',
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
+                ),
               ],
             ),
           ),
@@ -146,18 +182,18 @@ class _VenueDetailsBody extends ConsumerWidget {
                     ref.read(toggleFavoriteProvider(venue.id).future),
                 icon: Icon(
                   isFav ?? false
-                      ? Icons.favorite_rounded
-                      : Icons.favorite_outline_rounded,
+                      ? Icons.bookmark_rounded
+                      : Icons.bookmark_border_rounded,
                   color: isFav ?? false ? AppTheme.accent : null,
                 ),
               ),
               loading: () => const IconButton(
                 onPressed: null,
-                icon: Icon(Icons.favorite_outline_rounded),
+                icon: Icon(Icons.bookmark_border_rounded),
               ),
               error: (_, _) => const IconButton(
                 onPressed: null,
-                icon: Icon(Icons.favorite_outline_rounded),
+                icon: Icon(Icons.bookmark_border_rounded),
               ),
             ),
             const SizedBox(width: 4),
@@ -222,6 +258,16 @@ class _VenueDetailsBody extends ConsumerWidget {
                 ],
                 _PricingCard(venue: venue),
                 const SizedBox(height: 20),
+                if (PgRentCalculatorCard.appliesTo(venue)) ...[
+                  PgRentCalculatorCard(venue: venue),
+                  const SizedBox(height: 20),
+                ],
+                if (venue.category?.slug == 'hotel' ||
+                    venue.category?.slug == 'hotel_stay' ||
+                    venue.category?.slug == 'lodge_rooms') ...[
+                  _HotelRoomsSection(venueId: venue.id),
+                  const SizedBox(height: 20),
+                ],
                 if (venue.facilities.isNotEmpty) ...[
                   Text(l10n.amenities, style: theme.textTheme.titleMedium),
                   const SizedBox(height: 10),
@@ -289,11 +335,66 @@ class _VenueDetailsBody extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 24),
+                VenueReviewsSection(venueId: venue.id),
+                const SizedBox(height: 24),
               ],
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _HotelRoomsSection extends ConsumerWidget {
+  const _HotelRoomsSection({required this.venueId});
+
+  final String venueId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final rooms = ref.watch(hotelRoomTypesProvider(venueId));
+    return rooms.when(
+      loading: () => const LinearProgressIndicator(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (items) {
+        if (items.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Available rooms',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 10),
+            ...items.map(
+              (room) => Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  leading: room.images.isEmpty
+                      ? const Icon(Icons.bed_outlined)
+                      : ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            room.images.first,
+                            width: 56,
+                            height: 56,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) =>
+                                const Icon(Icons.bed_outlined),
+                          ),
+                        ),
+                  title: Text(room.name),
+                  subtitle: Text(
+                    '${room.bedType} · Sleeps ${room.capacity}'
+                    '${room.amenities.isEmpty ? '' : ' · ${room.amenities.join(', ')}'}',
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -466,6 +567,7 @@ class _VenueMap extends ConsumerWidget {
           ),
           children: [
             TileLayer(
+              tileProvider: createCachingTileProvider(),
               urlTemplate: map.tileUrlTemplate,
               userAgentPackageName: map.userAgentPackageName,
             ),

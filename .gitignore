@@ -24,7 +24,17 @@ build/
 **/google-services.json
 *.jks
 *.keystore
+*.keystore.base64
+debug.keystore.base64
+*.p12
+*.pem
+*.p8
+*.mobileprovision
 key.properties
+secrets.env
+**/serviceAccount*.json
+**/service-account*.json
+**/*-firebase-adminsdk-*.json
 
 # macOS
 .DS_Store
@@ -33,3 +43,5 @@ key.properties
 .idea/
 *.iml
 .vscode/
+
+.env.dev.local

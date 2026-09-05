@@ -52,7 +52,10 @@ alter table public.support_tickets
   add column if not exists admin_reply text,
   add column if not exists admin_id uuid references auth.users(id);
 alter table public.support_tickets alter column priority set default 'medium';
+-- Remap legacy 0006 'normal' priority rows before tightening the check.
+-- Drop the legacy check first so the remap itself does not violate it.
 alter table public.support_tickets drop constraint if exists support_tickets_priority_check;
+update public.support_tickets set priority = 'medium' where priority = 'normal';
 alter table public.support_tickets add constraint support_tickets_priority_check
   check (priority in ('low', 'medium', 'high', 'urgent'));
 

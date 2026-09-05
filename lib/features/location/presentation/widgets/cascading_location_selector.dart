@@ -23,6 +23,49 @@ class CascadingLocationValue {
   final LocationNode? village;
   final LocationNode? area;
 
+  /// Builds a selector value from an ordered country-to-leaf path.
+  ///
+  /// Paths may skip levels (for example, district → city), and future or
+  /// unknown levels are ignored rather than being forced into a category.
+  factory CascadingLocationValue.fromPath(Iterable<LocationNode> path) {
+    LocationNode? country;
+    LocationNode? state;
+    LocationNode? district;
+    LocationNode? mandal;
+    LocationNode? city;
+    LocationNode? village;
+    LocationNode? area;
+    for (final node in path) {
+      switch (node.level) {
+        case LocationNodeLevel.country:
+          country = node;
+        case LocationNodeLevel.stateProvince:
+          state = node;
+        case LocationNodeLevel.districtCounty:
+          district = node;
+        case LocationNodeLevel.mandalTalukTehsilBlock:
+          mandal = node;
+        case LocationNodeLevel.cityTown:
+          city = node;
+        case LocationNodeLevel.village:
+          village = node;
+        case LocationNodeLevel.areaLocality:
+          area = node;
+        case LocationNodeLevel.unknown:
+          break;
+      }
+    }
+    return CascadingLocationValue(
+      country: country,
+      state: state,
+      district: district,
+      mandal: mandal,
+      city: city,
+      village: village,
+      area: area,
+    );
+  }
+
   String? get selectedLocationId =>
       area?.id ??
       village?.id ??

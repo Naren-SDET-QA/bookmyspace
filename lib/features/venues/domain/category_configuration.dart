@@ -33,6 +33,9 @@ class CategoryConfiguration {
     this.ownerFields = const [],
     this.searchable = true,
     this.offerVisible = true,
+    this.availabilityEnabled = false,
+    this.paymentsEnabled = false,
+    this.locationEnabled = false,
     this.homeVisible = true,
     this.themeColor = '',
     this.bookingRequiredFields = const [],
@@ -44,6 +47,14 @@ class CategoryConfiguration {
     this.invoiceVisible = true,
     this.notificationVisible = true,
     this.qrVisible = true,
+    this.mediaEnabled = false,
+    this.imagesEnabled = false,
+    this.videosEnabled = false,
+    this.models3dEnabled = false,
+    this.galleryEnabled = false,
+    this.ownerUploadEnabled = false,
+    this.ownerEditEnabled = false,
+    this.publicMediaEnabled = false,
   });
 
   final String id;
@@ -71,6 +82,9 @@ class CategoryConfiguration {
   final List<String> ownerFields;
   final bool searchable;
   final bool offerVisible;
+  final bool availabilityEnabled;
+  final bool paymentsEnabled;
+  final bool locationEnabled;
   final bool homeVisible;
   final String themeColor;
   final List<String> bookingRequiredFields;
@@ -82,6 +96,14 @@ class CategoryConfiguration {
   final bool invoiceVisible;
   final bool notificationVisible;
   final bool qrVisible;
+  final bool mediaEnabled;
+  final bool imagesEnabled;
+  final bool videosEnabled;
+  final bool models3dEnabled;
+  final bool galleryEnabled;
+  final bool ownerUploadEnabled;
+  final bool ownerEditEnabled;
+  final bool publicMediaEnabled;
 
   bool get isListingOnly => !bookable || bookingMode == 'listing_only';
 
@@ -120,6 +142,17 @@ class CategoryConfiguration {
     List<String>? amenities,
     bool? searchable,
     bool? offerVisible,
+    bool? availabilityEnabled,
+    bool? paymentsEnabled,
+    bool? locationEnabled,
+    bool? mediaEnabled,
+    bool? imagesEnabled,
+    bool? videosEnabled,
+    bool? models3dEnabled,
+    bool? galleryEnabled,
+    bool? ownerUploadEnabled,
+    bool? ownerEditEnabled,
+    bool? publicMediaEnabled,
     bool? homeVisible,
     String? themeColor,
     List<String>? bookingRequiredFields,
@@ -158,6 +191,17 @@ class CategoryConfiguration {
       ownerFields: ownerFields ?? this.ownerFields,
       searchable: searchable ?? this.searchable,
       offerVisible: offerVisible ?? this.offerVisible,
+      availabilityEnabled: availabilityEnabled ?? this.availabilityEnabled,
+      paymentsEnabled: paymentsEnabled ?? this.paymentsEnabled,
+      locationEnabled: locationEnabled ?? this.locationEnabled,
+      mediaEnabled: mediaEnabled ?? this.mediaEnabled,
+      imagesEnabled: imagesEnabled ?? this.imagesEnabled,
+      videosEnabled: videosEnabled ?? this.videosEnabled,
+      models3dEnabled: models3dEnabled ?? this.models3dEnabled,
+      galleryEnabled: galleryEnabled ?? this.galleryEnabled,
+      ownerUploadEnabled: ownerUploadEnabled ?? this.ownerUploadEnabled,
+      ownerEditEnabled: ownerEditEnabled ?? this.ownerEditEnabled,
+      publicMediaEnabled: publicMediaEnabled ?? this.publicMediaEnabled,
       homeVisible: homeVisible ?? this.homeVisible,
       themeColor: themeColor ?? this.themeColor,
       bookingRequiredFields:
@@ -197,6 +241,10 @@ class CategoryConfiguration {
     'sort_order': sortOrder,
     'searchable': searchable,
     'offer_visible': offerVisible,
+    'offers_enabled': offerVisible,
+    'availability_enabled': availabilityEnabled,
+    'payments_enabled': paymentsEnabled,
+    'location_enabled': locationEnabled,
     'home_visible': homeVisible,
     'booking_required_fields': bookingRequiredFields,
     'booking_optional_fields': bookingOptionalFields,
@@ -207,6 +255,14 @@ class CategoryConfiguration {
     'invoice_visible': invoiceVisible,
     'notification_visible': notificationVisible,
     'qr_visible': qrVisible,
+    'media_enabled': mediaEnabled,
+    'images_enabled': imagesEnabled,
+    'videos_enabled': videosEnabled,
+    'models_3d_enabled': models3dEnabled,
+    'gallery_enabled': galleryEnabled,
+    'owner_upload_enabled': ownerUploadEnabled,
+    'owner_edit_enabled': ownerEditEnabled,
+    'public_media_enabled': publicMediaEnabled,
     if (imageUrl.isNotEmpty) 'image': imageUrl,
     if (themeColor.isNotEmpty) 'theme_color': themeColor,
   };
@@ -259,7 +315,7 @@ class CategoryConfiguration {
       name: category.name,
       icon: category.icon,
       imageUrl: (meta['image'] ?? meta['image_url'] ?? '').toString(),
-      sectionId: (meta['section'] ?? '').toString(),
+      sectionId: (meta['section_id'] ?? meta['section'] ?? '').toString(),
       visible: flag('active', true) && flag('visible', true),
       bookable: flag('bookable', true),
       bookingMode: (meta['booking_mode'] ?? 'instant').toString(),
@@ -267,7 +323,10 @@ class CategoryConfiguration {
       availabilityMode: (meta['availability_mode'] ?? 'slots').toString(),
       customerAction: (meta['customer_action_label'] ?? 'Book Now').toString(),
       mediaConfiguration: (meta['media_configuration'] ?? 'images').toString(),
-      sortOrder: (meta['sort_order'] as num?)?.toInt() ?? 0,
+      sortOrder:
+          ((meta['section_sort_order'] ?? meta['sort_order']) as num?)
+              ?.toInt() ??
+          0,
       localizedNames: stringMap(meta['localized_names']),
       aliases: stringList(meta['aliases']),
       searchAliases: stringList(meta['search_aliases']),
@@ -278,12 +337,18 @@ class CategoryConfiguration {
       amenities: stringList(meta['amenity_configuration'] ?? meta['amenities']),
       ownerFields: stringList(meta['owner_fields']),
       searchable: flag('searchable', true),
-      offerVisible: flag('offer_visible', true),
+      offerVisible: flag('offers_enabled', flag('offer_visible', true)),
+      availabilityEnabled: flag('availability_enabled', false),
+      paymentsEnabled: flag('payments_enabled', false),
+      locationEnabled: flag('location_enabled', false),
       homeVisible: flag('home_visible', true),
       themeColor: (meta['theme_color'] ?? meta['color'] ?? '').toString(),
       bookingRequiredFields: stringList(meta['booking_required_fields']),
       bookingOptionalFields: stringList(meta['booking_optional_fields']),
-      registrationRequired: flag('registration_required', pgFamily || instituteFamily),
+      registrationRequired: flag(
+        'registration_required',
+        pgFamily || instituteFamily,
+      ),
       kycRequired: flag('kyc_required', pgFamily),
       registrationRequiredFields: stringList(
         meta['registration_required_fields'],
@@ -294,6 +359,14 @@ class CategoryConfiguration {
       invoiceVisible: flag('invoice_visible', true),
       notificationVisible: flag('notification_visible', true),
       qrVisible: flag('qr_visible', true),
+      mediaEnabled: flag('media_enabled', false),
+      imagesEnabled: flag('images_enabled', false),
+      videosEnabled: flag('videos_enabled', false),
+      models3dEnabled: flag('models_3d_enabled', false),
+      galleryEnabled: flag('gallery_enabled', false),
+      ownerUploadEnabled: flag('owner_upload_enabled', false),
+      ownerEditEnabled: flag('owner_edit_enabled', false),
+      publicMediaEnabled: flag('public_media_enabled', false),
     );
   }
 }

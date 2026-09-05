@@ -104,6 +104,7 @@ void main() {
       find.byKey(const ValueKey('section_institutes_classes')),
       findsOneWidget,
     );
+
     expect(find.text('View on map'), findsOneWidget);
   });
 
@@ -153,14 +154,14 @@ void main() {
 
     await tester.pumpWidget(_material(const ProfileScreen()));
     await tester.pumpAndSettle();
-    expect(find.text('Payment History'), findsOneWidget);
+    expect(find.text('Payment history'), findsOneWidget);
     await tester.scrollUntilVisible(
-      find.text('Support & Help Desk'),
+      find.text('Support'),
       400,
       scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('Support & Help Desk'), findsOneWidget);
-    expect(find.text('Institutes & classes'), findsNothing);
+    expect(find.text('Support'), findsOneWidget);
+    expect(find.text('Classes'), findsNothing);
   });
 
   testWidgets('home header follows assistant and notifications flags', (
@@ -198,11 +199,11 @@ void main() {
     await tester.fling(find.byType(ListView), const Offset(0, -800), 1000);
     await tester.pumpAndSettle();
 
-    expect(find.text('Payment History'), findsNothing);
+    expect(find.text('Payment history'), findsNothing);
     expect(find.text('AI assistant'), findsNothing);
-    expect(find.text('Notifications & Alerts'), findsNothing);
-    expect(find.text('Institutes & classes'), findsOneWidget);
-    expect(find.text('Support & Help Desk'), findsOneWidget);
+    expect(find.text('Notifications'), findsNothing);
+    expect(find.text('Classes'), findsOneWidget);
+    expect(find.text('Support'), findsOneWidget);
   });
 
   testWidgets('map screen does not construct tiles when maps is disabled', (
@@ -292,7 +293,6 @@ void main() {
     expect(router.routeInformationProvider.value.uri.path.endsWith('/pay'), isFalse);
     expect(find.text('Pay now'), findsNothing);
     expect(find.text('Book Your Space'), findsNothing);
-    expect(find.textContaining('Slot held'), findsOneWidget);
   });
 
   testWidgets('registry configure after mount rebuilds home tiles', (

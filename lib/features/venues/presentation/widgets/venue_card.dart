@@ -303,10 +303,29 @@ class FunctionHallListCard extends ConsumerWidget {
                     ),
                     OutlinedButton(
                       onPressed: openDetails,
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        minimumSize: const Size(0, 36),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
                       child: const Text('View Details'),
                     ),
                     const SizedBox(width: 8),
-                    FilledButton(onPressed: startBooking, child: const Text('Book Now')),
+                    FilledButton(
+                      onPressed: startBooking,
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        minimumSize: const Size(0, 36),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text('Book Now'),
+                    ),
                   ],
                 ),
               ],
@@ -451,9 +470,31 @@ class HotelListCard extends ConsumerWidget {
                         ),
                       ),
                     ),
-                    OutlinedButton(onPressed: details, child: const Text('View Hotel')),
+                    OutlinedButton(
+                      onPressed: details,
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        minimumSize: const Size(0, 36),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text('View Hotel'),
+                    ),
                     const SizedBox(width: 8),
-                    FilledButton(onPressed: book, child: const Text('Book Stay')),
+                    FilledButton(
+                      onPressed: book,
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        minimumSize: const Size(0, 36),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text('Book Stay'),
+                    ),
                   ],
                 ),
               ],
@@ -522,6 +563,238 @@ class _LabelChip extends StatelessWidget {
             style: const TextStyle(color: Colors.white, fontSize: 12),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Compact, redBus/OYO-style vertical hotel card for browsing "Lodge / Rooms"
+/// stays. Deliberately simple: a colored rating pill on the image, name +
+/// location, and a single price row with one primary "Book Now" action --
+/// mirrors the lean hotel-listing pattern used by redBus/OYO-style booking
+/// apps, built only from fields that already exist on [Venue] (no invented
+/// pricing/discount data).
+class HotelStyleVenueCard extends ConsumerWidget {
+  const HotelStyleVenueCard({
+    super.key,
+    required this.venue,
+    required this.onTap,
+    required this.onBookTap,
+  });
+
+  final Venue venue;
+  final VoidCallback onTap;
+  final VoidCallback onBookTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final favorite = ref.watch(isFavoriteProvider(venue.id));
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+        ),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              height: 130,
+              width: double.infinity,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  AppNetworkImage(url: venue.coverImageUrl, fit: BoxFit.cover),
+                  if (venue.avgRating > 0)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1B7A4C),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.star_rounded,
+                              size: 13,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              venue.avgRating.toStringAsFixed(1),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: favorite.when(
+                      data: (isFav) => FavoriteButton(
+                        isFavorite: isFav ?? false,
+                        onPressed: () =>
+                            ref.read(toggleFavoriteProvider(venue.id).future),
+                      ),
+                      loading: () => const FavoriteButton(
+                        isFavorite: false,
+                        onPressed: null,
+                      ),
+                      error: (_, _) => const FavoriteButton(
+                        isFavorite: false,
+                        onPressed: null,
+                      ),
+                    ),
+                  ),
+                  if (venue.ratingCount > 0)
+                    Positioned(
+                      bottom: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '${venue.ratingCount} ratings',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          venue.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      if (venue.isVerified) const VerifiedBadge(),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.location_on_outlined,
+                        size: 13,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 2),
+                      Expanded(
+                        child: Text(
+                          venue.city.isNotEmpty
+                              ? venue.city
+                              : venue.addressLine1,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontSize: 11.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: RichText(
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          text: TextSpan(
+                            children: [
+                              TextSpan(
+                                text: venue.pricingBaseAmount > 0
+                                    ? '₹${venue.pricingBaseAmount.toInt()}'
+                                    : 'Price on request',
+                                style: TextStyle(
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 15,
+                                ),
+                              ),
+                              if (venue.pricingBaseAmount > 0)
+                                TextSpan(
+                                  text: ' / night',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton(
+                        onPressed: onBookTap,
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                          minimumSize: const Size(0, 36),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: const Text(
+                          'Book Now',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

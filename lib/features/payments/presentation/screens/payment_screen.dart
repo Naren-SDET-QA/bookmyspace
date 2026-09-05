@@ -10,11 +10,13 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../booking/domain/booking.dart';
 import '../../../booking/presentation/booking_providers.dart';
+import '../../../booking/presentation/widgets/booking_hold_countdown.dart';
 import '../../../notifications/domain/notification.dart';
 import '../../../notifications/presentation/notification_providers.dart';
 import '../../../venues/presentation/widgets/venue_badges.dart';
 import '../../domain/checkout_service.dart';
 import '../payment_providers.dart';
+import 'booking_success_screen.dart';
 
 /// Payment flow: creates a Razorpay order for a freshly made pending booking,
 /// opens checkout, then reflects the webhook-driven confirmation.
@@ -45,6 +47,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   String? _couponError;
   String? _appliedCode;
   _PaymentMethod _paymentMethod = _PaymentMethod.online;
+  bool _holdExpired = false;
 
   @override
   void dispose() {
@@ -241,6 +244,12 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    if (_phase == _PaymentPhase.done && _confirmed) {
+      // A backend-confirmed booking gets the full dedicated success screen
+      // (parity with the Android reference app's BookingSuccessScreen)
+      // instead of this flow's own app bar/scaffold chrome.
+      return BookingSuccessScreen(booking: _booking);
+    }
     return Scaffold(
       appBar: AppBar(title: Text(l10n.payment)),
       body: switch (_phase) {
@@ -259,7 +268,9 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
           ? _PayBar(
               total: _booking.totalAmount,
               method: _paymentMethod,
-              onConfirm: _paymentMethod == _PaymentMethod.online
+              onConfirm: _holdExpired
+                  ? null
+                  : _paymentMethod == _PaymentMethod.online
                   ? _pay
                   : _payAtVenue,
             )
@@ -278,7 +289,18 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         Expanded(
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            children: [_SummaryCard(booking: _booking)],
+            children: [
+              _SummaryCard(booking: _booking),
+              if (_booking.holdExpiresAt != null && _booking.canPay) ...[
+                const SizedBox(height: 12),
+                BookingHoldCountdown(
+                  expiresAt: _booking.holdExpiresAt!,
+                  onExpired: () {
+                    if (mounted) setState(() => _holdExpired = true);
+                  },
+                ),
+              ],
+            ],
           ),
         ),
         Padding(
@@ -504,7 +526,7 @@ class _PayBar extends StatelessWidget {
 
   final double total;
   final _PaymentMethod method;
-  final VoidCallback onConfirm;
+  final VoidCallback? onConfirm;
 
   @override
   Widget build(BuildContext context) {

@@ -7,6 +7,7 @@ import 'package:bookmyspace/features/location/domain/location_query_bounds.dart'
 import 'package:bookmyspace/features/location/domain/location_repository.dart';
 import 'package:bookmyspace/features/location/infrastructure/geonames_location_source.dart';
 import 'package:bookmyspace/features/location/infrastructure/lgd_location_source.dart';
+import 'package:bookmyspace/features/location/presentation/widgets/cascading_location_selector.dart';
 import 'package:bookmyspace/features/venues/domain/category_configuration.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -196,6 +197,25 @@ void main() {
       level: LocationNodeLevel.districtCounty,
     );
     expect(districts.map((node) => node.name), ['Hyderabad']);
+  });
+
+  test('a search result hydrates the complete selectable location path', () {
+    final value = CascadingLocationValue.fromPath([
+      india,
+      telangana,
+      hyderabadDistrict,
+      amberpet,
+      hyderabadTown,
+      abids,
+    ]);
+
+    expect(value.country?.id, india.id);
+    expect(value.state?.id, telangana.id);
+    expect(value.district?.id, hyderabadDistrict.id);
+    expect(value.mandal?.id, amberpet.id);
+    expect(value.city?.id, hyderabadTown.id);
+    expect(value.area?.id, abids.id);
+    expect(value.selectedLocationId, abids.id);
   });
 
   test('District → Mandal children resolve from the parent only', () async {

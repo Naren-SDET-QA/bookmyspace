@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/errors/app_exceptions.dart' show mapError;
 import '../domain/review.dart';
+import '../domain/review_validation.dart';
 
 /// Supabase-backed [ReviewRepository].
 class SupabaseReviewRepository implements ReviewRepository {
@@ -49,7 +50,10 @@ class SupabaseReviewRepository implements ReviewRepository {
     String? title,
     String? body,
     String? bookingId,
+    List<String> tags = const [],
   }) async {
+    ReviewValidation.ensureSignedIn(_userId);
+    ReviewValidation.validate(rating: rating, title: title, body: body);
     try {
       final rows = await _client
           .from('reviews')
@@ -60,6 +64,7 @@ class SupabaseReviewRepository implements ReviewRepository {
             'title': title,
             'body': body,
             'booking_id': bookingId,
+            'tags': tags.join(','),
           })
           .select()
           .limit(1);
@@ -76,6 +81,8 @@ class SupabaseReviewRepository implements ReviewRepository {
     String? title,
     String? body,
   }) async {
+    ReviewValidation.ensureSignedIn(_userId);
+    ReviewValidation.validate(rating: rating, title: title, body: body);
     try {
       final update = <String, dynamic>{};
       if (rating != null) update['rating'] = rating;
@@ -96,6 +103,7 @@ class SupabaseReviewRepository implements ReviewRepository {
 
   @override
   Future<void> deleteReview(String reviewId) async {
+    ReviewValidation.ensureSignedIn(_userId);
     try {
       await _client.from('reviews').delete().eq('id', reviewId);
     } catch (e) {

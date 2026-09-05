@@ -1,34 +1,26 @@
-# Supabase Migrations & Multi-Environment Strategy
+# Migration ordering — read this before adding or filtering migrations
 
-SQL migrations represent the single source of truth for the database schema across DEV, STAGING, and PROD environments.
+Every file in this directory is applied, in filename order, to every
+environment that runs these migrations — including a fresh dev database,
+CI, and production. There is no "dev-only" migration in the sense of
+"safe to skip": files named `*_dev.sql`, `*_dev_verify*.sql`, or
+`dev_reconciled_*.sql` describe *when they were authored/tested*, not
+*where they're allowed to run*. Several of them contain schema
+corrections (added columns, dropped columns, renamed constraints) that a
+later migration depends on being present — for example
+`20260820090200_dev_reconciled_0015_engagement.sql` is what makes
+`public.notifications` end up with the `read`/`read_at`/`updated_at`
+columns the Flutter client actually uses, correcting a column set
+(`is_read`) that an earlier migration (`0006`) created first. Skipping a
+"dev" file by name will leave the schema in the state before that
+correction — go read the migration content, not the filename, before
+deciding a file is optional.
 
-## Convention
-Files follow `NNNN_name.sql` where `NNNN` is a 4-digit incrementing sequence number.
-
-## Environment Architecture (DEV → STAGING → PROD)
-- **DEV**: Isolated Supabase project used by Android, iOS, and Web developers. Contains test users & test venues (Function Hall, Hotel/Stay, PG/Co-Living).
-- **STAGING/UAT**: Pre-production validation environment connected to staging builds.
-- **PROD**: Protected live environment. Never modified directly or manually synced with data copies.
-
-## Migration Promotion Rules
-1. **Immutable Migrations**: Deployed migrations (`0001_` through `0018_`) are immutable. Never modify or delete previously applied migration files.
-2. **Forward-Only**: All schema adjustments, RPC updates, or policy changes must be authored as NEW forward-only SQL migrations (`0019_`, `0020_`, etc.).
-3. **Automated Deployment**:
-   ```bash
-   # Deploy to DEV
-   supabase db push --linked --project-ref $DEV_PROJECT_REF
-
-   # Deploy to STAGING
-   supabase db push --linked --project-ref $STAGING_PROJECT_REF
-
-   # Deploy to PROD (Protected Release Workflow)
-   supabase db push --linked --project-ref $PROD_PROJECT_REF
-   ```
-4. **Zero Structural Resets**: Never execute `DROP DATABASE`, `TRUNCATE`, or `db reset` on shared STAGING or PROD instances.
-
-## Local CLI Workflow
-```bash
-supabase start          # start local stack (requires Docker)
-supabase migration new  # create a new forward-only migration
-supabase db reset       # apply all migrations locally
-```
+If you're auditing for duplicate `create table`/`create policy`
+declarations across files: most duplicates in this directory are
+deliberately idempotent (`create table if not exists`, `drop policy if
+exists` + `create policy`) and are safe to re-run. A small number are
+NOT idempotent (a plain `create table` followed later by a
+differently-shaped `create table if not exists` for the same name) —
+those are exactly the drift-then-patch pairs described above, and the
+patch file is load-bearing, not optional cleanup.

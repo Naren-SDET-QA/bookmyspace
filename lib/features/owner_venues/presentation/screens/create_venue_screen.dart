@@ -75,6 +75,14 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_mapController != null) return;
+    final map = resolvedMapProvider(ref.read(providerRegistryProvider));
+    _mapController = map?.createController();
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
@@ -759,11 +767,12 @@ class _CreateVenueScreenState extends ConsumerState<CreateVenueScreen> {
                       if (resolvedMapProvider(
                             ref.watch(providerRegistryProvider),
                           )
-                          case final map?)
+                          case final map?
+                          when _mapController != null)
                         _OwnerMapPicker(
                           latitude: _latitude,
                           longitude: _longitude,
-                          controller: _mapController ??= map.createController(),
+                          controller: _mapController!,
                           tileUrlTemplate: map.tileUrlTemplate,
                           userAgentPackageName: map.userAgentPackageName,
                           onPicked: (point) {

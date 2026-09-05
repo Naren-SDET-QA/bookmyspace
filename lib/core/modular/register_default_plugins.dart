@@ -8,6 +8,7 @@ import 'plugins/map_provider.dart';
 import 'plugins/payment_checkout_plugin.dart';
 import 'plugins/speech_voice_plugin.dart';
 import 'plugins/voice_provider.dart';
+import 'app_plugin.dart';
 import 'provider_registry.dart';
 
 /// Registers the real checkout, map, and speech factories. Factories are not
@@ -18,6 +19,7 @@ void registerDefaultPlugins(
   SpeechToText Function()? speechFactory,
   MapProvider Function()? mapFactory,
   VoiceProvider Function()? voiceFactory,
+  AppPlugin Function()? aiFactory,
 }) {
   registry.register(
     PluginKind.payment,
@@ -28,4 +30,7 @@ void registerDefaultPlugins(
     PluginKind.voice,
     voiceFactory ?? () => SpeechVoicePlugin(create: speechFactory),
   );
+  if (aiFactory != null) {
+    registry.register(PluginKind.ai, aiFactory);
+  }
 }

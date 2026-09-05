@@ -1,4 +1,5 @@
 import 'package:bookmyspace/core/localization/app_localizations.dart';
+import 'package:bookmyspace/core/modular/feature_registry.dart';
 import 'package:bookmyspace/features/owner_venues/presentation/providers/owner_venue_providers.dart';
 import 'package:bookmyspace/features/owner_venues/presentation/screens/create_venue_screen.dart';
 import 'package:bookmyspace/features/venues/presentation/venue_providers.dart';
@@ -11,6 +12,9 @@ import '../venues/mock_venue_repository.dart';
 import 'mock_owner_venue_repository.dart';
 
 void main() {
+  setUp(FeatureRegistry.reset);
+  tearDown(FeatureRegistry.reset);
+
   testWidgets('owner create only shows categories from the selected section', (
     tester,
   ) async {
@@ -39,21 +43,28 @@ void main() {
       ),
     );
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
 
     expect(find.byKey(const Key('owner_section_function_halls')), findsOneWidget);
     expect(find.byKey(const Key('owner_category_marriage_hall')), findsOneWidget);
     expect(find.byKey(const Key('owner_category_ladies_pg')), findsNothing);
 
+    await tester.ensureVisible(find.byKey(const Key('owner_section_pg_hostels')));
     await tester.tap(find.byKey(const Key('owner_section_pg_hostels')));
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
 
     expect(find.byKey(const Key('owner_category_ladies_pg')), findsOneWidget);
     expect(find.byKey(const Key('owner_category_marriage_hall')), findsNothing);
     expect(find.byKey(const Key('owner_category_hotel')), findsNothing);
     expect(find.byKey(const Key('owner_category_coaching')), findsNothing);
 
+    await tester.ensureVisible(
+      find.byKey(const Key('owner_section_institutes_classes')),
+    );
     await tester.tap(find.byKey(const Key('owner_section_institutes_classes')));
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
 
     expect(find.textContaining('advertising listings only'), findsOneWidget);
     expect(find.byKey(const Key('owner_category_coaching')), findsOneWidget);

@@ -1,3 +1,19 @@
+// The amount actually charged online: the venue's configured booking
+// token (a partial/deposit amount, venues.booking_token_amount) when one
+// is set, clamped to never exceed the booking's full price; the full
+// price otherwise. A venue with no token configured (the default — there
+// is currently no owner-facing UI to set one) charges in full, exactly
+// as before this existed, so this is purely additive/backward-compatible.
+export function resolveChargeAmount(
+  totalAmount: number,
+  tokenAmount: number | null | undefined,
+): number {
+  if (tokenAmount == null) return totalAmount;
+  const token = Number(tokenAmount);
+  if (!Number.isFinite(token) || token <= 0) return totalAmount;
+  return Math.min(token, totalAmount);
+}
+
 export function bookingDecision(
   booking: { user_id: string; status: string } | null,
   userId: string,

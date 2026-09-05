@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../core/errors/app_exceptions.dart' show mapError, NotFoundException;
+import '../../../core/errors/app_exceptions.dart'
+    show mapError, NotFoundException;
 import '../../courses/domain/course.dart';
 import '../domain/institute_profile.dart';
 import '../domain/institute_repository.dart';
@@ -166,6 +167,39 @@ class SupabaseInstituteRepository implements InstituteRepository {
           .select()
           .single();
       return FacultyMember.fromJson(row);
+    } catch (e) {
+      throw mapError(e);
+    }
+  }
+
+  @override
+  Future<void> deleteFaculty(String facultyId) async {
+    try {
+      await _client.from('institute_faculty').delete().eq('id', facultyId);
+    } catch (e) {
+      throw mapError(e);
+    }
+  }
+
+  @override
+  Future<void> deleteClass(String classId) async {
+    try {
+      await _client.from('courses').delete().eq('id', classId);
+    } catch (e) {
+      throw mapError(e);
+    }
+  }
+
+  @override
+  Future<Course> updateClassStatus(String classId, String status) async {
+    try {
+      final row = await _client
+          .from('courses')
+          .update({'status': status})
+          .eq('id', classId)
+          .select()
+          .single();
+      return Course.fromJson(row);
     } catch (e) {
       throw mapError(e);
     }

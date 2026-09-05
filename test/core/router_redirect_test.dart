@@ -1,7 +1,12 @@
 import 'package:bookmyspace/core/localization/app_localizations.dart';
 import 'package:bookmyspace/core/router/app_router.dart';
+import 'package:bookmyspace/features/auth/domain/auth_configuration.dart';
 import 'package:bookmyspace/features/auth/domain/auth_user.dart';
 import 'package:bookmyspace/features/auth/presentation/auth_providers.dart';
+import 'package:bookmyspace/features/booking/presentation/booking_providers.dart';
+import 'package:bookmyspace/features/courses/presentation/course_providers.dart';
+import 'package:bookmyspace/features/events/presentation/event_providers.dart';
+import 'package:bookmyspace/features/notifications/presentation/notification_providers.dart';
 import 'package:bookmyspace/features/venues/presentation/venue_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -9,6 +14,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../features/auth/mock_auth_repository.dart';
+import '../features/booking/mock_booking_repository.dart';
+import '../features/courses/mock_course_repository.dart';
+import '../features/events/mock_event_repository.dart';
+import '../features/notifications/mock_notification_repository.dart';
 import '../features/venues/mock_venue_repository.dart';
 
 Future<String> _redirectTo(
@@ -34,7 +43,37 @@ Future<String> _redirectTo(
             initialUser: const AuthUser(id: 'u1', email: 'a@b.com'),
           ),
         ),
+        // LoginScreen reads this directly (unrelated to auth gating, which
+        // this file tests via resolveAppRedirect). Left unmocked it falls
+        // through to the real Supabase-backed provider, which is never
+        // initialized in tests: the provider settles to an AsyncError, but
+        // LoginScreen's null-config branch renders an indeterminate
+        // CircularProgressIndicator, whose perpetual animation keeps
+        // scheduling frames forever -- pumpAndSettle() can never settle
+        // while it's on screen. Mirrors the override login_screen_test.dart
+        // already uses for the same reason.
+        authConfigurationProvider.overrideWith(
+          (ref) async => const AuthConfiguration(
+            authenticationEnabled: true,
+            emailLoginEnabled: true,
+            emailOtpEnabled: true,
+            phoneLoginEnabled: true,
+            phoneOtpEnabled: true,
+          ),
+        ),
         venueRepositoryProvider.overrideWithValue(MockVenueRepository()),
+        // The shell route builds all six branch screens at once
+        // (StatefulShellRoute.indexedStack), so every repository a
+        // branch screen depends on needs a fake here too -- otherwise
+        // an unmocked provider is left resolving against a
+        // never-initialized Supabase client and pumpAndSettle times out
+        // waiting for a loading state that never reaches a stable end.
+        bookingRepositoryProvider.overrideWithValue(MockBookingRepository()),
+        courseRepositoryProvider.overrideWithValue(MockCourseRepository()),
+        eventRepositoryProvider.overrideWithValue(MockEventRepository()),
+        notificationRepositoryProvider.overrideWithValue(
+          MockNotificationRepository(),
+        ),
       ],
       child: MaterialApp.router(
         routerConfig: router,

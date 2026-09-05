@@ -3,6 +3,7 @@ enum NotificationType {
   bookingCancelled,
   paymentReceived,
   refundProcessed,
+  slotReminder,
   system,
   supportReply,
   admin;
@@ -12,6 +13,7 @@ enum NotificationType {
     'booking_cancelled' => NotificationType.bookingCancelled,
     'payment_received' => NotificationType.paymentReceived,
     'refund_processed' => NotificationType.refundProcessed,
+    'slot_reminder' => NotificationType.slotReminder,
     'system' => NotificationType.system,
     'support_reply' => NotificationType.supportReply,
     'admin' => NotificationType.admin,
@@ -23,6 +25,7 @@ enum NotificationType {
     NotificationType.bookingCancelled => 'booking_cancelled',
     NotificationType.paymentReceived => 'payment_received',
     NotificationType.refundProcessed => 'refund_processed',
+    NotificationType.slotReminder => 'slot_reminder',
     NotificationType.system => 'system',
     NotificationType.supportReply => 'support_reply',
     NotificationType.admin => 'admin',

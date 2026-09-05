@@ -8,14 +8,18 @@ import 'package:intl/intl.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/config/settings_controller.dart';
 import '../../../../core/modular/feature_providers.dart';
+import '../../../../core/modular/feature_id.dart';
+import '../../../../core/router/app_router.dart';
 import '../../../../core/modular/plugin_kind.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/validators/app_validators.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/error_view.dart';
+import '../../../../core/errors/app_exceptions.dart';
 import '../../../auth/presentation/auth_providers.dart';
 import '../../../home/domain/customer_section_catalog.dart';
 import '../../../venues/domain/category_configuration.dart';
+import '../../../venues/domain/category_discovery.dart';
 import '../../../venues/domain/category_registration.dart';
 import '../../../venues/domain/venue.dart';
 import '../../../venues/presentation/category_configuration_providers.dart';
@@ -25,6 +29,7 @@ import '../../domain/configurable_booking.dart';
 import '../booking_providers.dart';
 import '../widgets/configurable_booking_fields_form.dart';
 import '../widgets/section_customer_details_form.dart';
+import '../../../support/presentation/widgets/contextual_help_button.dart';
 
 /// Booking flow: pick a date, pick an available slot, confirm the hold.
 ///
@@ -43,6 +48,7 @@ class BookingScreen extends ConsumerStatefulWidget {
 class _BookingScreenState extends ConsumerState<BookingScreen> {
   final _detailsFormKey = GlobalKey<FormState>();
   DateTime? _selectedDate;
+  DateTime? _selectedCheckoutDate;
   SlotAvailability? _selectedSlot;
   bool _confirming = false;
   BookingFieldValues _fieldValues = const BookingFieldValues({'guests': 100});
@@ -73,6 +79,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
     );
     final l10n = AppLocalizations.of(context);
     final quickMode = ref.watch(bookingModeProvider) == BookingMode.quick;
+    final isSignedIn = ref.watch(authNotifierProvider).user != null;
 
     if (listingOnly) {
       return Scaffold(
@@ -93,6 +100,15 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(CustomerSectionCatalog.bookingScreenTitle(section)),
+        actions: [
+          const ContextualHelpButton(route: AppRoutes.bookingFlow),
+          if (ref.watch(featureRegistryProvider).isExposed(FeatureId.ai))
+            IconButton(
+              tooltip: 'Ask Assistant',
+              icon: const Icon(Icons.chat_bubble_outline),
+              onPressed: () => context.push(AppRoutes.assistant),
+            ),
+        ],
       ),
       body: date == null
           ? const Center(child: CircularProgressIndicator())
@@ -102,13 +118,13 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                 children: [
                   _VenueHeader(venue: widget.venue),
                   if (quickMode)
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                       child: Align(
                         alignment: Alignment.centerLeft,
                         child: Chip(
-                          avatar: Icon(Icons.flash_on_rounded, size: 16),
-                          label: Text('Quick booking mode'),
+                          avatar: const Icon(Icons.flash_on_rounded, size: 16),
+                          label: Text(l10n.quickBookingMode),
                         ),
                       ),
                     ),
@@ -123,6 +139,13 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                     values: _fieldValues,
                     onChanged: (next) => setState(() => _fieldValues = next),
                   ),
+                  if (section == CustomerSection.lodgeRooms)
+                    _CheckoutDateField(
+                      selected: _selectedCheckoutDate,
+                      onSelected: (date) => setState(() {
+                        _selectedCheckoutDate = date;
+                      }),
+                    ),
                   _DateStrip(
                     selected: date,
                     onSelected: (d) {
@@ -145,7 +168,9 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                 ],
               ),
             ),
-      bottomNavigationBar: _selectedSlot != null
+      bottomNavigationBar: _selectedSlot == null
+          ? null
+          : isSignedIn
           ? _ConfirmBar(
               venue: widget.venue,
               date: date!,
@@ -153,7 +178,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
               confirming: _confirming,
               onConfirm: () => _confirmBooking(date),
             )
-          : null,
+          : _SignInRequiredBar(onSignIn: () => _promptSignIn()),
     );
   }
 
@@ -189,8 +214,46 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
   Future<void> _confirmBooking(DateTime date) async {
     final slot = _selectedSlot;
     if (slot == null || _confirming) return;
+    if (ref.read(authNotifierProvider).user == null) {
+      // Defense in depth: the Confirm action is not rendered while signed
+      // out (see build()), but guard the entry point directly too so a
+      // stale build or a future caller can never acquire a hold without an
+      // authenticated session.
+      unawaited(_promptSignIn());
+      return;
+    }
+    final category = _categoryConfig(ref);
+    if (!CategoryDiscovery.canBook(category)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context).bookingDisabledForCategory,
+          ),
+        ),
+      );
+      return;
+    }
+    if (category != null && !category.availabilityEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context).availabilityDisabledForCategory,
+          ),
+        ),
+      );
+      return;
+    }
     if (_detailsFormKey.currentState?.validate() == false) return;
     final section = CustomerSectionCatalog.sectionForVenue(widget.venue);
+    if (section == CustomerSection.lodgeRooms &&
+        _selectedCheckoutDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Complete your booking details: Check-out is required'),
+        ),
+      );
+      return;
+    }
     final missing = _validateSectionDetails(section, _details);
     if (missing != null) {
       ScaffoldMessenger.of(
@@ -198,7 +261,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
       ).showSnackBar(SnackBar(content: Text(missing)));
       return;
     }
-    final config = _categoryConfig(ref);
+    final config = category;
     final bookingFields = ConfigurableBookingFields.resolve(
       config: config,
       sectionId: section?.id,
@@ -207,7 +270,13 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
     final missingBooking = _fieldValues.missing(bookingFields);
     if (missingBooking.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Need: ${missingBooking.join(', ')}')),
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(
+              context,
+            ).fieldsRequired(missingBooking.join(', ')),
+          ),
+        ),
       );
       return;
     }
@@ -222,7 +291,13 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
       });
       if (missingRegistration.isNotEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Need: ${missingRegistration.join(', ')}')),
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(
+                context,
+              ).fieldsRequired(missingRegistration.join(', ')),
+            ),
+          ),
         );
         return;
       }
@@ -309,25 +384,42 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
           'customer_phone': _details.phone,
           'full_name': _details.fullName,
           'phone': _details.phone,
+          if (_selectedCheckoutDate != null)
+            'check_out': _selectedCheckoutDate!.toIso8601String(),
+          'hold_expires_at': hold.expiresAt.toUtc().toIso8601String(),
           ..._fieldValues.toMetadata(),
         },
       );
       ref.invalidate(myBookingsProvider);
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.slotHeld)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            l10n.holdExpiresIn(HoldCountdown.format(hold.remaining())),
+          ),
+        ),
+      );
       if (isCheckoutExposed(ref.read(featureRegistryProvider))) {
         unawaited(context.push('/bookings/${booking.id}/pay', extra: booking));
       }
     } catch (e) {
       if (!mounted) return;
+      final message = e is AppException ? e.message : e.toString();
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      ).showSnackBar(SnackBar(content: Text(message)));
     } finally {
       if (mounted) setState(() => _confirming = false);
     }
+  }
+
+  /// Sends a signed-out user to the existing login flow and returns them
+  /// here afterwards. Uses `push` (not `go`) so this screen -- and every
+  /// field of booking state held on it -- is kept alive underneath, not
+  /// disposed; [LoginScreen] pops back to it on a successful sign-in
+  /// instead of navigating to the shell (see LoginScreen._onSignedIn).
+  Future<void> _promptSignIn() async {
+    await context.push(AppRoutes.login);
   }
 
   CategoryConfiguration? _categoryConfig(WidgetRef ref) {
@@ -390,6 +482,38 @@ class _VenueHeader extends StatelessWidget {
               label: Text('${venue.capacity}'),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _CheckoutDateField extends StatelessWidget {
+  const _CheckoutDateField({required this.selected, required this.onSelected});
+
+  final DateTime? selected;
+  final ValueChanged<DateTime> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = selected == null
+        ? 'Check-out: Select date'
+        : 'Check-out: ${DateFormat('EEE, d MMM').format(selected!)}';
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      child: OutlinedButton.icon(
+        key: const Key('booking_checkout_date'),
+        onPressed: () async {
+          final now = DateTime.now();
+          final picked = await showDatePicker(
+            context: context,
+            firstDate: now,
+            lastDate: now.add(const Duration(days: 365)),
+            initialDate: selected ?? now.add(const Duration(days: 1)),
+          );
+          if (picked != null) onSelected(picked);
+        },
+        icon: const Icon(Icons.calendar_month_outlined),
+        label: Text(label),
       ),
     );
   }
@@ -728,6 +852,47 @@ class _ConfirmBar extends StatelessWidget {
                     : const Icon(Icons.lock_rounded),
                 label: Text(l10n.confirmBooking),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Shown instead of [_ConfirmBar] when no user is signed in. Booking
+/// details already entered on this screen are preserved -- this widget
+/// only blocks the final "acquire a booking hold" call, which requires an
+/// authenticated Supabase session server-side regardless of this UI gate.
+class _SignInRequiredBar extends StatelessWidget {
+  const _SignInRequiredBar({required this.onSignIn});
+
+  final VoidCallback onSignIn;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                l10n.signInRequiredForBooking,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            FilledButton.icon(
+              onPressed: onSignIn,
+              icon: const Icon(Icons.login_rounded),
+              label: Text(l10n.signInToContinue),
             ),
           ],
         ),

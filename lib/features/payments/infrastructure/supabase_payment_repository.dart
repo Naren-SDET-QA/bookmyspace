@@ -204,6 +204,10 @@ class SupabasePaymentRepository implements PaymentRepository {
         code: error,
         statusCode: e.status,
       ),
+      'hold_expired' => app_errors.HoldExpiredException(
+        'This hold has expired. Pick the slot again.',
+        code: error,
+      ),
       _ => app_errors.ServerException(
         'Payment service error (${e.status}).',
         code: error,

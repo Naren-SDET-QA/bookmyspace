@@ -1,0 +1,20 @@
+title = "BookMySpace secret scanning"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Placeholders, examples, and local docker fixtures — not production secrets"
+paths = [
+  '''.*\.example$''',
+  '''gitleaks\.toml''',
+  '''\.github/workflows/secret-scan\.yml''',
+]
+regexes = [
+  '''LOCAL_ANON_KEY''',
+  '''SUPABASE_ANON_KEY_REQUIRED''',
+  '''rzp_test_PLACEHOLDER''',
+  '''rzp_live_PLACEHOLDER''',
+  '''POSTGRES_PASSWORD: postgres''',
+  '''PGPASSWORD=postgres''',
+]

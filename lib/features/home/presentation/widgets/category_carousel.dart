@@ -22,11 +22,12 @@ class CategoryCarousel extends StatelessWidget {
     final theme = Theme.of(context);
     final chips = CategoryDiscovery.carouselItems(items);
     return SizedBox(
-      height: 44,
+      height: 48,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         primary: false,
         physics: const ClampingScrollPhysics(),
+        clipBehavior: Clip.none,
         addAutomaticKeepAlives: false,
         padding: padding,
         itemCount: chips.length,
@@ -38,12 +39,16 @@ class CategoryCarousel extends StatelessWidget {
           return FilterChip(
             selected: isSelected,
             onSelected: (_) => onSelected(cat.slug),
+            visualDensity: VisualDensity.compact,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             avatar: Text(
               cat.icon.isNotEmpty ? cat.icon : '•',
               style: const TextStyle(fontSize: 14),
             ),
             label: Text(
               cat.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                 color: isSelected

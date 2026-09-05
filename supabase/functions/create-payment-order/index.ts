@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from 'npm:@supabase/supabase-js@2';
-import { amountDecision, bookingDecision, canFailClaim, pendingOrderResponse } from './payment_order_policy.ts';
+import { amountDecision, bookingDecision, canFailClaim, pendingOrderResponse, resolveChargeAmount } from './payment_order_policy.ts';
 
 // ============================================================
 // Razorpay order creation — runs server-side so secrets stay secret.
@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
     // Validate server-side: the booking must belong to the user and be pending.
     const { data: booking, error: bookingError } = await adminClient
       .from('bookings')
-      .select('id, user_id, total_amount, status')
+      .select('id, user_id, total_amount, status, venue_id, venues(category_id, booking_token_amount, venue_categories(metadata))')
       .eq('id', booking_id)
       .single();
     if (bookingError || !booking) {
@@ -95,10 +95,29 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    const venueRow = Array.isArray(booking.venues) ? booking.venues[0] : booking.venues;
+    const categoryRow = Array.isArray(venueRow?.venue_categories)
+      ? venueRow.venue_categories[0]
+      : venueRow?.venue_categories;
+    const categoryMetadata = (categoryRow?.metadata ?? {}) as Record<string, unknown>;
+    if (categoryMetadata.active !== true || categoryMetadata.payments_enabled !== true) {
+      return new Response(JSON.stringify({ error: 'category_payments_disabled' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    // Charge only the venue's configured booking token when one is set
+    // (clamped to never exceed the full price); the full price otherwise.
+    // This is the single place the online charge amount is decided —
+    // never the client, never a hardcoded literal.
+    const chargeAmount = resolveChargeAmount(
+      Number(booking.total_amount),
+      venueRow?.booking_token_amount ?? null,
+    );
     // The amount is always taken from the DB (never from the client).
     // If supplied by an older client, still reject a mismatched amount; the
     // current Flutter client intentionally omits it and uses the DB total.
-    if (amountDecision(amount, Number(booking.total_amount)) === 'amount_mismatch') {
+    if (amountDecision(amount, chargeAmount) === 'amount_mismatch') {
       return new Response(JSON.stringify({ error: 'amount_mismatch' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -139,7 +158,7 @@ Deno.serve(async (req) => {
         booking_id: booking.id,
         user_id: user.id,
         provider: 'razorpay',
-        amount: booking.total_amount,
+        amount: chargeAmount,
         status: 'pending',
       })
       .select('id')
@@ -160,7 +179,7 @@ Deno.serve(async (req) => {
     let order: { id: string };
     try {
       order = await createRazorpayOrder(
-        Math.round(Number(booking.total_amount) * 100),
+        Math.round(chargeAmount * 100),
         booking.id,
       );
     } catch (_) {
@@ -196,7 +215,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ order_id: order.id, amount: booking.total_amount, currency: 'INR' }),
+      JSON.stringify({ order_id: order.id, amount: chargeAmount, currency: 'INR' }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (e) {

@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../domain/support_ticket.dart';
 import '../support_providers.dart';
+import '../widgets/contextual_help_button.dart';
 
 class SupportTicketsScreen extends ConsumerWidget {
   const SupportTicketsScreen({super.key});
@@ -17,7 +19,10 @@ class SupportTicketsScreen extends ConsumerWidget {
     final tickets = ref.watch(myTicketsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.support)),
+      appBar: AppBar(
+        title: Text(l10n.support),
+        actions: const [ContextualHelpButton(route: AppRoutes.support)],
+      ),
       body: tickets.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
@@ -25,10 +30,10 @@ class SupportTicketsScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(myTicketsProvider),
         ),
         data: (items) => items.isEmpty
-            ? const EmptyState(
+            ? EmptyState(
                 icon: Icons.headset_mic_rounded,
-                title: 'No support tickets',
-                message: 'Tap the button below to create a new ticket.',
+                title: l10n.noSupportTickets,
+                message: l10n.ticketCreated,
               )
             : ListView.builder(
                 padding: const EdgeInsets.all(16),
@@ -39,12 +44,13 @@ class SupportTicketsScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showCreateDialog(context, ref),
         icon: const Icon(Icons.add_rounded),
-        label: const Text('New Ticket'),
+        label: Text(l10n.newTicket),
       ),
     );
   }
 
   void _showCreateDialog(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final subjectController = TextEditingController();
     final descriptionController = TextEditingController();
     var category = 'general';
@@ -54,7 +60,7 @@ class SupportTicketsScreen extends ConsumerWidget {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('New Support Ticket'),
+          title: Text(l10n.newTicket),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -82,9 +88,12 @@ class SupportTicketsScreen extends ConsumerWidget {
                 DropdownButtonFormField<TicketPriority>(
                   initialValue: priority,
                   items: TicketPriority.values
-                      .map((p) => DropdownMenuItem(value: p, child: Text(p.name)))
+                      .map(
+                        (p) => DropdownMenuItem(value: p, child: Text(p.name)),
+                      )
                       .toList(),
-                  onChanged: (v) => setState(() => priority = v ?? TicketPriority.medium),
+                  onChanged: (v) =>
+                      setState(() => priority = v ?? TicketPriority.medium),
                   decoration: const InputDecoration(labelText: 'Priority'),
                 ),
               ],
@@ -93,7 +102,7 @@ class SupportTicketsScreen extends ConsumerWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text(l10n.cancel),
             ),
             FilledButton(
               onPressed: () async {
@@ -107,7 +116,7 @@ class SupportTicketsScreen extends ConsumerWidget {
                 await ref.read(createTicketProvider(ticketParams).future);
                 if (context.mounted) Navigator.pop(context);
               },
-              child: const Text('Submit'),
+              child: Text(l10n.save),
             ),
           ],
         ),
@@ -143,7 +152,10 @@ class _TicketTile extends ConsumerWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: ticket.isResolved
                         ? AppTheme.brand.withValues(alpha: 0.12)
@@ -153,7 +165,9 @@ class _TicketTile extends ConsumerWidget {
                   child: Text(
                     ticket.isResolved ? 'Resolved' : ticket.status.dbValue,
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: ticket.isResolved ? AppTheme.brand : AppTheme.accent,
+                      color: ticket.isResolved
+                          ? AppTheme.brand
+                          : AppTheme.accent,
                       fontWeight: FontWeight.w700,
                     ),
                   ),

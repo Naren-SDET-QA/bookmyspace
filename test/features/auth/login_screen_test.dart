@@ -1,5 +1,6 @@
 import 'package:bookmyspace/core/localization/app_localizations.dart';
 import 'package:bookmyspace/features/auth/presentation/auth_providers.dart';
+import 'package:bookmyspace/features/auth/domain/auth_configuration.dart';
 import 'package:bookmyspace/features/auth/presentation/screens/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -8,9 +9,21 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'mock_auth_repository.dart';
 
-Widget _wrap(MockAuthRepository repo) {
+Widget _wrap(
+  MockAuthRepository repo, {
+  AuthConfiguration config = const AuthConfiguration(
+    authenticationEnabled: true,
+    emailLoginEnabled: true,
+    emailOtpEnabled: true,
+    phoneLoginEnabled: true,
+    phoneOtpEnabled: true,
+  ),
+}) {
   return ProviderScope(
-    overrides: [authRepositoryProvider.overrideWithValue(repo)],
+    overrides: [
+      authRepositoryProvider.overrideWithValue(repo),
+      authConfigurationProvider.overrideWith((ref) async => config),
+    ],
     child: const MaterialApp(
       localizationsDelegates: [
         AppLocalizations.delegate,
@@ -73,6 +86,25 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('OTP send failed'), findsOneWidget);
+    repo.dispose();
+  });
+
+  testWidgets('shows forgot password when password login is enabled', (
+    tester,
+  ) async {
+    final repo = MockAuthRepository();
+    await tester.pumpWidget(
+      _wrap(
+        repo,
+        config: const AuthConfiguration(
+          authenticationEnabled: true,
+          emailLoginEnabled: true,
+          passwordLoginEnabled: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Forgot password?'), findsOneWidget);
     repo.dispose();
   });
 }

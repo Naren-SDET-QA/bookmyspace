@@ -5,6 +5,7 @@ import {
   claimFailure,
   insertFailure,
   pendingOrderResponse,
+  resolveChargeAmount,
 } from './payment_order_policy.ts';
 
 Deno.test('booking authorization rejects missing and non-pending bookings', () => {
@@ -74,5 +75,32 @@ Deno.test('claim cleanup is scoped to the current pending claim', () => {
   }
   if (canFailClaim('claim-1', 'claim-1', 'pending', 'order_test')) {
     throw new Error('persisted provider order was changed');
+  }
+});
+
+Deno.test('resolveChargeAmount charges the configured token, clamped to never exceed the full price', () => {
+  if (resolveChargeAmount(5000, 1000) !== 1000) {
+    throw new Error('configured token was not charged');
+  }
+  if (resolveChargeAmount(5000, null) !== 5000) {
+    throw new Error('unconfigured venue (no token) did not fall back to the full price');
+  }
+  if (resolveChargeAmount(5000, undefined) !== 5000) {
+    throw new Error('undefined token did not fall back to the full price');
+  }
+  if (resolveChargeAmount(5000, 9000) !== 5000) {
+    throw new Error('a token amount exceeding the full price was not clamped down to the full price');
+  }
+  if (resolveChargeAmount(5000, 5000) !== 5000) {
+    throw new Error('a token equal to the full price was not honored as-is');
+  }
+  if (resolveChargeAmount(5000, 0) !== 5000) {
+    throw new Error('a zero token (misconfiguration, blocked by the DB check constraint but defended here too) was charged as zero instead of falling back to the full price');
+  }
+  if (resolveChargeAmount(5000, -100) !== 5000) {
+    throw new Error('a negative token was not rejected back to the full price');
+  }
+  if (resolveChargeAmount(5000, NaN) !== 5000) {
+    throw new Error('a non-finite token was not rejected back to the full price');
   }
 });

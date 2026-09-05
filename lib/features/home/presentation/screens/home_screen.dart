@@ -24,6 +24,7 @@ import '../../../location/presentation/widgets/location_picker_sheet.dart';
 import '../../../venues/domain/venue.dart';
 import '../../../venues/presentation/venue_providers.dart';
 import '../../../venues/presentation/widgets/venue_badges.dart';
+import '../../../venues/presentation/widgets/venue_card.dart';
 import '../../domain/context_aware_help.dart';
 import '../../domain/customer_section_catalog.dart';
 import '../../domain/home_category_catalog.dart';
@@ -160,13 +161,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   final Set<String> _selectedAmenities = {};
 
   List<MainHomeSection> _visibleHomeSections(WidgetRef ref) {
-    final ids = ref.watch(featureRegistryProvider).visibleHomeSections();
+    final ids = ref.watch(featureRegistryProvider).visibleHomeSections().toSet();
     final preferences = ref.watch(customerCategoryPreferencesProvider);
+    final configured = ref.watch(appCustomerSectionsProvider).valueOrNull ??
+        const <AppSectionConfig>[];
+    final effective = HomeCategoryCatalog.effectiveMainSections(
+      configured: configured,
+      featureVisibleIds: ids,
+      customerEnabledIds: MainHomeSection.values
+          .where((section) => preferences.isEnabled(section.id))
+          .map((section) => section.id)
+          .toSet(),
+    );
     return MainHomeSection.values
-        .where(
-          (section) =>
-              ids.contains(section.id) && preferences.isEnabled(section.id),
-        )
+        .where((section) => effective.contains(section.catalog))
         .toList();
   }
 
@@ -217,13 +225,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         .watch(featureRegistryProvider)
         .visibleHomeSections()
         .toSet();
+    final configuredSections =
+        ref.watch(appCustomerSectionsProvider).valueOrNull ??
+        const <AppSectionConfig>[];
+    final configuredMainIds = HomeCategoryCatalog.effectiveMainSections(
+      configured: configuredSections,
+      featureVisibleIds: featureVisibleIds,
+      customerEnabledIds: MainHomeSection.values
+          .where((section) => preferences.isEnabled(section.id))
+          .map((section) => section.id)
+          .toSet(),
+    ).map((section) => section.id).toSet();
     final mainSectionIds = MainHomeSection.values.map((s) => s.id).toSet();
     final groups = CategoryGroup.fromConfigurations(fallback);
     return groups
         .where(
           (group) =>
               !mainSectionIds.contains(group.id) ||
-              featureVisibleIds.contains(group.id),
+              (featureVisibleIds.contains(group.id) &&
+                  (configuredSections.isEmpty ||
+                      configuredMainIds.contains(group.id))),
         )
         .where((group) => preferences.isEnabled(group.id))
         .map(
@@ -377,6 +398,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 homeConfig['hero_title'],
                                 'Book Your Space',
                               ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                               style: theme.textTheme.headlineMedium?.copyWith(
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: -0.5,
@@ -389,6 +412,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 homeConfig['hero_subtitle'],
                                 'Select what you are looking for to get started:',
                               ),
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: theme.colorScheme.onSurfaceVariant,
                               ),
@@ -447,34 +472,49 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                     if (responsive.isCompact)
                       SliverToBoxAdapter(
-                        child: SizedBox(
-                          height: 158,
-                          child: ListView.separated(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: responsive.horizontalPadding,
-                            ),
-                            scrollDirection: Axis.horizontal,
-                            itemCount: _visibleConfiguredHomeCategories(
-                              ref,
-                            ).length,
-                            separatorBuilder: (_, _) =>
-                                SizedBox(width: responsive.gridSpacing),
-                            itemBuilder: (context, index) {
-                              final section = _visibleConfiguredHomeCategories(
-                                ref,
-                              )[index];
-                              return SizedBox(
-                                width: 252,
-                                child: _MainSectionHeroCard(
-                                  key: ValueKey('section_${section.id}'),
-                                  category: section,
-                                  isTabletOrWide: false,
-                                  onTap: () =>
-                                      _openConfiguredHomeCategory(section),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final width = constraints.maxWidth;
+                            final cardWidth = (width * 0.61).clamp(
+                              200.0,
+                              280.0,
+                            );
+                            final cardHeight = (width * 0.38).clamp(
+                              148.0,
+                              180.0,
+                            );
+                            return SizedBox(
+                              height: cardHeight,
+                              child: ListView.separated(
+                                clipBehavior: Clip.none,
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: responsive.horizontalPadding,
                                 ),
-                              );
-                            },
-                          ),
+                                scrollDirection: Axis.horizontal,
+                                itemCount: _visibleConfiguredHomeCategories(
+                                  ref,
+                                ).length,
+                                separatorBuilder: (_, _) =>
+                                    SizedBox(width: responsive.gridSpacing),
+                                itemBuilder: (context, index) {
+                                  final section =
+                                      _visibleConfiguredHomeCategories(
+                                        ref,
+                                      )[index];
+                                  return SizedBox(
+                                    width: cardWidth,
+                                    child: _MainSectionHeroCard(
+                                      key: ValueKey('section_${section.id}'),
+                                      category: section,
+                                      isTabletOrWide: false,
+                                      onTap: () =>
+                                          _openConfiguredHomeCategory(section),
+                                    ),
+                                  );
+                                },
+                              ),
+                            );
+                          },
                         ),
                       )
                     else
@@ -566,61 +606,80 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                OutlinedButton.icon(
-                                  onPressed: () {
-                                    clearCustomerSection(ref);
-                                  },
-                                  style: OutlinedButton.styleFrom(
-                                    minimumSize: const Size(120, 44),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(14),
+                                Flexible(
+                                  child: OutlinedButton.icon(
+                                    onPressed: () {
+                                      clearCustomerSection(ref);
+                                    },
+                                    style: OutlinedButton.styleFrom(
+                                      minimumSize: const Size(0, 44),
+                                      visualDensity: VisualDensity.compact,
+                                      tapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 8,
+                                      ),
                                     ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 8,
+                                    icon: const Icon(
+                                      Icons.arrow_back_rounded,
+                                      size: 18,
                                     ),
-                                  ),
-                                  icon: const Icon(
-                                    Icons.arrow_back_rounded,
-                                    size: 18,
-                                  ),
-                                  label: const Text(
-                                    'All Spaces',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
+                                    label: const Text(
+                                      'All Spaces',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                 ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: theme.colorScheme.primaryContainer,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        selectedSection.emoji,
-                                        style: const TextStyle(fontSize: 16),
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Align(
+                                    alignment: Alignment.centerRight,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
                                       ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        selectedSection.title,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 13,
-                                          color: theme
-                                              .colorScheme
-                                              .onPrimaryContainer,
-                                        ),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            theme.colorScheme.primaryContainer,
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
-                                    ],
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            selectedSection.emoji,
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Flexible(
+                                            child: Text(
+                                              selectedSection.title,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 13,
+                                                color: theme
+                                                    .colorScheme
+                                                    .onPrimaryContainer,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ],
@@ -628,12 +687,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             const SizedBox(height: 12),
                             Text(
                               '${selectedSection.emoji} ${selectedSection.title}',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                               style: theme.textTheme.headlineSmall?.copyWith(
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
                             Text(
                               selectedSection.subtitle,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: theme.colorScheme.onSurfaceVariant,
                               ),
@@ -652,21 +715,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               onTap: () => context.push(AppRoutes.search),
                             ),
                             const SizedBox(height: 10),
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: TextButton.icon(
-                                onPressed: () =>
-                                    _showContextAwareHelpDialog(context),
-                                icon: const Icon(
-                                  Icons.help_outline_rounded,
-                                  size: 16,
-                                ),
-                                label: Text(
-                                  selectedSection.catalog.isBookable
-                                      ? 'Help · How ${selectedSection.title} booking works'
-                                      : 'Help · How institute enquiries work',
-                                  style: const TextStyle(fontSize: 12),
-                                ),
+                            TextButton(
+                              onPressed: () =>
+                                  _showContextAwareHelpDialog(context),
+                              style: TextButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                padding: EdgeInsets.zero,
+                                alignment: Alignment.centerLeft,
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.help_outline_rounded,
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      selectedSection.catalog.isBookable
+                                          ? 'Help · How ${selectedSection.title} booking works'
+                                          : 'Help · How institute enquiries work',
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
@@ -857,12 +931,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  'Filter by Amenities',
-                                  style: theme.textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.bold,
+                                Expanded(
+                                  child: Text(
+                                    'Filter by Amenities',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.titleSmall?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                                 if (_selectedAmenities.isNotEmpty)
@@ -872,19 +949,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                         _selectedAmenities.clear();
                                       });
                                     },
+                                    style: TextButton.styleFrom(
+                                      visualDensity: VisualDensity.compact,
+                                      tapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
+                                    ),
                                     child: const Text('Clear Filters'),
                                   ),
                               ],
                             ),
                             const SizedBox(height: 6),
                             SizedBox(
-                              height: 38,
+                              height: 48,
                               child: ListView.separated(
                                 scrollDirection: Axis.horizontal,
+                                clipBehavior: Clip.none,
                                 itemCount: _amenitiesFor(
                                   selectedSection.catalog,
                                 ).length,
-                                separatorBuilder: (_, __) =>
+                                separatorBuilder: (_, _) =>
                                     const SizedBox(width: 8),
                                 itemBuilder: (context, index) {
                                   final amenity = _amenitiesFor(
@@ -894,6 +977,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       .contains(amenity.id);
                                   return FilterChip(
                                     selected: isSelected,
+                                    visualDensity: VisualDensity.compact,
+                                    materialTapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
                                     onSelected: (selected) {
                                       setState(() {
                                         if (selected) {
@@ -909,6 +995,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     ),
                                     label: Text(
                                       amenity.label,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(fontSize: 12),
                                     ),
                                     selectedColor:
@@ -951,11 +1039,52 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           );
                         }
 
+                        final listPadding = EdgeInsets.symmetric(
+                          horizontal: responsive.horizontalPadding,
+                          vertical: 8,
+                        );
+                        final bookable = selectedSection.catalog.isBookable;
+                        // HotelStyleVenueCard is compact and sizes itself.
+                        // A fixed-aspect SliverGrid leaves a large empty
+                        // gap under each lodge card on compact Android.
+                        if (selectedSection == MainHomeSection.lodgeRooms) {
+                          return SliverPadding(
+                            padding: listPadding,
+                            sliver: SliverList(
+                              delegate: SliverChildBuilderDelegate((
+                                context,
+                                index,
+                              ) {
+                                final venue = scoped[index];
+                                return Padding(
+                                  padding: EdgeInsets.only(
+                                    bottom: responsive.gridSpacing,
+                                  ),
+                                  child: HotelStyleVenueCard(
+                                    venue: venue,
+                                    onTap: () => context.push(
+                                      AppRoutes.venueDetails.replaceAll(
+                                        ':id',
+                                        venue.id,
+                                      ),
+                                    ),
+                                    onBookTap: bookable
+                                        ? () => context.push(
+                                            AppRoutes.bookingFlow.replaceAll(
+                                              ':id',
+                                              venue.id,
+                                            ),
+                                            extra: venue,
+                                          )
+                                        : () => _handleCall(context, venue),
+                                  ),
+                                );
+                              }, childCount: scoped.length),
+                            ),
+                          );
+                        }
                         return SliverPadding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: responsive.horizontalPadding,
-                            vertical: 8,
-                          ),
+                          padding: listPadding,
                           sliver: SliverGrid(
                             gridDelegate:
                                 SliverGridDelegateWithFixedCrossAxisCount(
@@ -970,8 +1099,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               index,
                             ) {
                               final venue = scoped[index];
-                              final bookable =
-                                  selectedSection.catalog.isBookable;
                               return _SectionVenueCard(
                                 venue: venue,
                                 bookLabel: AdminSettings.text(
@@ -1479,96 +1606,147 @@ class _TopHeaderBar extends StatelessWidget {
         horizontal: responsive.horizontalPadding,
         vertical: 12,
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Row(
             children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppTheme.brand, Color(0xFF757DE8)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.domain_rounded,
-                  color: Colors.white,
-                  size: 22,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'BookMySpace',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.5,
-                  color: AppTheme.brand,
-                ),
-              ),
-            ],
-          ),
-          Row(
-            children: [
-              if (user == null)
-                FilledButton.tonalIcon(
-                  onPressed: onLoginTap,
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    minimumSize: const Size(80, 40),
-                  ),
-                  icon: const Icon(Icons.login_rounded, size: 16),
-                  label: const Text(
-                    'Sign In',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                  ),
-                )
-              else
-                InkWell(
-                  onTap: onProfileTap,
-                  borderRadius: BorderRadius.circular(20),
-                  child: CircleAvatar(
-                    radius: 18,
-                    backgroundColor: theme.colorScheme.primaryContainer,
-                    child: Text(
-                      () {
-                        final email = user?.email as String?;
-                        if (email == null || email.isEmpty) return 'U';
-                        return email[0].toUpperCase();
-                      }(),
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onPrimaryContainer,
+              Expanded(
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [AppTheme.brand, Color(0xFF757DE8)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.domain_rounded,
+                        color: Colors.white,
+                        size: 22,
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        'BookMySpace',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.5,
+                          color: AppTheme.brand,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: constraints.maxWidth * 0.62,
+                ),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (user == null)
+                        FilledButton.tonalIcon(
+                          onPressed: onLoginTap,
+                          style: FilledButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 8,
+                            ),
+                            minimumSize: const Size(0, 40),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          icon: const Icon(Icons.login_rounded, size: 16),
+                          label: const Text(
+                            'Sign In',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                        )
+                      else
+                        InkWell(
+                          onTap: onProfileTap,
+                          borderRadius: BorderRadius.circular(24),
+                          child: CircleAvatar(
+                            radius: 24,
+                            backgroundColor: theme.colorScheme.primaryContainer,
+                            child: Text(
+                              () {
+                                final email = user?.email as String?;
+                                if (email == null || email.isEmpty) return 'U';
+                                return email[0].toUpperCase();
+                              }(),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.onPrimaryContainer,
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (showAssistant)
+                        IconButton.filledTonal(
+                          visualDensity: VisualDensity.compact,
+                          style: IconButton.styleFrom(
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            minimumSize: const Size(48, 48),
+                            backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                            padding: const EdgeInsets.all(8),
+                          ),
+                          onPressed: onAssistantTap,
+                          icon: const Icon(Icons.auto_awesome, size: 22),
+                        ),
+                      if (showCheckIn)
+                        IconButton.filledTonal(
+                          visualDensity: VisualDensity.compact,
+                          style: IconButton.styleFrom(
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            minimumSize: const Size(48, 48),
+                            backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                            padding: const EdgeInsets.all(8),
+                          ),
+                          onPressed: onCheckInTap,
+                          icon: const Icon(
+                            Icons.qr_code_scanner_rounded,
+                            size: 22,
+                          ),
+                        ),
+                      if (showNotifications)
+                        IconButton.filledTonal(
+                          visualDensity: VisualDensity.compact,
+                          style: IconButton.styleFrom(
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            minimumSize: const Size(48, 48),
+                            backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                            padding: const EdgeInsets.all(8),
+                          ),
+                          onPressed: onNotificationsTap,
+                          icon: const Icon(
+                            Icons.notifications_none_rounded,
+                            size: 22,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-              const SizedBox(width: 8),
-              if (showAssistant)
-                IconButton.filledTonal(
-                  onPressed: onAssistantTap,
-                  icon: const Icon(Icons.auto_awesome, size: 20),
-                ),
-              if (showCheckIn)
-                IconButton.filledTonal(
-                  onPressed: onCheckInTap,
-                  icon: const Icon(Icons.qr_code_scanner_rounded, size: 20),
-                ),
-              if (showNotifications)
-                IconButton.filledTonal(
-                  onPressed: onNotificationsTap,
-                  icon: const Icon(Icons.notifications_none_rounded, size: 20),
-                ),
+              ),
             ],
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -1769,6 +1947,8 @@ class _VoiceBookingBanner extends StatelessWidget {
                 children: [
                   Text(
                     '🎙️ Bol-ke-Book (Voice Search)',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -1777,6 +1957,8 @@ class _VoiceBookingBanner extends StatelessWidget {
                   ),
                   Text(
                     'Tap to speak and book in Telugu, Hindi or English',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(color: Colors.white70, fontSize: 11),
                   ),
                 ],
@@ -1816,10 +1998,19 @@ class _InstituteEnquiryCard extends StatelessWidget {
           const Expanded(
             child: Text(
               'Explore institutes and contact them by Call or WhatsApp.',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
-          TextButton(onPressed: onTap, child: const Text('Explore')),
+          TextButton(
+            onPressed: onTap,
+            style: TextButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text('Explore'),
+          ),
         ],
       ),
     );
@@ -1868,10 +2059,14 @@ class _QuickBookCard extends StatelessWidget {
               children: [
                 const Text(
                   '1-Tap Fast Booking',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                 ),
                 Text(
                   'Instant confirmation for top-rated $sectionTitle',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 11,
                     color: theme.colorScheme.onSurfaceVariant,
@@ -1880,15 +2075,20 @@ class _QuickBookCard extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(width: 8),
           FilledButton.tonal(
             onPressed: onQuickBookTap,
             style: FilledButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              minimumSize: const Size(70, 36),
+              minimumSize: const Size(0, 36),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
             ),
             child: Text(
               ctaLabel,
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -2026,22 +2226,30 @@ class _SectionVenueCard extends StatelessWidget {
 
                   // Pricing & Capacity
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        '₹${venue.pricingBaseAmount.toInt()}/day',
-                        style: TextStyle(
-                          color: theme.colorScheme.primary,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 13.5,
+                      Expanded(
+                        child: Text(
+                          '₹${venue.pricingBaseAmount.toInt()}/day',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 13.5,
+                          ),
                         ),
                       ),
                       if (venue.capacity > 0)
-                        Text(
-                          '👥 ${venue.capacity} Guests',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: theme.colorScheme.onSurfaceVariant,
+                        Flexible(
+                          child: Text(
+                            '👥 ${venue.capacity} Guests',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.end,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
                           ),
                         ),
                     ],
@@ -2063,6 +2271,8 @@ class _SectionVenueCard extends StatelessWidget {
                           ),
                           child: Text(
                             bookLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,

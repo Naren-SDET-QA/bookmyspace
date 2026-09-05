@@ -272,13 +272,14 @@ void main() {
   });
 
   test('theme tokens stay centralized for light and dark', () {
-    final light = ThemeTokens.fromSeed(const Color(0xFF3F51B5));
-    final dark = ThemeTokens.fromSeed(
-      const Color(0xFF3F51B5),
-      brightness: Brightness.dark,
+    const seed = Color(0xFF3F51B5);
+    final light = ThemeTokens.fromSeed(seed);
+    final dark = ThemeTokens.fromSeed(seed, brightness: Brightness.dark);
+    expect(
+      light.primary,
+      ThemeTokens.colorSchemeFor(seed, Brightness.light).primary,
     );
-    expect(light.primary, const Color(0xFF3F51B5));
-    expect(light.secondary.value, isNonZero);
+    expect(light.secondary.toARGB32(), isNonZero);
     expect(dark.surface, isNot(light.surface));
   });
 }

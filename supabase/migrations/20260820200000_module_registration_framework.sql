@@ -213,7 +213,7 @@ create policy module_documents_owner_admin_read on storage.objects for select to
   bucket_id = 'module-documents' and (public.is_platform_admin((select auth.uid())) or exists (
     select 1 from public.module_submission_documents d join public.module_form_submissions s on s.id=d.submission_id
     join public.venues v on v.id=s.venue_id join public.organizations o on o.id=v.org_id
-    where d.storage_path=name and o.owner_user_id=(select auth.uid())
+    where d.storage_path=storage.objects.name and o.owner_user_id=(select auth.uid())
   ))
 );
 

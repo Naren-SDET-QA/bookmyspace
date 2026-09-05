@@ -62,11 +62,20 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: flutter build apk --release
+      - run: flutter build apk --release --build-number=${{ github.run_number }}
+      - run: flutter build appbundle --release --build-number=${{ github.run_number }}
       - uses: actions/upload-artifact@v4
         with:
-          name: release-apk
+          name: ci-apk
           path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ci-aab
+          path: build/app/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 14
 
   build-web:
     name: Build Web
@@ -80,11 +89,13 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: flutter build web --release
+      - run: flutter build web --release --build-number=${{ github.run_number }}
       - uses: actions/upload-artifact@v4
         with:
-          name: release-web
+          name: ci-web
           path: build/web/
+          if-no-files-found: error
+          retention-days: 14
 
   build-ios:
     name: Build iOS (no codesign)
@@ -98,7 +109,13 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: flutter build ios --release --no-codesign
+      - run: flutter build ios --release --no-codesign --build-number=${{ github.run_number }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ci-ios-unsigned
+          path: build/ios/iphoneos/Runner.app
+          if-no-files-found: error
+          retention-days: 14
 
   sql-tests:
     name: SQL Migration Tests

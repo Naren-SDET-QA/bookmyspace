@@ -34,7 +34,10 @@ class HomePromoCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.16),
                     borderRadius: BorderRadius.circular(20),
@@ -52,6 +55,8 @@ class HomePromoCard extends StatelessWidget {
                 const SizedBox(height: 9),
                 const Text(
                   'Your space,\nready when you are.',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 20,
@@ -99,11 +104,22 @@ class HomeSectionHeader extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
               if (actionLabel != null)
                 TextButton(
                   onPressed: onAction,
-                  style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                  ),
                   child: Text(actionLabel!),
                 ),
             ],
@@ -136,9 +152,13 @@ class HomeRadarCard extends StatelessWidget {
       child: Ink(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.62),
+          color: theme.colorScheme.surfaceContainerHighest.withValues(
+            alpha: 0.62,
+          ),
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+          border: Border.all(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+          ),
         ),
         child: Row(
           children: [
@@ -159,7 +179,10 @@ class HomeRadarCard extends StatelessWidget {
                     child: Container(
                       width: 7,
                       height: 7,
-                      decoration: const BoxDecoration(color: Color(0xFF39D98A), shape: BoxShape.circle),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF39D98A),
+                        shape: BoxShape.circle,
+                      ),
                     ),
                   ),
                 ],
@@ -172,18 +195,53 @@ class HomeRadarCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      const Text('LIVE SPACE RADAR', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                      const Flexible(
+                        child: Text(
+                          'LIVE SPACE RADAR',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ),
                       const SizedBox(width: 6),
-                      Container(width: 6, height: 6, decoration: const BoxDecoration(color: Color(0xFF39D98A), shape: BoxShape.circle)),
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF39D98A),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Text(locationLabel, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
-                  Text('$verifiedCount verified spaces available', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                  Text(
+                    locationLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    '$verifiedCount verified spaces available',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                 ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded, color: theme.colorScheme.onSurfaceVariant),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ],
         ),
       ),
@@ -257,9 +315,8 @@ class _CategorySpotlightCardState extends State<CategorySpotlightCard>
                   Image.network(
                     widget.imageUrl,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => ColoredBox(
-                      color: theme.colorScheme.primaryContainer,
-                    ),
+                    errorBuilder: (_, _, _) =>
+                        ColoredBox(color: theme.colorScheme.primaryContainer),
                   ),
                   DecoratedBox(
                     decoration: BoxDecoration(
@@ -284,14 +341,24 @@ class _CategorySpotlightCardState extends State<CategorySpotlightCard>
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
                                   color: Colors.white.withValues(alpha: 0.18),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: const Text(
                                   'FEATURED IN THIS CATEGORY',
-                                  style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 0.8),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 0.8,
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 8),
@@ -299,11 +366,20 @@ class _CategorySpotlightCardState extends State<CategorySpotlightCard>
                                 'Discover ${widget.title}',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                ),
                               ),
                               Text(
                                 'Fresh spaces, real availability, simple booking.',
-                                style: TextStyle(color: Colors.white.withValues(alpha: 0.84), fontSize: 11),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.84),
+                                  fontSize: 11,
+                                ),
                               ),
                             ],
                           ),
@@ -311,8 +387,14 @@ class _CategorySpotlightCardState extends State<CategorySpotlightCard>
                         Container(
                           width: 42,
                           height: 42,
-                          decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                          child: Icon(Icons.arrow_forward_rounded, color: theme.colorScheme.primary),
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.arrow_forward_rounded,
+                            color: theme.colorScheme.primary,
+                          ),
                         ),
                       ],
                     ),

@@ -1,86 +1,26 @@
 -- ============================================================
 -- BookMySpace — Migration 0016: Reviews & Venue Management
+--
+-- Idempotent compatibility layer.
+-- History note: the reviews table, its RLS and the rating trigger are
+-- owned by 0006 + 20260820090300_dev_reconciled_0016_reviews.sql. This
+-- migration only guarantees the table shell and adds owner venue
+-- management helpers plus demo review seeding.
 -- ============================================================
 
--- Reviews table: users can review venues they've booked.
-create table public.reviews (
+-- Reviews table shell (canonical shape maintained by reconciled migration).
+create table if not exists public.reviews (
   id uuid primary key default gen_random_uuid(),
   venue_id uuid not null references public.venues(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
-  booking_id uuid references public.bookings(id) on delete set null,
+  booking_id uuid references public.bookings(id),
   rating integer not null check (rating >= 1 and rating <= 5),
   title text,
   body text,
   is_verified boolean not null default false,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  unique (venue_id, user_id)
+  updated_at timestamptz not null default now()
 );
-
--- Index for fast venue lookups.
-create index idx_reviews_venue_id on public.reviews(venue_id);
-create index idx_reviews_user_id on public.reviews(user_id);
-
--- RLS: anyone can read reviews; only the author can update/delete their own.
-alter table public.reviews enable row level security;
-
-create policy "Reviews are publicly readable"
-  on public.reviews for select
-  using (true);
-
-create policy "Authenticated users can insert reviews"
-  on public.reviews for insert
-  with check (auth.uid() = user_id);
-
-create policy "Users can update their own reviews"
-  on public.reviews for update
-  using (auth.uid() = user_id);
-
-create policy "Users can delete their own reviews"
-  on public.reviews for delete
-  using (auth.uid() = user_id);
-
--- Function to recalculate venue avg_rating and rating_count.
-create or replace function public.update_venue_rating(p_venue_id uuid)
-returns void
-language plpgsql
-security definer
-as $$
-begin
-  update public.venues
-  set
-    avg_rating = coalesce(
-      (select avg(r.rating)::numeric(3,2) from public.reviews r where r.venue_id = p_venue_id),
-      0
-    ),
-    rating_count = (
-      select count(*)::integer from public.reviews r where r.venue_id = p_venue_id
-    ),
-    updated_at = now()
-  where id = p_venue_id;
-end;
-$$;
-
--- Trigger to auto-update venue rating after review insert/update/delete.
-create or replace function public.reviews_rating_trigger()
-returns trigger
-language plpgsql
-as $$
-begin
-  if tg_op = 'INSERT' or tg_op = 'UPDATE' then
-    perform public.update_venue_rating(new.venue_id);
-  end if;
-  if tg_op = 'DELETE' then
-    perform public.update_venue_rating(old.venue_id);
-  end if;
-  return null;
-end;
-$$;
-
-create trigger reviews_rating_changes
-  after insert or update or delete on public.reviews
-  for each row
-  execute function public.reviews_rating_trigger();
 
 -- Owner venue management: allow owners to CRUD venues via their org.
 -- RLS is handled by org ownership; this migration adds helper functions.

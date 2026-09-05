@@ -175,6 +175,13 @@ class Booking {
   /// Raw `metadata` jsonb, e.g. guests / sharing / deposit info.
   final Map<String, dynamic> metadata;
 
+  /// Server hold-expiry timestamp when the pending booking is still held.
+  DateTime? get holdExpiresAt {
+    final raw = metadata['hold_expires_at'];
+    if (raw is String) return DateTime.tryParse(raw)?.toLocal();
+    return null;
+  }
+
   bool get isActive =>
       status == BookingStatus.pending ||
       status == BookingStatus.confirmed ||
@@ -268,11 +275,39 @@ class BookingHold {
   final String id;
   final DateTime expiresAt;
 
-  factory BookingHold.fromResponse(Map<String, dynamic> json) {
+  factory BookingHold.fromResponse(
+    Map<String, dynamic> json, {
+    DateTime? now,
+  }) {
+    final parsed = DateTime.tryParse(json['expires_at'] as String? ?? '');
+    if (parsed != null) {
+      return BookingHold(
+        id: json['hold_id'] as String? ?? '',
+        expiresAt: parsed.toLocal(),
+      );
+    }
     final expiresIn = (json['expires_in_minutes'] as num?)?.toInt() ?? 10;
     return BookingHold(
       id: json['hold_id'] as String? ?? '',
-      expiresAt: DateTime.now().add(Duration(minutes: expiresIn)),
+      expiresAt: (now ?? DateTime.now()).add(Duration(minutes: expiresIn)),
     );
+  }
+
+  bool isExpired([DateTime? now]) => !((now ?? DateTime.now()).isBefore(expiresAt));
+
+  Duration remaining([DateTime? now]) {
+    final left = expiresAt.difference(now ?? DateTime.now());
+    return left.isNegative ? Duration.zero : left;
+  }
+}
+
+/// Formats a hold countdown from the server expiry timestamp.
+class HoldCountdown {
+  static String format(Duration remaining) {
+    final total = remaining.inSeconds;
+    if (total <= 0) return '00:00';
+    final minutes = (total ~/ 60).toString().padLeft(2, '0');
+    final seconds = (total % 60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
   }
 }

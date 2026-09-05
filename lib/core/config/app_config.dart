@@ -16,31 +16,31 @@ enum AppEnvironment {
   ),
   development(
     name: 'development',
-    supabaseUrl: 'https://zykxneztahxbjduagutv.supabase.co',
-    supabaseAnonKey: 'sb_publishable_D3kAHDoTejg6FGSjEPXTWQ_wjoH3Hl5',
+    supabaseUrl: 'https://configure-supabase-url.invalid',
+    supabaseAnonKey: 'SUPABASE_ANON_KEY_REQUIRED',
     razorpayKeyId: 'rzp_test_PLACEHOLDER',
-    apiBaseUrl: 'https://zykxneztahxbjduagutv.supabase.co/functions/v1',
+    apiBaseUrl: 'https://configure-supabase-url.invalid/functions/v1',
   ),
   testing(
     name: 'testing',
-    supabaseUrl: 'https://zykxneztahxbjduagutv.supabase.co',
-    supabaseAnonKey: 'sb_publishable_D3kAHDoTejg6FGSjEPXTWQ_wjoH3Hl5',
+    supabaseUrl: 'https://configure-supabase-url.invalid',
+    supabaseAnonKey: 'SUPABASE_ANON_KEY_REQUIRED',
     razorpayKeyId: 'rzp_test_PLACEHOLDER',
-    apiBaseUrl: 'https://zykxneztahxbjduagutv.supabase.co/functions/v1',
+    apiBaseUrl: 'https://configure-supabase-url.invalid/functions/v1',
   ),
   staging(
     name: 'staging',
-    supabaseUrl: 'https://zykxneztahxbjduagutv.supabase.co',
-    supabaseAnonKey: 'sb_publishable_D3kAHDoTejg6FGSjEPXTWQ_wjoH3Hl5',
+    supabaseUrl: 'https://configure-supabase-url.invalid',
+    supabaseAnonKey: 'SUPABASE_ANON_KEY_REQUIRED',
     razorpayKeyId: 'rzp_test_PLACEHOLDER',
-    apiBaseUrl: 'https://zykxneztahxbjduagutv.supabase.co/functions/v1',
+    apiBaseUrl: 'https://configure-supabase-url.invalid/functions/v1',
   ),
   production(
     name: 'production',
-    supabaseUrl: 'https://ehxuygrsyaknhhsaihhx.supabase.co',
-    supabaseAnonKey: 'sb_publishable_ffdJNvPYB9mVqdbNEIgjlA_vky6ujM_',
+    supabaseUrl: 'https://configure-supabase-url.invalid',
+    supabaseAnonKey: 'SUPABASE_ANON_KEY_REQUIRED',
     razorpayKeyId: 'rzp_live_PLACEHOLDER',
-    apiBaseUrl: 'https://ehxuygrsyaknhhsaihhx.supabase.co/functions/v1',
+    apiBaseUrl: 'https://configure-supabase-url.invalid/functions/v1',
   );
 
   const AppEnvironment({
@@ -91,6 +91,9 @@ class AppConfig {
   );
   static const String _supabaseAnonKeyDefine = String.fromEnvironment(
     'SUPABASE_ANON_KEY',
+  );
+  static const String _apiBaseUrlDefine = String.fromEnvironment(
+    'API_BASE_URL',
   );
   static const String _razorpayKeyIdDefine = String.fromEnvironment(
     'RAZORPAY_KEY_ID',
@@ -147,7 +150,11 @@ class AppConfig {
     return testKey.isNotEmpty ? testKey : environment.razorpayKeyId;
   }
 
-  static String get apiBaseUrl => environment.apiBaseUrl;
+  static String get apiBaseUrl {
+    if (_apiBaseUrlDefine.isNotEmpty) return _apiBaseUrlDefine;
+    if (environment == AppEnvironment.local) return environment.apiBaseUrl;
+    return '${supabaseUrl.replaceFirst(RegExp(r'/$'), '')}/functions/v1';
+  }
   static String get devTestEmail => _devTestEmailDefine;
   static String get devTestPassword => _devTestPasswordDefine;
   static String get oneSignalAppId => _oneSignalAppIdDefine;
@@ -162,6 +169,25 @@ class AppConfig {
       return uri.replace(path: '/', query: '', fragment: '').toString();
     }
     return '';
+  }
+
+  /// Native (iOS/Android) OAuth deep-link redirect. A fixed app-scheme URL
+  /// (not environment-dependent like [webAuthRedirectUri]) that iOS/Android
+  /// are registered to hand back to this app after Google/Apple sign-in.
+  /// Must also be added to the Supabase project's Redirect URLs allow-list.
+  static const String nativeAuthRedirectUri =
+      'com.bookmyspace.bookmyspace://login-callback/';
+
+  /// Redirect target for the password-recovery email.
+  /// Web lands on `/reset-password`; native reuses the existing OAuth scheme.
+  static String get passwordResetRedirectUri {
+    if (kIsWeb) {
+      final base = Uri.tryParse(webAuthRedirectUri);
+      if (base != null && base.hasScheme) {
+        return base.replace(path: '/reset-password', query: '', fragment: '').toString();
+      }
+    }
+    return nativeAuthRedirectUri;
   }
 
   static String get appName => 'BookMySpace';

@@ -9,11 +9,14 @@ import '../../../../core/modular/feature_id.dart';
 import '../../../../core/modular/feature_providers.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/widgets/empty_state.dart';
+import '../../../../core/widgets/configurable_banner.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/responsive_layout.dart';
 import '../../../../core/widgets/skeleton.dart';
 import '../../../home/domain/customer_section_catalog.dart';
 import '../../../home/presentation/customer_section_providers.dart';
+import '../../../admin/presentation/admin_settings_providers.dart';
+import '../../../admin/domain/admin_settings.dart';
 import '../../../location/presentation/location_providers.dart';
 import '../../../location/presentation/widgets/location_bar.dart';
 import '../../../location/presentation/widgets/location_picker_sheet.dart';
@@ -26,6 +29,8 @@ import '../../../venues/presentation/venue_providers.dart';
 import '../../../venues/presentation/widgets/venue_card.dart';
 import '../../domain/ai_search_intent.dart';
 import '../../../ai/presentation/voice_booking_sheet.dart';
+import '../../../../core/offline/offline_providers.dart';
+import '../../../support/presentation/widgets/contextual_help_button.dart';
 
 /// Search screen: text query + section category chips + location + a
 /// section-aware filter sheet. Results are always scoped to the selected
@@ -101,15 +106,35 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   void _onQueryChanged(String value) {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 400), () {
+    _applySearch(value, debounce: true);
+  }
+
+  void _applySearch(String value, {bool debounce = false}) {
+    void apply() {
       if (!mounted) return;
+      final trimmed = value.trim();
       final current = ref.read(searchQueryProvider);
       ref.read(searchQueryProvider.notifier).state = current.copyWith(
-        query: value.trim(),
+        query: trimmed,
         sectionId: () => ref.read(selectedCustomerSectionProvider)?.id,
       );
-    });
+      if (trimmed.length >= 2) {
+        ref.read(recentSearchesProvider.notifier).add(trimmed);
+      }
+    }
+
+    _debounce?.cancel();
+    if (debounce) {
+      _debounce = Timer(const Duration(milliseconds: 400), apply);
+    } else {
+      apply();
+    }
+  }
+
+  void _selectRecentSearch(String query) {
+    _controller.text = query;
+    _controller.selection = TextSelection.collapsed(offset: query.length);
+    _applySearch(query);
   }
 
   void _clearFilters() {
@@ -187,10 +212,16 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       fallback: fallbackChips,
     );
 
+    final homeSettings =
+        ref.watch(adminSettingsProvider).valueOrNull ?? AdminSettings.defaults;
+    final recentSearches =
+        ref.watch(recentSearchesProvider).valueOrNull ?? const [];
+
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.search),
         actions: [
+          const ContextualHelpButton(route: AppRoutes.search),
           if (features.isExposed(FeatureId.voice))
             IconButton(
               onPressed: () => showModalBottomSheet<void>(
@@ -222,6 +253,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       ),
       body: Column(
         children: [
+          if (AdminSettings.flag(
+            homeSettings.home['search_banner_visible'],
+            fallback: true,
+          ))
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: ConfigurableBanner(settings: homeSettings.home),
+            ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: Row(
@@ -231,6 +270,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     controller: _controller,
                     onChanged: _onQueryChanged,
                     textInputAction: TextInputAction.search,
+                    onSubmitted: _applySearch,
                     decoration: InputDecoration(
                       hintText: l10n.searchHint,
                       prefixIcon: const Icon(Icons.search_rounded),
@@ -259,6 +299,59 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: LocationBar(area: area, onTap: _openLocationPicker),
           ),
+          if (recentSearches.isEmpty && query.query.isEmpty)
+            Padding(
+              key: const Key('recent_searches_empty'),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Text(
+                l10n.noRecentSearches,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            )
+          else if (recentSearches.isNotEmpty)
+            SizedBox(
+              height: 40,
+              child: ListView(
+                key: const Key('recent_searches'),
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8, top: 8),
+                    child: Text(
+                      l10n.recentSearches,
+                      style: Theme.of(context).textTheme.labelMedium,
+                    ),
+                  ),
+                  ...recentSearches.map(
+                    (item) => Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: InputChip(
+                        key: Key('recent_search_chip_${item.query}'),
+                        label: Text(item.query),
+                        deleteIcon: Icon(
+                          Icons.close,
+                          size: 16,
+                          key: Key('recent_search_delete_${item.query}'),
+                        ),
+                        onPressed: () => _selectRecentSearch(item.query),
+                        onDeleted: () => ref
+                            .read(recentSearchesProvider.notifier)
+                            .remove(item.query),
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    key: const Key('clear_all_recent_searches'),
+                    onPressed: () =>
+                        ref.read(recentSearchesProvider.notifier).clear(),
+                    child: Text(l10n.clearRecentSearches),
+                  ),
+                ],
+              ),
+            ),
           SizedBox(
             height: 48,
             child: ListView(
@@ -339,11 +432,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             child: results.when(
               data: (venues) {
                 if (venues.isEmpty) {
-                  return const EmptyState(
+                  return EmptyState(
                     icon: Icons.search_off_rounded,
-                    title: 'No results found',
-                    message:
-                        'Try a different keyword, category, price range or location.',
+                    title: l10n.noResults,
+                    message: l10n.noResultsMessage,
                   );
                 }
                 final isFunctionHall = section == CustomerSection.functionHalls;
@@ -360,7 +452,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                           childAspectRatio: responsive.resultsAspectRatio,
                         ),
                         itemCount: venues.length,
-                        itemBuilder: (context, i) => VenueCard(venue: venues[i]),
+                        itemBuilder: (context, i) =>
+                            VenueCard(venue: venues[i]),
                       );
                     },
                   );
@@ -375,13 +468,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       itemBuilder: (context, index) {
                         if (index == 0) {
                           return _FunctionHallResultsHeader(
-                            title: isHotel ? 'Hotels' : 'Function Halls',
+                            title: isHotel ? l10n.hotels : l10n.functionHalls,
                             areaLabel: area.label,
                             count: venues.length,
                             query: query,
-                            onSortChanged: (sort) => ref
-                                .read(searchQueryProvider.notifier)
-                                .state = query.copyWith(sortBy: sort),
+                            onSortChanged: (sort) =>
+                                ref.read(searchQueryProvider.notifier).state =
+                                    query.copyWith(sortBy: sort),
                           );
                         }
                         return isHotel
@@ -402,14 +495,25 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Filters', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                                  Text(
+                                    l10n.filters,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.w800),
+                                  ),
                                   const SizedBox(height: 6),
-                                  Text('Location, price, rating, capacity and amenities', style: Theme.of(context).textTheme.bodySmall),
+                                  Text(
+                                    l10n.filtersHint,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
+                                  ),
                                   const SizedBox(height: 14),
                                   FilledButton.tonalIcon(
                                     onPressed: _openFilters,
                                     icon: const Icon(Icons.tune_rounded),
-                                    label: const Text('All filters'),
+                                    label: Text(l10n.allFilters),
                                   ),
                                 ],
                               ),
@@ -453,6 +557,7 @@ class _FunctionHallResultsHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     return Row(
       children: [
         Expanded(
@@ -460,12 +565,17 @@ class _FunctionHallResultsHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '$title in $areaLabel',
+                l10n.inArea(title, areaLabel),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-              Text('$count verified results', style: theme.textTheme.bodySmall),
+              Text(
+                l10n.verifiedResultsCount(count),
+                style: theme.textTheme.bodySmall,
+              ),
             ],
           ),
         ),
@@ -476,12 +586,27 @@ class _FunctionHallResultsHeader extends StatelessWidget {
             onChanged: (value) {
               if (value != null) onSortChanged(value);
             },
-            items: const [
-              DropdownMenuItem(value: VenueSortBy.relevance, child: Text('Recommended')),
-              DropdownMenuItem(value: VenueSortBy.priceAsc, child: Text('Price: low')),
-              DropdownMenuItem(value: VenueSortBy.priceDesc, child: Text('Price: high')),
-              DropdownMenuItem(value: VenueSortBy.rating, child: Text('Top rated')),
-              DropdownMenuItem(value: VenueSortBy.distance, child: Text('Nearest')),
+            items: [
+              DropdownMenuItem(
+                value: VenueSortBy.relevance,
+                child: Text(l10n.recommended),
+              ),
+              DropdownMenuItem(
+                value: VenueSortBy.priceAsc,
+                child: Text(l10n.priceLow),
+              ),
+              DropdownMenuItem(
+                value: VenueSortBy.priceDesc,
+                child: Text(l10n.priceHigh),
+              ),
+              DropdownMenuItem(
+                value: VenueSortBy.rating,
+                child: Text(l10n.topRated),
+              ),
+              DropdownMenuItem(
+                value: VenueSortBy.distance,
+                child: Text(l10n.nearest),
+              ),
             ],
           ),
         ),
@@ -783,7 +908,7 @@ class _SectionFilterSheetState extends State<_SectionFilterSheet> {
                   if (_date != null)
                     TextButton(
                       onPressed: () => setState(() => _date = null),
-                      child: const Text('Clear date'),
+                      child: Text(l10n.clearDate),
                     ),
                 ] else if (spec.field == SectionFilterField.checkInOut) ...[
                   Text(spec.label, style: theme.textTheme.titleSmall),
@@ -803,7 +928,7 @@ class _SectionFilterSheetState extends State<_SectionFilterSheet> {
                           _checkOut = null;
                         });
                       },
-                      child: const Text('Clear dates'),
+                      child: Text(l10n.clearDates),
                     ),
                 ] else if (spec.field == SectionFilterField.guests) ...[
                   Text(spec.label, style: theme.textTheme.titleSmall),

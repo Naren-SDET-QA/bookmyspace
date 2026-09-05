@@ -33,6 +33,19 @@ class FeatureConfig {
   }
 
   static FeatureConfig defaultFor(FeatureId id) {
+    final promotionFlags = id == FeatureId.offers
+        ? <String, Object?>{
+            'promotions_enabled': true,
+            'banners_enabled': true,
+            'offers_enabled': true,
+            'discounts_enabled': false,
+            'promotion_media_enabled': true,
+            'category_targeting_enabled': true,
+            'venue_targeting_enabled': true,
+            'scheduling_enabled': true,
+            'cta_enabled': true,
+          }
+        : const <String, Object?>{};
     return FeatureConfig(
       enabled: true,
       provider: switch (id) {
@@ -46,6 +59,7 @@ class FeatureConfig {
         FeatureId.barcode => 'qr_check_in',
         _ => null,
       },
+      config: promotionFlags,
       dependencies: switch (id) {
         FeatureId.maps => const [FeatureId.location],
         FeatureId.booking => const [FeatureId.location],

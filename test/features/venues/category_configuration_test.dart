@@ -56,28 +56,45 @@ void main() {
     expect(config.allAliases, contains('mandir'));
   });
 
-  test('alias index matches multilingual tokens without per-category switches', () {
-    final index = CategoryAliasIndex([
-      const CategoryConfiguration(
-        id: '1',
-        slug: 'exhibition_hall',
-        name: 'Exhibition Hall',
-        sectionId: 'function_halls',
-        aliases: ['expo', 'trade show'],
-        aiAliases: ['exhibition'],
-      ),
-      const CategoryConfiguration(
-        id: '2',
-        slug: 'ladies_pg',
-        name: 'Ladies PG',
-        sectionId: 'pg_hostels',
-        aliases: ['ladies pg'],
-      ),
-    ]);
-    expect(index.match('expo in Hyderabad')?.slug, 'exhibition_hall');
-    expect(index.match('ladies pg near me')?.sectionId, 'pg_hostels');
-    expect(index.match('unrelated query'), isNull);
+  test('category configuration reads database section_id metadata', () {
+    const category = VenueCategory(
+      id: '2',
+      slug: 'student_hostel',
+      name: 'Student Hostel',
+      metadata: {'section_id': 'lodge_rooms', 'section_sort_order': 10},
+    );
+
+    final config = CategoryConfiguration.fromCategory(category);
+
+    expect(config.sectionId, 'lodge_rooms');
+    expect(config.sortOrder, 10);
   });
+
+  test(
+    'alias index matches multilingual tokens without per-category switches',
+    () {
+      final index = CategoryAliasIndex([
+        const CategoryConfiguration(
+          id: '1',
+          slug: 'exhibition_hall',
+          name: 'Exhibition Hall',
+          sectionId: 'function_halls',
+          aliases: ['expo', 'trade show'],
+          aiAliases: ['exhibition'],
+        ),
+        const CategoryConfiguration(
+          id: '2',
+          slug: 'ladies_pg',
+          name: 'Ladies PG',
+          sectionId: 'pg_hostels',
+          aliases: ['ladies pg'],
+        ),
+      ]);
+      expect(index.match('expo in Hyderabad')?.slug, 'exhibition_hall');
+      expect(index.match('ladies pg near me')?.sectionId, 'pg_hostels');
+      expect(index.match('unrelated query'), isNull);
+    },
+  );
 
   test('AI search uses alias index when provided', () {
     final index = CategoryAliasIndex(const [
@@ -93,6 +110,22 @@ void main() {
     expect(intent.categorySlug, 'temple');
     expect(intent.section?.id, 'function_halls');
   });
+
+  test(
+    'sports court terminology resolves to the authoritative sports_ground category',
+    () {
+      final index = CategoryAliasIndex(const [
+        CategoryConfiguration(
+          id: 'sports-ground',
+          slug: 'sports_ground',
+          name: 'Sports Ground',
+          sectionId: 'institutes_classes',
+          aiAliases: ['sports ground', 'sports court'],
+        ),
+      ]);
+      expect(index.match('book a sports court')?.slug, 'sports_ground');
+    },
+  );
 
   test('venue image media kind defaults to image for future video', () {
     final image = VenueImage.fromJson({

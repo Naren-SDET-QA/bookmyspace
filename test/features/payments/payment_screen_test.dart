@@ -114,7 +114,13 @@ void main() {
     await tester.tap(find.text('Pay now'));
     await _pumpThroughPayment(tester);
 
-    expect(find.text('Payment successful'), findsOneWidget);
+    // A confirmed booking gets the full dedicated success screen (parity
+    // with the Android reference app's BookingSuccessScreen) rather than
+    // the old inline "Payment successful" card.
+    expect(find.text('Booking Confirmed!'), findsOneWidget);
+    expect(find.text('BMS-1A2B3C'), findsOneWidget);
+    expect(find.text('Sunrise Function Hall'), findsWidgets);
+    expect(find.text('Payment successful'), findsNothing);
     expect(paymentRepo.statusCalls, greaterThan(0));
 
     // The confirmed booking records an in-app notification.

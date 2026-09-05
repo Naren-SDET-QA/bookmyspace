@@ -71,10 +71,9 @@ class _EditProfileModalState extends ConsumerState<EditProfileModal> {
     setState(() => _isSaving = true);
 
     try {
-      await ref.read(authNotifierProvider.notifier).updateProfile(
-            fullName: newName,
-            avatarUrl: newAvatar,
-          );
+      await ref
+          .read(authNotifierProvider.notifier)
+          .updateProfile(fullName: newName, avatarUrl: newAvatar);
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -173,10 +172,7 @@ class _EditProfileModalState extends ConsumerState<EditProfileModal> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: theme.colorScheme.primaryContainer,
-                        border: Border.all(
-                          color: AppTheme.brand,
-                          width: 2.5,
-                        ),
+                        border: Border.all(color: AppTheme.brand, width: 2.5),
                       ),
                       clipBehavior: Clip.antiAlias,
                       child: activeAvatar.isNotEmpty
@@ -235,7 +231,8 @@ class _EditProfileModalState extends ConsumerState<EditProfileModal> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                   filled: true,
-                  fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                  fillColor: theme.colorScheme.surfaceContainerHighest
+                      .withValues(alpha: 0.3),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -267,7 +264,9 @@ class _EditProfileModalState extends ConsumerState<EditProfileModal> {
                       });
                     },
                     icon: Icon(
-                      _showCustomUrlInput ? Icons.grid_view_rounded : Icons.link_rounded,
+                      _showCustomUrlInput
+                          ? Icons.grid_view_rounded
+                          : Icons.link_rounded,
                       size: 16,
                     ),
                     label: Text(
@@ -288,7 +287,8 @@ class _EditProfileModalState extends ConsumerState<EditProfileModal> {
                     separatorBuilder: (_, __) => const SizedBox(width: 10),
                     itemBuilder: (context, index) {
                       final url = kPresetAvatars[index];
-                      final isSelected = _selectedAvatarUrl == url &&
+                      final isSelected =
+                          _selectedAvatarUrl == url &&
                           _avatarUrlController.text.isEmpty;
 
                       return GestureDetector(
@@ -315,10 +315,7 @@ class _EditProfileModalState extends ConsumerState<EditProfileModal> {
                           child: Stack(
                             fit: StackFit.expand,
                             children: [
-                              AppNetworkImage(
-                                url: url,
-                                fit: BoxFit.cover,
-                              ),
+                              AppNetworkImage(url: url, fit: BoxFit.cover),
                               if (isSelected)
                                 Container(
                                   color: AppTheme.brand.withValues(alpha: 0.3),
@@ -354,7 +351,8 @@ class _EditProfileModalState extends ConsumerState<EditProfileModal> {
                       borderRadius: BorderRadius.circular(14),
                     ),
                     filled: true,
-                    fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                    fillColor: theme.colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.3),
                   ),
                   onChanged: (_) => setState(() {}),
                 ),

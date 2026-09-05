@@ -73,6 +73,13 @@ AppException mapError(Object error) {
   if (error is ArgumentError) {
     return const BusinessException('Invalid argument passed to repository.');
   }
+  final text = error.toString().toLowerCase();
+  if (text.contains('hold expired') || text.contains('hold_expired')) {
+    return const HoldExpiredException(
+      'This hold has expired. Pick the slot again.',
+      code: 'hold_expired',
+    );
+  }
   if (kDebugMode) {
     return AppError('Unexpected error: $error', code: 'unknown');
   }

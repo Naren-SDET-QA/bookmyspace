@@ -94,6 +94,7 @@ class NotificationsScreen extends ConsumerWidget {
         context.push('/bookings/$bookingId/invoice');
         break;
       case notification_domain.NotificationType.bookingCancelled:
+      case notification_domain.NotificationType.slotReminder:
         context.push('/bookings');
         break;
       default:
@@ -177,7 +178,10 @@ class _NotificationTile extends ConsumerWidget {
                           const SizedBox(width: 8),
                         if (notification.createdAt != null)
                           Text(
-                            _relativeTime(notification.createdAt!),
+                            _relativeTime(
+                              notification.createdAt!,
+                              AppLocalizations.of(context),
+                            ),
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: theme.colorScheme.outline,
                             ),
@@ -208,6 +212,8 @@ class _NotificationTile extends ConsumerWidget {
         Icons.support_agent_rounded,
       notification_domain.NotificationType.admin =>
         Icons.admin_panel_settings_outlined,
+      notification_domain.NotificationType.slotReminder =>
+        Icons.notifications_active_outlined,
       notification_domain.NotificationType.system => Icons.info_outline_rounded,
     };
   }
@@ -220,17 +226,18 @@ class _NotificationTile extends ConsumerWidget {
       notification_domain.NotificationType.paymentReceived => Colors.blue,
       notification_domain.NotificationType.supportReply => Colors.orange,
       notification_domain.NotificationType.admin => Colors.purple,
+      notification_domain.NotificationType.slotReminder => Colors.amber,
       notification_domain.NotificationType.system => Colors.grey,
     };
   }
 
-  static String _relativeTime(DateTime dateTime) {
+  static String _relativeTime(DateTime dateTime, AppLocalizations l10n) {
     final now = DateTime.now();
     final diff = now.difference(dateTime);
-    if (diff.inMinutes < 1) return 'now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    if (diff.inMinutes < 1) return l10n.justNow;
+    if (diff.inMinutes < 60) return l10n.minutesAgo(diff.inMinutes);
+    if (diff.inHours < 24) return l10n.hoursAgo(diff.inHours);
+    if (diff.inDays < 7) return l10n.daysAgo(diff.inDays);
     return DateFormat.yMMMd().format(dateTime);
   }
 }

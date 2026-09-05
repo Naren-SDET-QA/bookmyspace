@@ -10,6 +10,13 @@ abstract interface class CategoryConfigurationRepository {
     required Map<String, dynamic> metadata,
   });
 
+  Future<CategoryConfiguration> createCategory({
+    required String slug,
+    required String name,
+    String icon = '',
+    Map<String, dynamic> metadata = const {},
+  });
+
   Future<AppSectionConfig> updateSectionVisibility({
     required String sectionId,
     required bool visible,

@@ -14,6 +14,8 @@ import '../../../../core/widgets/responsive_layout.dart';
 import '../../../../core/modular/feature_id.dart';
 import '../../../../core/modular/feature_providers.dart';
 import '../../../../core/modular/plugins/map_provider.dart';
+import '../../../../core/offline/map_tile_cache.dart';
+import '../../../support/presentation/widgets/contextual_help_button.dart';
 import '../../../home/domain/customer_section_catalog.dart';
 import '../../../home/presentation/customer_section_providers.dart';
 import '../../../location/presentation/location_providers.dart';
@@ -35,10 +37,14 @@ class SearchMapScreen extends ConsumerStatefulWidget {
 class _SearchMapScreenState extends ConsumerState<SearchMapScreen> {
   String? _selectedId;
   MapController? _mapController;
+  late final TextEditingController _mapSearchController;
 
   @override
   void initState() {
     super.initState();
+    _mapSearchController = TextEditingController(
+      text: ref.read(searchQueryProvider).query,
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (!ref.read(featureRegistryProvider).isExposed(FeatureId.maps)) return;
@@ -66,6 +72,7 @@ class _SearchMapScreenState extends ConsumerState<SearchMapScreen> {
 
   @override
   void dispose() {
+    _mapSearchController.dispose();
     _mapController?.dispose();
     super.dispose();
   }
@@ -115,9 +122,72 @@ class _SearchMapScreenState extends ConsumerState<SearchMapScreen> {
               ? l10n.viewOnMap
               : '${section.emoji} ${section.title} · ${l10n.viewOnMap}',
         ),
+        actions: const [ContextualHelpButton(route: AppRoutes.map)],
       ),
       body: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+            child: TextField(
+              controller: _mapSearchController,
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                hintText: 'Filter venues, arenas, halls...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _mapSearchController.text.isEmpty
+                    ? null
+                    : IconButton(
+                        tooltip: 'Clear',
+                        icon: const Icon(Icons.close),
+                        onPressed: () {
+                          _mapSearchController.clear();
+                          _updateMapQuery(query: '');
+                        },
+                      ),
+              ),
+              onChanged: (value) => _updateMapQuery(query: value),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    ChoiceChip(
+                      label: const Text('All spaces'),
+                      selected: ref.watch(searchQueryProvider).categorySlug == null,
+                      onSelected: (_) => _updateMapQuery(categorySlug: null),
+                    ),
+                    ...ref.watch(venueCategoriesProvider).maybeWhen(
+                      data: (categories) => [
+                        for (final category in categories)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 8),
+                            child: ChoiceChip(
+                              label: Text(
+                                category.icon.isEmpty
+                                    ? category.name
+                                    : '${category.icon} ${category.name}',
+                              ),
+                              selected:
+                                  ref.watch(searchQueryProvider).categorySlug ==
+                                  category.slug,
+                              onSelected: (_) => _updateMapQuery(
+                                categorySlug: category.slug,
+                              ),
+                            ),
+                          ),
+                      ],
+                      orElse: () => const <Widget>[],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
@@ -178,6 +248,7 @@ class _SearchMapScreenState extends ConsumerState<SearchMapScreen> {
                   TileLayer(
                     urlTemplate: mapPlugin.tileUrlTemplate,
                     userAgentPackageName: mapPlugin.userAgentPackageName,
+                    tileProvider: createCachingTileProvider(),
                   ),
                   MarkerLayer(
                     markers: [
@@ -271,6 +342,15 @@ class _SearchMapScreenState extends ConsumerState<SearchMapScreen> {
         ],
       ),
     );
+  }
+
+  void _updateMapQuery({String? query, String? categorySlug}) {
+    final current = ref.read(searchQueryProvider);
+    ref.read(searchQueryProvider.notifier).state = current.copyWith(
+      query: query,
+      categorySlug: () => categorySlug,
+    );
+    setState(() {});
   }
 }
 

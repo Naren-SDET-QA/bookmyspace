@@ -1,3 +1,5 @@
+import 'sample_venue_images.dart';
+
 /// Venue categories as seeded in `venue_categories`.
 ///
 /// NOTE: Freeze/JsonSerializable codegen is configured but was not run in this
@@ -188,13 +190,50 @@ class Venue {
     return 'draft';
   }
 
-  /// Cover image URL (first cover, else first image, else placeholder).
+  /// Cover image URL (uploaded image first, then deterministic sample imagery).
   String get coverImageUrl {
-    if (images.isEmpty) return '';
-    for (final image in images) {
-      if (image.isCover) return image.url;
+    if (images.isNotEmpty) {
+      for (final image in images) {
+        if (image.isCover && image.url.trim().isNotEmpty) {
+          if (!SampleVenueImages.isAndroidGenericFallback(image.url)) {
+            return image.url;
+          }
+        }
+      }
+      for (final image in images) {
+        if (image.url.trim().isNotEmpty &&
+            !SampleVenueImages.isAndroidGenericFallback(image.url)) {
+          return image.url;
+        }
+      }
     }
-    return images.first.url;
+    return SampleVenueImages.forVenue(
+      id: id,
+      categorySlug: category?.slug ?? '',
+    );
+  }
+
+  /// Android's `VenueImageResolver.resolveGalleryImages` equivalent.
+  ///
+  /// Generic shared seed fixtures are replaced with deterministic category
+  /// imagery, while real owner uploads remain authoritative.
+  List<String> get galleryImageUrls {
+    final ownerImages = images
+        .map((image) => image.url.trim())
+        .where((url) => url.isNotEmpty)
+        .toList();
+    if (ownerImages.isNotEmpty &&
+        ownerImages.every(
+          (url) => !SampleVenueImages.isAndroidGenericFallback(url),
+        )) {
+      return ownerImages;
+    }
+    final placeholders = SampleVenueImages.androidGalleryForCategory(
+      category?.slug ?? '',
+    );
+    // Android preserves owner-image order and appends every category fallback;
+    // it does not deduplicate this combined gallery.
+    return [...ownerImages, ...placeholders];
   }
 
   /// Address composed from address lines + city + state.

@@ -1,8 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../../core/errors/app_exceptions.dart'
     show NotFoundException, mapError;
-import '../../../core/firebase/error_logger.dart';
 import '../../home/domain/customer_section_catalog.dart';
 import '../domain/venue.dart';
 import '../domain/venue_repository.dart';
@@ -225,9 +225,8 @@ class SupabaseVenueRepository implements VenueRepository {
             "${query.city != null && query.city!.trim().isNotEmpty ? " AND city ILIKE '%${query.city!.trim()}%'" : ""}"
             " ORDER BY $orderColumn ${ascending ? 'ASC' : 'DESC'} LIMIT 50;";
 
-        ErrorLogger.logMessage(
+        debugPrint(
           'Executing PostgREST Category Search SQL [slug=${query.categorySlug}, category_id=${categoryId ?? 'NULL'}]: $executedSql',
-          context: 'SupabaseVenueRepository.search',
         );
       }
 
@@ -285,10 +284,7 @@ class SupabaseVenueRepository implements VenueRepository {
           ];
         } catch (e) {
           // Distance is an enhancement; a failing RPC must not break search.
-          ErrorLogger.logMessage(
-            'Distance lookup skipped: $e',
-            context: 'SupabaseVenueRepository.search.distance',
-          );
+          debugPrint('Distance lookup skipped: $e');
         }
       }
       if (query.sortBy == VenueSortBy.distance) {

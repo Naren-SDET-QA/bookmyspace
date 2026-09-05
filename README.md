@@ -29,8 +29,11 @@ dart format lib test
 flutter analyze
 flutter test
 
-# 4. Run the app (development environment)
-flutter run --dart-define=APP_ENV=development
+# 4. Run the app against remote DEV (requires ignored .env.dev.local)
+#    APP_ENV=development alone is not enough: SUPABASE_URL and
+#    SUPABASE_ANON_KEY must be injected via dart-define.
+.\scripts\run_dev_web.ps1
+.\scripts\run_dev_android.ps1
 ```
 
 ## Environments

@@ -19,32 +19,32 @@ void main() {
     final visible = visibleShellDestinations(FeatureRegistry.defaults());
     expect(
       visible.map((item) => item.id).toList(),
-      ['home', 'notifications', 'search', 'bookings', 'courses', 'profile'],
+      ['home', 'map', 'search', 'bookings', 'profile', 'saved'],
     );
     expect(visible.map((item) => item.branchIndex).toList(), [0, 1, 2, 3, 4, 5]);
   });
 
   test('disabled feature tabs disappear without duplicating config', () {
     final registry = FeatureRegistry.defaults()
-      ..apply(FeatureId.notifications, enabled: false)
-      ..apply(FeatureId.courses, enabled: false);
+      ..apply(FeatureId.maps, enabled: false)
+      ..apply(FeatureId.search, enabled: false);
 
     final visible = visibleShellDestinations(registry);
     expect(visible.map((item) => item.id).toList(), [
       'home',
-      'search',
       'bookings',
       'profile',
+      'saved',
     ]);
-    expect(visible.any((item) => item.id == 'notifications'), isFalse);
-    expect(visible.any((item) => item.id == 'courses'), isFalse);
+    expect(visible.any((item) => item.id == 'map'), isFalse);
+    expect(visible.any((item) => item.id == 'search'), isFalse);
     expect(visible.first.id, 'home');
-    expect(visible.last.id, 'profile');
+    expect(visible.last.id, 'saved');
   });
 
   test('selected index maps to remaining visible branches', () {
     final visible = visibleShellDestinations(
-      FeatureRegistry.defaults()..apply(FeatureId.notifications, enabled: false),
+      FeatureRegistry.defaults()..apply(FeatureId.maps, enabled: false),
     );
     expect(selectedShellIndex(currentBranch: 0, visible: visible), 0);
     expect(selectedShellIndex(currentBranch: 2, visible: visible), 1);
@@ -55,8 +55,7 @@ void main() {
     tester,
   ) async {
     FeatureRegistry.reset();
-    FeatureRegistry.configure(FeatureId.courses, enabled: false);
-    FeatureRegistry.configure(FeatureId.notifications, enabled: false);
+    FeatureRegistry.configure(FeatureId.maps, enabled: false);
     addTearDown(FeatureRegistry.reset);
 
     final router = createAppRouter(
@@ -106,11 +105,7 @@ void main() {
       find.descendant(of: bar, matching: find.text('Profile')),
       findsOneWidget,
     );
-    expect(find.descendant(of: bar, matching: find.text('Courses')), findsNothing);
-    expect(
-      find.descendant(of: bar, matching: find.text('Notifications')),
-      findsNothing,
-    );
+    expect(find.descendant(of: bar, matching: find.text('Map')), findsNothing);
     router.dispose();
   });
 }

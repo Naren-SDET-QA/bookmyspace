@@ -60,43 +60,57 @@ final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(
 );
 
 enum ThemePalette {
-  indigo(0xFF3F51B5, 'Indigo'),
-  ocean(0xFF0077B6, 'Ocean'),
-  forest(0xFF2E7D32, 'Forest'),
-  emerald(0xFF00897B, 'Emerald'),
-  sunset(0xFFE65100, 'Sunset'),
-  rose(0xFFC2185B, 'Rose'),
-  plum(0xFF6A1B9A, 'Plum'),
-  amber(0xFFFF8F00, 'Amber'),
-  teal(0xFF00695C, 'Teal'),
-  slate(0xFF455A64, 'Slate'),
-  coral(0xFFD84315, 'Coral'),
-  sky(0xFF1565C0, 'Sky');
+  indigo(0xFF4F46E5, 'Indigo', 'Default BookMySpace brand'),
+  royalPurple(0xFF7C3AED, 'Royal Purple', 'Majestic regal purple'),
+  electricTeal(0xFF00C9A7, 'Electric Teal', 'Sleek minty teal'),
+  midnightNavy(0xFF2563EB, 'Midnight Navy', 'High-contrast sapphire'),
+  emeraldLuxury(0xFF059669, 'Emerald Garden', 'Sophisticated emerald'),
+  crimsonPassion(0xFFE11D48, 'Crimson Passion', 'Vibrant ruby red'),
+  sunsetAmber(0xFFF59E0B, 'Sunset Amber', 'Warm saffron gold'),
+  sapphireResort(0xFF0284C7, 'Sapphire Ocean', 'Refreshing ocean blue'),
+  roseGold(0xFFDB2777, 'Rose Gold', 'Chic magenta blush'),
+  cyberNeon(0xFF8B5CF6, 'Cyber Violet', 'Futuristic violet'),
+  forestCanopy(0xFF166534, 'Forest Canopy', 'Deep forest green'),
+  nordicSlate(0xFF475569, 'Nordic Slate', 'Professional slate grey');
 
-  const ThemePalette(this.value, this.label);
+  const ThemePalette(this.value, this.label, this.description);
   final int value;
   final String label;
+  final String description;
   Color get color => Color(value);
+
+  static const defaultPalette = indigo;
+
+  static ThemePalette? byName(String value) {
+    for (final palette in values) {
+      if (palette.name == value) return palette;
+    }
+    return null;
+  }
 }
 
 class ThemePaletteNotifier extends Notifier<String> {
   @override
   String build() {
     _load();
-    return ThemePalette.indigo.name;
+    return ThemePalette.defaultPalette.name;
   }
+
+  bool _loaded = false;
 
   Future<void> _load() async {
     final saved = await ref
         .read(preferencesProvider)
         .read(AppConstants.prefsThemePaletteKey);
-    if (saved != null &&
-        (ThemePalette.values.any((p) => p.name == saved) ||
-            _parseHex(saved) != null))
-      state = saved;
+    if (saved == null || _loaded) return;
+    _loaded = true;
+    if (ThemePalette.byName(saved) != null || parseThemeHex(saved) != null) {
+      state = saved.startsWith('#') ? saved.substring(1).toUpperCase() : saved;
+    }
   }
 
   Future<void> setPalette(ThemePalette palette) async {
+    _loaded = true;
     state = palette.name;
     await ref
         .read(preferencesProvider)
@@ -104,22 +118,36 @@ class ThemePaletteNotifier extends Notifier<String> {
   }
 
   Future<bool> setCustomHex(String value) async {
-    final normalized = value.trim().replaceFirst('#', '');
-    final color = _parseHex(normalized);
+    final color = parseThemeHex(value);
     if (color == null) return false;
-    state = normalized.toUpperCase();
+    var cleaned = value.trim();
+    if (cleaned.startsWith('#')) cleaned = cleaned.substring(1);
+    _loaded = true;
+    state = cleaned.toUpperCase();
     await ref
         .read(preferencesProvider)
         .write(AppConstants.prefsThemePaletteKey, state);
     return true;
   }
 
+  Future<void> resetToDefault() async {
+    await setPalette(ThemePalette.defaultPalette);
+  }
+
   Color get color => themePaletteColor(state);
 }
 
-Color? _parseHex(String value) {
-  if (!RegExp(r'^[0-9a-fA-F]{6}$').hasMatch(value)) return null;
-  return Color(int.parse('FF$value', radix: 16));
+/// Parses `#RRGGBB`, `RRGGBB`, or 8-digit ARGB. Returns null when invalid.
+Color? parseThemeHex(String value) {
+  var cleaned = value.trim();
+  if (cleaned.startsWith('#')) cleaned = cleaned.substring(1);
+  if (RegExp(r'^[0-9a-fA-F]{6}$').hasMatch(cleaned)) {
+    return Color(int.parse('FF$cleaned', radix: 16));
+  }
+  if (RegExp(r'^[0-9a-fA-F]{8}$').hasMatch(cleaned)) {
+    return Color(int.parse(cleaned, radix: 16));
+  }
+  return null;
 }
 
 final themePaletteProvider = NotifierProvider<ThemePaletteNotifier, String>(
@@ -127,12 +155,10 @@ final themePaletteProvider = NotifierProvider<ThemePaletteNotifier, String>(
 );
 
 Color themePaletteColor(String value) =>
-    _parseHex(value) ??
-    ThemePalette.values
-        .firstWhere((p) => p.name == value, orElse: () => ThemePalette.indigo)
-        .color;
+    parseThemeHex(value) ??
+    (ThemePalette.byName(value) ?? ThemePalette.defaultPalette).color;
 
-/// Locale controller (en / te / hi), persisted.
+/// Locale controller. Persisted language code; unknown values fall back to English.
 class LocaleNotifier extends Notifier<Locale> {
   @override
   Locale build() {
@@ -147,18 +173,15 @@ class LocaleNotifier extends Notifier<Locale> {
     final saved = await prefs.read(AppConstants.prefsLocaleKey);
     if (saved != null && !_loaded) {
       _loaded = true;
-      state = AppLocalizations.supportedLocales.firstWhere(
-        (l) => l.languageCode == saved,
-        orElse: () => AppLocalizations.supportedLocales.first,
-      );
+      state = AppLocalizations.resolve(Locale(saved));
     }
   }
 
   Future<void> setLocale(Locale locale) async {
-    state = locale;
+    state = AppLocalizations.resolve(locale);
     await ref
         .read(preferencesProvider)
-        .write(AppConstants.prefsLocaleKey, locale.languageCode);
+        .write(AppConstants.prefsLocaleKey, state.languageCode);
   }
 }
 

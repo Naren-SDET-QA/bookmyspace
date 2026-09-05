@@ -51,6 +51,9 @@ class AdminFeatureConfiguration {
     this.searchVisible = true,
     this.bookingEnabled = true,
     this.offerVisible = true,
+    this.availabilityEnabled = true,
+    this.paymentsEnabled = true,
+    this.locationEnabled = true,
     this.icon = '',
     this.image = '',
     this.accentColor = '',
@@ -90,6 +93,9 @@ class AdminFeatureConfiguration {
   bool searchVisible;
   bool bookingEnabled;
   bool offerVisible;
+  bool availabilityEnabled;
+  bool paymentsEnabled;
+  bool locationEnabled;
   final String icon;
   final String image;
   final String accentColor;
@@ -198,6 +204,9 @@ class AdminFeatureConfiguration {
       searchVisible: category.searchable,
       bookingEnabled: category.bookable && !category.isListingOnly,
       offerVisible: category.offerVisible,
+      availabilityEnabled: category.availabilityEnabled,
+      paymentsEnabled: category.paymentsEnabled,
+      locationEnabled: category.locationEnabled,
       icon: category.icon,
       image: category.imageUrl,
       accentColor: category.themeColor,
@@ -349,6 +358,9 @@ class AdminFeatureConfiguration {
     bool? searchVisible,
     bool? bookingEnabled,
     bool? offerVisible,
+    bool? availabilityEnabled,
+    bool? paymentsEnabled,
+    bool? locationEnabled,
     int? order,
     String? displayName,
     String? description,
@@ -387,6 +399,10 @@ class AdminFeatureConfiguration {
         if (searchVisible != null) 'search_visible': searchVisible,
         if (bookingEnabled != null) 'booking_enabled': bookingEnabled,
         if (offerVisible != null) 'offer_visible': offerVisible,
+        if (availabilityEnabled != null)
+          'availability_enabled': availabilityEnabled,
+        if (paymentsEnabled != null) 'payments_enabled': paymentsEnabled,
+        if (locationEnabled != null) 'location_enabled': locationEnabled,
         if (order != null) 'order': order,
         if (displayName != null) 'display_name': displayName,
         if (description != null) 'description': description,
@@ -426,6 +442,9 @@ class AdminFeatureConfiguration {
     bool? searchVisible,
     bool? bookingEnabled,
     bool? offerVisible,
+    bool? availabilityEnabled,
+    bool? paymentsEnabled,
+    bool? locationEnabled,
     int? order,
     String? displayName,
     String? description,
@@ -448,6 +467,10 @@ class AdminFeatureConfiguration {
       'searchable': searchVisible ?? this.searchVisible,
       'bookable': bookingEnabled ?? this.bookingEnabled,
       'offer_visible': offerVisible ?? this.offerVisible,
+      'offers_enabled': offerVisible ?? this.offerVisible,
+      'availability_enabled': availabilityEnabled ?? this.availabilityEnabled,
+      'payments_enabled': paymentsEnabled ?? this.paymentsEnabled,
+      'location_enabled': locationEnabled ?? this.locationEnabled,
       'sort_order': order ?? this.order,
       if ((displayName ?? this.displayName).isNotEmpty)
         'display_name': displayName ?? this.displayName,

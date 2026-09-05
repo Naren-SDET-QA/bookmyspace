@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../auth/presentation/auth_providers.dart';
+import '../../../auth/domain/auth_configuration.dart';
 import '../../../../core/modular/feature_providers.dart';
 import '../../../../core/modular/feature_registry.dart';
+import '../../../promotions/infrastructure/supabase_admin_promotion_repository.dart';
 import '../../../venues/domain/category_configuration.dart';
 import '../../../venues/presentation/category_configuration_providers.dart';
 import '../../domain/admin_feature_configuration.dart';
@@ -21,11 +26,22 @@ class AdminFeatureConfigurationScreen extends ConsumerWidget {
       categories: categories,
     );
     return Scaffold(
-      appBar: AppBar(title: const Text('Feature configuration')),
+      appBar: AppBar(
+        title: const Text('Feature configuration'),
+        actions: [
+          IconButton(
+            tooltip: 'Add category',
+            icon: const Icon(Icons.add),
+            onPressed: () => _showAddCategory(context, ref),
+          ),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            const _AuthConfigurationPanel(),
+            const SizedBox(height: 12),
             for (final group in AdminConfigGroup.values) ...[
               Card(
                 child: ExpansionTile(
@@ -45,6 +61,196 @@ class AdminFeatureConfigurationScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+class _AuthConfigurationPanel extends ConsumerWidget {
+  const _AuthConfigurationPanel();
+
+  static const _flags = <String, String>{
+    'authentication_enabled': 'Authentication',
+    'signup_enabled': 'Signup',
+    'phone_login_enabled': 'Mobile login',
+    'phone_otp_enabled': 'Mobile OTP',
+    'email_login_enabled': 'Email login',
+    'email_otp_enabled': 'Email OTP',
+    'password_login_enabled': 'Email password',
+    'google_login_enabled': 'Google login',
+    'apple_login_enabled': 'Apple login',
+  };
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(authConfigurationProvider);
+    return Card(
+      child: ExpansionTile(
+        title: const Text('Authentication'),
+        subtitle: const Text('Provider availability and sign-up controls'),
+        children: [
+          state.when(
+            loading: () => const CircularProgressIndicator(),
+            error: (_, _) => const ListTile(
+              title: Text('Authentication configuration unavailable'),
+            ),
+            data: (config) => Column(
+              children: [
+                for (final entry in _flags.entries)
+                  SwitchListTile.adaptive(
+                    title: Text(entry.value),
+                    value: _value(config, entry.key),
+                    onChanged:
+                        config.authenticationEnabled ||
+                            entry.key == 'authentication_enabled'
+                        ? (value) async {
+                            await ref
+                                .read(authConfigurationRepositoryProvider)
+                                .update({entry.key: value});
+                            ref.invalidate(authConfigurationProvider);
+                          }
+                        : null,
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  bool _value(AuthConfiguration c, String key) => switch (key) {
+    'authentication_enabled' => c.authenticationEnabled,
+    'signup_enabled' => c.signupEnabled,
+    'phone_login_enabled' => c.phoneLoginEnabled,
+    'phone_otp_enabled' => c.phoneOtpEnabled,
+    'email_login_enabled' => c.emailLoginEnabled,
+    'email_otp_enabled' => c.emailOtpEnabled,
+    'password_login_enabled' => c.passwordLoginEnabled,
+    'google_login_enabled' => c.googleLoginEnabled,
+    'apple_login_enabled' => c.appleLoginEnabled,
+    _ => false,
+  };
+}
+
+Future<void> _showAddCategory(BuildContext context, WidgetRef ref) async {
+  final name = TextEditingController();
+  final code = TextEditingController();
+  final icon = TextEditingController();
+  var active = true;
+  var searchable = true;
+  var bookable = true;
+  var availability = true;
+  var offers = true;
+  var payments = true;
+  var location = true;
+  final created = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => StatefulBuilder(
+      builder: (context, setState) => AlertDialog(
+        title: const Text('Add category'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: name,
+                decoration: const InputDecoration(labelText: 'Category name'),
+              ),
+              TextField(
+                controller: code,
+                decoration: const InputDecoration(labelText: 'Category code'),
+              ),
+              TextField(
+                controller: icon,
+                decoration: const InputDecoration(labelText: 'Icon or image'),
+              ),
+              for (final item
+                  in <({String label, bool value, void Function(bool) set})>[
+                    (
+                      label: 'Active',
+                      value: active,
+                      set: (v) => setState(() => active = v),
+                    ),
+                    (
+                      label: 'Search',
+                      value: searchable,
+                      set: (v) => setState(() => searchable = v),
+                    ),
+                    (
+                      label: 'Booking',
+                      value: bookable,
+                      set: (v) => setState(() => bookable = v),
+                    ),
+                    (
+                      label: 'Availability',
+                      value: availability,
+                      set: (v) => setState(() => availability = v),
+                    ),
+                    (
+                      label: 'Offers',
+                      value: offers,
+                      set: (v) => setState(() => offers = v),
+                    ),
+                    (
+                      label: 'Payments',
+                      value: payments,
+                      set: (v) => setState(() => payments = v),
+                    ),
+                    (
+                      label: 'Location',
+                      value: location,
+                      set: (v) => setState(() => location = v),
+                    ),
+                  ])
+                SwitchListTile.adaptive(
+                  title: Text(item.label),
+                  value: item.value,
+                  onChanged: item.set,
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    ),
+  );
+  if (created != true || name.text.trim().isEmpty || code.text.trim().isEmpty)
+    return;
+  try {
+    await ref
+        .read(categoryConfigurationRepositoryProvider)
+        .createCategory(
+          slug: code.text.trim(),
+          name: name.text.trim(),
+          icon: icon.text.trim(),
+          metadata: {
+            'active': active,
+            'searchable': searchable,
+            'bookable': bookable,
+            'availability_enabled': availability,
+            'offers_enabled': offers,
+            'payments_enabled': payments,
+            'location_enabled': location,
+          },
+        );
+    ref.invalidate(categoryConfigurationsProvider);
+    if (context.mounted)
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Category saved')));
+  } catch (_) {
+    if (context.mounted)
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Category could not be saved')),
+      );
   }
 }
 
@@ -102,6 +308,56 @@ class _FeatureSettingsTile extends ConsumerWidget {
                 value: item.offerVisible,
                 onChanged: (value) => _save(ref, offerVisible: value),
               ),
+            if (group == AdminConfigGroup.categories) ...[
+              SwitchListTile.adaptive(
+                title: const Text('Availability'),
+                value: item.availabilityEnabled,
+                onChanged: (value) => _save(ref, availabilityEnabled: value),
+              ),
+              SwitchListTile.adaptive(
+                title: const Text('Payments'),
+                value: item.paymentsEnabled,
+                onChanged: (value) => _save(ref, paymentsEnabled: value),
+              ),
+              SwitchListTile.adaptive(
+                title: const Text('Location'),
+                value: item.locationEnabled,
+                onChanged: (value) => _save(ref, locationEnabled: value),
+              ),
+            ],
+            if (group == AdminConfigGroup.offers) ...[
+              for (final flag in const [
+                ('promotions_enabled', 'Promotions'),
+                ('banners_enabled', 'Banners'),
+                ('offers_enabled', 'Offers'),
+                ('discounts_enabled', 'Discounts'),
+                ('promotion_media_enabled', 'Promotion media'),
+                ('category_targeting_enabled', 'Category targeting'),
+                ('venue_targeting_enabled', 'Venue targeting'),
+                ('scheduling_enabled', 'Scheduling'),
+                ('cta_enabled', 'CTA buttons'),
+              ])
+                SwitchListTile.adaptive(
+                  title: Text(flag.$2),
+                  value:
+                      item.registry.configOf(item.id!).config[flag.$1]
+                          as bool? ??
+                      true,
+                  onChanged: (value) {
+                    final current = item.registry.configOf(item.id!).config;
+                    item.registry.apply(
+                      item.id!,
+                      config: {...current, flag.$1: value},
+                    );
+                    ref.invalidate(featureRegistryProvider);
+                    unawaited(
+                      SupabaseAdminPromotionRepository(
+                        ref.read(supabaseProvider),
+                      ).saveGlobalFlag(flag.$1, value),
+                    );
+                  },
+                ),
+            ],
             _textField(
               label: 'Display name',
               value: item.displayName,
@@ -318,6 +574,9 @@ class _FeatureSettingsTile extends ConsumerWidget {
     bool? searchVisible,
     bool? bookingEnabled,
     bool? offerVisible,
+    bool? availabilityEnabled,
+    bool? paymentsEnabled,
+    bool? locationEnabled,
     int? order,
     String? displayName,
     String? description,
@@ -356,6 +615,9 @@ class _FeatureSettingsTile extends ConsumerWidget {
         searchVisible: searchVisible,
         bookingEnabled: bookingEnabled,
         offerVisible: offerVisible,
+        availabilityEnabled: availabilityEnabled,
+        paymentsEnabled: paymentsEnabled,
+        locationEnabled: locationEnabled,
         order: order,
         displayName: displayName,
         description: description,
@@ -396,6 +658,9 @@ class _FeatureSettingsTile extends ConsumerWidget {
               searchVisible: searchVisible,
               bookingEnabled: bookingEnabled,
               offerVisible: offerVisible,
+              availabilityEnabled: availabilityEnabled,
+              paymentsEnabled: paymentsEnabled,
+              locationEnabled: locationEnabled,
               order: order,
               displayName: displayName,
               description: description,

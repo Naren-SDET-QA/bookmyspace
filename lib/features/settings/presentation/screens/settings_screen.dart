@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/config/settings_controller.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/router/app_router.dart';
+import '../../../../core/config/test_mode.dart';
+import '../../../../features/debug/presentation/screens/debug_menu_screen.dart';
 
 /// Settings screen: theme, language and account management entry points.
 class SettingsScreen extends ConsumerWidget {
@@ -66,22 +68,29 @@ class SettingsScreen extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.language_rounded),
             title: Text(l10n.language),
-            subtitle: Text(locale.languageCode.toUpperCase()),
+            subtitle: Text(AppLocalizations.languageLabel(locale)),
             trailing: const Icon(Icons.chevron_right_rounded),
             onTap: () => _showLanguagePicker(context, ref),
+          ),
+          ListTile(
+            leading: const Icon(Icons.tune_rounded),
+            title: const Text('Choose what you want to see'),
+            subtitle: const Text('Customize home categories'),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => context.push(AppRoutes.categoryPreferences),
           ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.notifications_outlined),
             title: Text(l10n.notifications),
             trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () {},
+            onTap: () => context.push(AppRoutes.notifications),
           ),
           ListTile(
             leading: const Icon(Icons.support_agent_rounded),
             title: Text(l10n.support),
             trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () {},
+            onTap: () => context.push(AppRoutes.support),
           ),
           const Divider(),
           ListTile(
@@ -96,10 +105,10 @@ class SettingsScreen extends ConsumerWidget {
             trailing: const Icon(Icons.chevron_right_rounded),
             onTap: () => context.push(AppRoutes.termsOfService),
           ),
-          ListTile(
-            leading: const Icon(Icons.info_outline),
-            title: Text(l10n.about),
-            onTap: () => _showAboutDialog(context, l10n),
+          _AboutListTile(
+            title: l10n.about,
+            tagline: l10n.tagline,
+            appName: l10n.appName,
           ),
           const Divider(),
           ListTile(
@@ -236,30 +245,17 @@ class SettingsScreen extends ConsumerWidget {
     showModalBottomSheet<void>(
       context: context,
       builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: ListView(
+          shrinkWrap: true,
           children: [
-            ListTile(
-              title: const Text('English'),
-              onTap: () {
-                ref.read(localeProvider.notifier).setLocale(const Locale('en'));
-                Navigator.pop(sheetContext);
-              },
-            ),
-            ListTile(
-              title: const Text('తెలుగు'),
-              onTap: () {
-                ref.read(localeProvider.notifier).setLocale(const Locale('te'));
-                Navigator.pop(sheetContext);
-              },
-            ),
-            ListTile(
-              title: const Text('हिन्दी'),
-              onTap: () {
-                ref.read(localeProvider.notifier).setLocale(const Locale('hi'));
-                Navigator.pop(sheetContext);
-              },
-            ),
+            for (final locale in AppLocalizations.supportedLocales)
+              ListTile(
+                title: Text(AppLocalizations.languageLabel(locale)),
+                onTap: () {
+                  ref.read(localeProvider.notifier).setLocale(locale);
+                  Navigator.pop(sheetContext);
+                },
+              ),
           ],
         ),
       ),
@@ -297,15 +293,6 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  void _showAboutDialog(BuildContext context, AppLocalizations l10n) {
-    showAboutDialog(
-      context: context,
-      applicationName: l10n.appName,
-      applicationVersion: '1.0.0',
-      children: [Text(l10n.tagline)],
-    );
-  }
-
   Future<void> _confirmDeleteAccount(
     BuildContext context,
     AppLocalizations l10n,
@@ -335,5 +322,64 @@ class SettingsScreen extends ConsumerWidget {
     if (confirmed == true && context.mounted) {
       context.go(AppRoutes.onboarding);
     }
+  }
+}
+
+/// About tile that also serves as the hidden Test Mode debug-menu unlock:
+/// 7 taps within a 3-second window (while [TestMode.debugMenuEnabled] is on)
+/// opens [DebugMenuScreen] instead of the normal About dialog.
+class _AboutListTile extends StatefulWidget {
+  const _AboutListTile({
+    required this.title,
+    required this.tagline,
+    required this.appName,
+  });
+
+  final String title;
+  final String tagline;
+  final String appName;
+
+  @override
+  State<_AboutListTile> createState() => _AboutListTileState();
+}
+
+class _AboutListTileState extends State<_AboutListTile> {
+  int _tapCount = 0;
+  DateTime? _windowStart;
+
+  void _handleTap() {
+    if (TestMode.debugMenuEnabled) {
+      final now = DateTime.now();
+      if (_windowStart == null ||
+          now.difference(_windowStart!) > const Duration(seconds: 3)) {
+        _windowStart = now;
+        _tapCount = 1;
+      } else {
+        _tapCount++;
+      }
+      if (_tapCount >= 7) {
+        _tapCount = 0;
+        _windowStart = null;
+        Navigator.of(context).push<void>(
+          MaterialPageRoute(builder: (_) => const DebugMenuScreen()),
+        );
+        return;
+      }
+    }
+    showAboutDialog(
+      context: context,
+      applicationName: widget.appName,
+      applicationVersion: '1.0.0',
+      children: [Text(widget.tagline)],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: const Icon(Icons.info_outline),
+      title: Text(widget.title),
+      onTap: _handleTap,
+    );
   }
 }

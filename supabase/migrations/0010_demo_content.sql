@@ -14,33 +14,40 @@ begin
   select id into v_sunrise from public.venues where slug = 'sunrise-function-hall';
   select id into v_boardroom from public.venues where slug = 'the-boardroom';
 
-  -- Sunrise Function Hall gallery
-  insert into public.venue_images (venue_id, url, alt_text, is_cover, sort_order)
-  select v_sunrise, 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3',
-    'Sunrise function hall main hall', true, 0
-  where not exists (select 1 from public.venue_images where venue_id = v_sunrise);
+  -- Demo content is optional: when the demo auth user/org does not exist
+  -- (fresh environments), the venues above are absent and this migration
+  -- must still apply cleanly instead of failing on a null venue_id.
+  if v_sunrise is not null then
+    -- Sunrise Function Hall gallery
+    insert into public.venue_images (venue_id, url, alt_text, is_cover, sort_order)
+    select v_sunrise, 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3',
+      'Sunrise function hall main hall', true, 0
+    where not exists (select 1 from public.venue_images where venue_id = v_sunrise);
 
-  insert into public.venue_images (venue_id, url, alt_text, is_cover, sort_order)
-  select v_sunrise, 'https://images.unsplash.com/photo-1511578314322-379afb476865',
-    'Decorative entrance', false, 1
-  where not exists (
-    select 1 from public.venue_images
-    where venue_id = v_sunrise and url = 'https://images.unsplash.com/photo-1511578314322-379afb476865'
-  );
+    insert into public.venue_images (venue_id, url, alt_text, is_cover, sort_order)
+    select v_sunrise, 'https://images.unsplash.com/photo-1511578314322-379afb476865',
+      'Decorative entrance', false, 1
+    where not exists (
+      select 1 from public.venue_images
+      where venue_id = v_sunrise and url = 'https://images.unsplash.com/photo-1511578314322-379afb476865'
+    );
 
-  insert into public.venue_images (venue_id, url, alt_text, is_cover, sort_order)
-  select v_sunrise, 'https://images.unsplash.com/photo-1505236858219-8359eb29e329',
-    'Banquet setup', false, 2
-  where not exists (
-    select 1 from public.venue_images
-    where venue_id = v_sunrise and url = 'https://images.unsplash.com/photo-1505236858219-8359eb29e329'
-  );
+    insert into public.venue_images (venue_id, url, alt_text, is_cover, sort_order)
+    select v_sunrise, 'https://images.unsplash.com/photo-1505236858219-8359eb29e329',
+      'Banquet setup', false, 2
+    where not exists (
+      select 1 from public.venue_images
+      where venue_id = v_sunrise and url = 'https://images.unsplash.com/photo-1505236858219-8359eb29e329'
+    );
+  end if;
 
-  -- The Boardroom gallery
-  insert into public.venue_images (venue_id, url, alt_text, is_cover, sort_order)
-  select v_boardroom, 'https://images.unsplash.com/photo-1497366216548-37526070297c',
-    'Modern meeting room', true, 0
-  where not exists (select 1 from public.venue_images where venue_id = v_boardroom);
+  if v_boardroom is not null then
+    -- The Boardroom gallery
+    insert into public.venue_images (venue_id, url, alt_text, is_cover, sort_order)
+    select v_boardroom, 'https://images.unsplash.com/photo-1497366216548-37526070297c',
+      'Modern meeting room', true, 0
+    where not exists (select 1 from public.venue_images where venue_id = v_boardroom);
+  end if;
 end $$;
 
 -- Operating hours for The Boardroom.

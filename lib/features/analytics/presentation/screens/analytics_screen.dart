@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/modular/feature_id.dart';
 import '../../../../core/modular/feature_providers.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/error_view.dart';
+import '../../../owner_bookings/presentation/owner_booking_providers.dart';
 import '../../domain/analytics_display_config.dart';
+import '../../domain/peak_hours_analytics.dart';
 import '../../domain/revenue_analytics.dart';
 import '../analytics_providers.dart';
+import '../widgets/peak_hours_chart.dart';
 
 class AnalyticsScreen extends ConsumerStatefulWidget {
   const AnalyticsScreen({super.key});
@@ -17,6 +23,7 @@ class AnalyticsScreen extends ConsumerStatefulWidget {
 
 class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
   late DateTimeRange _range;
+  var _dayFilter = PeakHoursDayFilter.all;
   @override
   void initState() {
     super.initState();
@@ -36,7 +43,18 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
       revenueAnalyticsProvider((start: _range.start, end: _range.end)),
     );
     return Scaffold(
-      appBar: AppBar(title: const Text('Revenue & Booking Analytics')),
+      appBar: AppBar(
+        title: const Text('Revenue & Booking Analytics'),
+        actions: [
+          if (query.hasValue)
+            IconButton(
+              tooltip: 'Share report',
+              icon: const Icon(Icons.share_rounded),
+              onPressed: () =>
+                  _shareReport(context, query.value!, _range),
+            ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -82,6 +100,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                   )
                 : _Dashboard(data: data, display: display),
           ),
+          if (display.showCharts) _peakHoursSection(),
         ],
       ),
     );
@@ -108,6 +127,95 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
       initialDateRange: _range,
     );
     if (picked != null) setState(() => _range = picked);
+  }
+
+  /// Plain-text report summary for sharing -- mirrors the Android reference
+  /// app's daily/weekly report share action, built from the same
+  /// server-computed [RevenueAnalytics] already on screen (no separate
+  /// report data source).
+  static String _reportSummaryText(RevenueAnalytics data, DateTimeRange range) {
+    final fmt = DateFormat.yMMMd();
+    String inr(double v) => '₹${v.toStringAsFixed(2)}';
+    return 'BookMySpace report: ${fmt.format(range.start)} - ${fmt.format(range.end)}\n'
+        'Total revenue: ${inr(data.totalRevenue)}\n'
+        'Net revenue: ${inr(data.netRevenue)}\n'
+        'Successful bookings: ${data.successfulBookings}\n'
+        'Cancelled bookings: ${data.cancelledBookings}\n'
+        'Refund amount: ${inr(data.refundAmount)}\n'
+        'Average booking value: ${inr(data.averageBookingValue)}';
+  }
+
+  Future<void> _shareReport(
+    BuildContext context,
+    RevenueAnalytics data,
+    DateTimeRange range,
+  ) async {
+    final summary = _reportSummaryText(data, range);
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.copy_rounded),
+              title: const Text('Copy summary'),
+              onTap: () async {
+                await Clipboard.setData(ClipboardData(text: summary));
+                if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Copied to clipboard')),
+                  );
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.chat_bubble_rounded),
+              title: const Text('Share via WhatsApp'),
+              onTap: () async {
+                Navigator.of(sheetContext).pop();
+                final uri = Uri.parse(
+                  'https://wa.me/?text=${Uri.encodeComponent(summary)}',
+                );
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _peakHoursSection() {
+    final bookings = ref.watch(ownerBookingsProvider);
+    return bookings.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.only(top: 24),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (error, _) => Padding(
+        padding: const EdgeInsets.only(top: 16),
+        child: ErrorView(
+          message: error.toString(),
+          onRetry: () => ref.invalidate(ownerBookingsProvider),
+        ),
+      ),
+      data: (items) {
+        final report = PeakHoursCalculator.build(
+          bookings: items,
+          start: _range.start,
+          end: _range.end,
+          dayFilter: _dayFilter,
+        );
+        return PeakHoursChart(
+          report: report,
+          dayFilter: _dayFilter,
+          onFilterChanged: (value) => setState(() => _dayFilter = value),
+        );
+      },
+    );
   }
 }
 

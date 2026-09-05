@@ -9,7 +9,18 @@ import '../../features/admin/presentation/screens/admin_categories_screen.dart';
 import '../../features/admin/presentation/screens/admin_dashboard_screen.dart';
 import '../../features/admin/presentation/screens/admin_listing_fields_screen.dart';
 import '../../features/admin/presentation/screens/admin_listings_screen.dart';
+import '../../features/admin/presentation/screens/admin_venue_discovery_review_screen.dart';
+import '../../features/venue_discovery/presentation/screens/venue_discovery_screen.dart';
+import '../../features/venue_discovery/infrastructure/supabase_discovery_repository.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthUser;
 import '../../features/admin/presentation/screens/admin_oversight_screen.dart';
+import '../../features/admin/presentation/screens/admin_tenant_configuration_screen.dart';
+import '../../features/admin/presentation/screens/admin_observability_screen.dart';
+import '../../features/admin/presentation/screens/admin_health_screen.dart';
+import '../../features/admin/presentation/screens/admin_settings_screen.dart';
+import '../../features/admin/presentation/screens/admin_observability_providers_screen.dart';
+import '../../features/admin/presentation/screens/admin_help_center_screen.dart';
+import '../../features/admin/presentation/screens/admin_promotions_screen.dart';
 import '../../features/payments/presentation/screens/payment_health_screen.dart';
 import '../../features/registration/presentation/unified_registration_screen.dart';
 import '../../features/ai/presentation/screens/assistant_screen.dart';
@@ -22,6 +33,8 @@ import '../../features/settings/presentation/screens/theme_customizer_screen.dar
 import '../../features/analytics/presentation/screens/analytics_screen.dart';
 import '../../features/auth/domain/auth_user.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
+import '../../features/auth/presentation/screens/forgot_password_screen.dart';
+import '../../features/auth/presentation/screens/reset_password_screen.dart';
 import '../../features/auth/presentation/screens/profile_screen.dart';
 import '../../features/booking/domain/booking.dart';
 import '../../features/booking/presentation/screens/booking_screen.dart';
@@ -35,6 +48,7 @@ import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/notifications/presentation/screens/notifications_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/owner/presentation/screens/owner_dashboard_screen.dart';
+import '../../features/owner/presentation/screens/venue_optimizer_screen.dart';
 import '../../features/owner/presentation/screens/owner_registration_screen.dart';
 import '../../features/owner/presentation/screens/registration_field_configuration_screen.dart';
 import '../../features/business/presentation/screens/business_pricing_configuration_screen.dart';
@@ -43,6 +57,8 @@ import '../../features/owner_bookings/presentation/screens/owner_bookings_screen
 import '../../features/owner_bookings/presentation/screens/owner_calendar_screen.dart';
 import '../../features/owner_venues/presentation/screens/create_venue_screen.dart';
 import '../../features/owner_venues/presentation/screens/owner_venues_screen.dart';
+import '../../features/owner_venues/presentation/screens/media_manager_screen.dart';
+import '../../features/owner_venues/presentation/screens/owner_availability_screen.dart';
 import '../../features/legal/presentation/screens/privacy_policy_screen.dart';
 import '../../features/legal/presentation/screens/terms_of_service_screen.dart';
 import '../../features/location/presentation/screens/location_management_screen.dart';
@@ -65,6 +81,7 @@ import '../../features/search/presentation/screens/map_screen.dart';
 import '../../features/search/presentation/screens/search_screen.dart';
 import '../../features/search/domain/ai_search_intent.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
+import '../../features/home/presentation/screens/customer_category_preferences_screen.dart';
 import '../../features/support/presentation/screens/support_screen.dart';
 import '../../features/venues/domain/venue.dart';
 import '../../features/venues/presentation/screens/venue_details_screen.dart';
@@ -81,7 +98,10 @@ abstract class AppRoutes {
   static const saved = '/saved';
   static const profile = '/profile';
   static const settings = '/settings';
+  static const categoryPreferences = '/settings/categories';
   static const login = '/login';
+  static const forgotPassword = '/forgot-password';
+  static const resetPassword = '/reset-password';
   static const venueDetails = '/venues/:id';
   static const bookingFlow = '/venues/:id/book';
   static const paymentFlow = '/bookings/:id/pay';
@@ -95,13 +115,21 @@ abstract class AppRoutes {
   static const adminAudit = '/admin/audit';
   static const adminDashboard = '/admin';
   static const adminListings = '/admin/listings';
+  static const adminVenueDiscoveryReview = '/admin/venue-discovery-review';
   static const adminCategories = '/admin/categories';
   static const adminAppSections = '/admin/app-sections';
   static const adminFeatureConfiguration = '/admin/features';
+  static const adminTenantConfiguration = '/admin/tenant-configuration';
   static const adminBookings = '/admin/bookings';
   static const adminPayments = '/admin/payments';
   static const adminRefunds = '/admin/refunds';
   static const adminPaymentHealth = '/admin/payment-health';
+  static const adminObservability = '/admin/observability';
+  static const adminHealth = '/admin/health';
+  static const adminSettings = '/admin/settings';
+  static const adminObservabilityProviders = '/admin/observability/providers';
+  static const adminHelp = '/admin/help';
+  static const adminPromotions = '/admin/promotions';
   static const adminListingFields = '/admin/listing-fields';
   static const unifiedRegistration = '/register';
   static const adminLocations = '/admin/locations';
@@ -116,10 +144,13 @@ abstract class AppRoutes {
   static const ownerVenues = '/owner/venues';
   static const ownerVenueCreate = '/owner/venues/create';
   static const ownerVenueEdit = '/owner/venues/:id/edit';
+  static const ownerVenueMedia = '/owner/venues/:id/media';
+  static const ownerVenueAvailability = '/owner/venues/:id/availability';
   static const ownerBookings = '/owner/bookings';
   static const ownerCalendar = '/owner/calendar';
   static const ownerBookingCreate = '/owner/bookings/create';
   static const ownerLocations = '/owner/locations';
+  static const ownerOptimizer = '/owner/optimizer';
   static const adminRegistrationFields = '/admin/registration-fields';
   static const adminBusinessPricing = '/admin/business-pricing';
   static const adminRewards = '/admin/rewards';
@@ -134,6 +165,8 @@ abstract class AppRoutes {
   static const moduleSubmissionStatus = '/registration/:id';
 
   static String ownerVenueEditPath(String id) => '/owner/venues/$id/edit';
+  static String ownerVenueAvailabilityPath(String id) =>
+      '/owner/venues/$id/availability';
   static const privacyPolicy = '/privacy';
   static const termsOfService = '/terms';
 }
@@ -165,6 +198,12 @@ GoRouter createAppRouter({
     ),
     routes: [
       GoRoute(
+        path: '/venue-discovery',
+        builder: (context, state) => VenueDiscoveryScreen(
+          repository: SupabaseDiscoveryRepository(Supabase.instance.client),
+        ),
+      ),
+      GoRoute(
         path: AppRoutes.onboarding,
         builder: (context, state) => const OnboardingScreen(),
       ),
@@ -174,19 +213,29 @@ GoRouter createAppRouter({
         builder: (context, state) => const LoginScreen(),
       ),
       GoRoute(
+        path: AppRoutes.forgotPassword,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.resetPassword,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const ResetPasswordScreen(),
+      ),
+      GoRoute(
         path: AppRoutes.settings,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const SettingsScreen(),
       ),
       GoRoute(
+        path: AppRoutes.categoryPreferences,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const CustomerCategoryPreferencesScreen(),
+      ),
+      GoRoute(
         path: AppRoutes.themeCustomizer,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const ThemeCustomizerScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.saved,
-        parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) => const SavedScreen(),
       ),
       GoRoute(
         path: AppRoutes.assistant,
@@ -226,6 +275,11 @@ GoRouter createAppRouter({
         builder: (context, state) => const AdminListingsScreen(),
       ),
       GoRoute(
+        path: AppRoutes.adminVenueDiscoveryReview,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const AdminVenueDiscoveryReviewScreen(),
+      ),
+      GoRoute(
         path: AppRoutes.adminCategories,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const AdminCategoriesScreen(),
@@ -239,6 +293,43 @@ GoRouter createAppRouter({
         path: AppRoutes.adminFeatureConfiguration,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const AdminFeatureConfigurationScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminTenantConfiguration,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => AdminTenantConfigurationScreen(
+          organizationId: state.uri.queryParameters['organization_id'] ?? '',
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.adminObservability,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const AdminObservabilityScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminHealth,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const AdminHealthScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminSettings,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const AdminSettingsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminObservabilityProviders,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const AdminObservabilityProvidersScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminHelp,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const AdminHelpCenterScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminPromotions,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const AdminPromotionsScreen(),
       ),
       GoRoute(
         path: AppRoutes.adminBookings,
@@ -274,9 +365,14 @@ GoRouter createAppRouter({
         builder: (context, state) => const UnifiedRegistrationScreen(),
       ),
       GoRoute(
-        path: AppRoutes.map,
+        path: AppRoutes.notifications,
         parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) => const SearchMapScreen(),
+        builder: (context, state) => const NotificationsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.coursesList,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const CoursesListScreen(),
       ),
       GoRoute(
         path: AppRoutes.venueDetails,
@@ -376,6 +472,18 @@ GoRouter createAppRouter({
             CreateVenueScreen(venueId: state.pathParameters['id']),
       ),
       GoRoute(
+        path: AppRoutes.ownerVenueMedia,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) =>
+            MediaManagerScreen(venueId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: AppRoutes.ownerVenueAvailability,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) =>
+            OwnerAvailabilityScreen(venueId: state.pathParameters['id']!),
+      ),
+      GoRoute(
         path: AppRoutes.ownerBookings,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const OwnerBookingsScreen(),
@@ -395,6 +503,11 @@ GoRouter createAppRouter({
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) =>
             const LocationManagementScreen(admin: false),
+      ),
+      GoRoute(
+        path: AppRoutes.ownerOptimizer,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const VenueOptimizerScreen(),
       ),
       GoRoute(
         path: AppRoutes.privacyPolicy,
@@ -450,8 +563,8 @@ GoRouter createAppRouter({
         parentNavigatorKey: rootNavigatorKey,
         redirect: (context, state) =>
             state.pathParameters['module'] == 'venue_owner'
-                ? AppRoutes.ownerRegistration
-                : null,
+            ? AppRoutes.ownerRegistration
+            : null,
         builder: (context, state) => ModuleRegistrationScreen(
           moduleKey: state.pathParameters['module'] ?? '',
           venueId: state.uri.queryParameters['venue_id'],
@@ -498,11 +611,16 @@ GoRouter createAppRouter({
               ),
             ],
           ),
+          // Map is a primary destination (parity with the Android reference
+          // app's 5-item bottom nav: Home/Map/Search/Bookings/Profile).
+          // Notifications and Courses moved to standalone pushed routes --
+          // matching Android, where they are secondary destinations reached
+          // from Home rather than the bottom bar.
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: AppRoutes.notifications,
-                builder: (context, state) => const NotificationsScreen(),
+                path: AppRoutes.map,
+                builder: (context, state) => const SearchMapScreen(),
               ),
             ],
           ),
@@ -545,16 +663,16 @@ GoRouter createAppRouter({
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: AppRoutes.coursesList,
-                builder: (context, state) => const CoursesListScreen(),
+                path: AppRoutes.profile,
+                builder: (context, state) => const ProfileScreen(),
               ),
             ],
           ),
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: AppRoutes.profile,
-                builder: (context, state) => const ProfileScreen(),
+                path: AppRoutes.saved,
+                builder: (context, state) => const SavedScreen(),
               ),
             ],
           ),
@@ -576,6 +694,8 @@ String? resolveAppRedirect({
   final isPublic =
       location == AppRoutes.onboarding ||
       location == AppRoutes.login ||
+      location == AppRoutes.forgotPassword ||
+      location == AppRoutes.resetPassword ||
       location == AppRoutes.unifiedRegistration ||
       location == AppRoutes.ownerRegistration ||
       location.startsWith('/register/');
@@ -589,7 +709,10 @@ String? resolveAppRedirect({
         location.startsWith('/owner') || location == AppRoutes.analytics;
     if (isAdminRoute && !currentUser.isAdmin) return AppRoutes.profile;
     if (isOwnerRoute && !currentUser.isOwner) return AppRoutes.profile;
-    if (location == AppRoutes.onboarding || location == AppRoutes.login) {
+    if (location == AppRoutes.resetPassword) return null;
+    if (location == AppRoutes.onboarding ||
+        location == AppRoutes.login ||
+        location == AppRoutes.forgotPassword) {
       return AppRoutes.shell;
     }
   }
@@ -654,24 +777,23 @@ class _AppShell extends ConsumerWidget {
 
 IconData _shellIcon(String id, {required bool selected}) {
   return switch (id) {
-    'notifications' =>
-      selected ? Icons.notifications_rounded : Icons.notifications_outlined,
+    'map' => selected ? Icons.map_rounded : Icons.map_outlined,
     'search' => selected ? Icons.search_rounded : Icons.search_outlined,
     'bookings' =>
       selected ? Icons.receipt_long_rounded : Icons.receipt_long_outlined,
-    'courses' => selected ? Icons.school_rounded : Icons.school_outlined,
     'profile' => selected ? Icons.person_rounded : Icons.person_outline_rounded,
+    'saved' => selected ? Icons.bookmark_rounded : Icons.bookmark_outline_rounded,
     _ => selected ? Icons.home_rounded : Icons.home_outlined,
   };
 }
 
 String _shellLabel(String id, AppLocalizations l10n) {
   return switch (id) {
-    'notifications' => l10n.notifications,
+    'map' => l10n.navMap,
     'search' => l10n.navSearch,
     'bookings' => l10n.navBookings,
-    'courses' => l10n.courses,
     'profile' => l10n.navProfile,
+    'saved' => l10n.navSaved,
     _ => l10n.navHome,
   };
 }

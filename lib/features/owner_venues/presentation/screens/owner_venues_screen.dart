@@ -178,6 +178,18 @@ class _VenueTile extends ConsumerWidget {
                   child: const Text('Edit'),
                 ),
                 TextButton(
+                  onPressed: () => context.push(
+                    '/owner/venues/${venue.id}/media',
+                  ),
+                  child: const Text('Media'),
+                ),
+                TextButton(
+                  onPressed: () => context.push(
+                    AppRoutes.ownerVenueAvailabilityPath(venue.id),
+                  ),
+                  child: const Text('Hours & slots'),
+                ),
+                TextButton(
                   onPressed: () => context.push('/venues/${venue.id}'),
                   child: const Text('Preview'),
                 ),

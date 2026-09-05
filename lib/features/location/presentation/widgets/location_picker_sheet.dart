@@ -55,6 +55,7 @@ class _LocationPickerSheetState extends ConsumerState<LocationPickerSheet> {
   bool _locating = false;
   String _locationError = '';
   CascadingLocationValue _hierarchy = const CascadingLocationValue();
+  int _selectionRequest = 0;
 
   @override
   void initState() {
@@ -89,30 +90,38 @@ class _LocationPickerSheetState extends ConsumerState<LocationPickerSheet> {
     });
   }
 
-  void _selectLocationMatch(LocationNode match) {
+  Future<void> _selectLocationMatch(LocationNode match) async {
+    final request = ++_selectionRequest;
+    final path = await ref.read(locationRepositoryProvider).path(match.id);
+    if (!mounted || request != _selectionRequest) return;
+    final hierarchy = path.isEmpty
+        ? CascadingLocationValue.fromPath([match])
+        : CascadingLocationValue.fromPath(path);
+    final selected = hierarchy.area ??
+        hierarchy.city ??
+        hierarchy.village ??
+        hierarchy.mandal ??
+        hierarchy.district ??
+        hierarchy.state ??
+        hierarchy.country ??
+        match;
     setState(() {
-      _hierarchy = CascadingLocationValue(
-        country: match.level == LocationNodeLevel.country ? match : null,
-        state: match.level == LocationNodeLevel.stateProvince ? match : null,
-        district: match.level == LocationNodeLevel.districtCounty
-            ? match
-            : null,
-        mandal: match.level == LocationNodeLevel.mandalTalukTehsilBlock
-            ? match
-            : null,
-        city: match.level == LocationNodeLevel.cityTown ? match : null,
-        village: match.level == LocationNodeLevel.village ? match : null,
-        area: match.level == LocationNodeLevel.areaLocality ? match : null,
-      );
+      _hierarchy = hierarchy;
       _area = _area.copyWith(
-        label: match.name,
-        locationNodeId: match.id,
-        countryCode: match.countryCode,
-        latitude: match.latitude,
-        longitude: match.longitude,
+        label: selected.name,
+        locationNodeId: hierarchy.selectedLocationId,
+        countryCode: selected.countryCode,
+        country: hierarchy.country?.name,
+        state: hierarchy.state?.name,
+        district: hierarchy.district?.name,
+        city: hierarchy.city?.name,
+        area: hierarchy.area?.name,
+        timezone: selected.timezone,
+        latitude: selected.latitude,
+        longitude: selected.longitude,
       );
-      if (match.latitude != null && match.longitude != null) {
-        _mapPoint = LatLng(match.latitude!, match.longitude!);
+      if (selected.latitude != null && selected.longitude != null) {
+        _mapPoint = LatLng(selected.latitude!, selected.longitude!);
       }
     });
   }

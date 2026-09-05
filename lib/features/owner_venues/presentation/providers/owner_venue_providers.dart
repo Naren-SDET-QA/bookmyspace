@@ -4,6 +4,8 @@ import '../../../auth/presentation/auth_providers.dart';
 import '../../../venues/domain/venue.dart';
 import '../../domain/owner_venue_repository.dart';
 import '../../infrastructure/supabase_owner_venue_repository.dart';
+import '../../domain/owner_availability_repository.dart';
+import '../../infrastructure/supabase_owner_availability_repository.dart';
 
 /// Owner venue repository instance.
 final ownerVenueRepositoryProvider = Provider<OwnerVenueRepository>((ref) {
@@ -15,6 +17,11 @@ final ownerVenueRepositoryProvider = Provider<OwnerVenueRepository>((ref) {
 final myVenuesProvider = FutureProvider<List<Venue>>((ref) {
   return ref.watch(ownerVenueRepositoryProvider).myVenues();
 });
+
+final ownerAvailabilityRepositoryProvider =
+    Provider<OwnerAvailabilityRepository>(
+      (ref) => SupabaseOwnerAvailabilityRepository(ref.watch(supabaseProvider)),
+    );
 
 /// Create a venue and invalidate the list.
 final createVenueProvider = FutureProvider.autoDispose

@@ -19,6 +19,16 @@ abstract interface class AuthRepository {
 
   /// Signs in with a phone OTP.
   Future<void> signInWithPhoneOtp(String phone);
+  Future<AuthUser> signInWithPassword(String email, String password);
+
+  /// Sends a password-recovery email through Supabase Auth.
+  Future<void> requestPasswordReset(String email);
+
+  /// Sets a new password for the recovery (or signed-in) session.
+  Future<void> updatePassword(String newPassword);
+
+  /// Emits `true` when a recovery deep-link establishes a session.
+  Stream<bool> passwordRecoveryState();
 
   /// Verifies a phone OTP token.
   Future<AuthUser> verifyPhoneOtp(String phone, String token);

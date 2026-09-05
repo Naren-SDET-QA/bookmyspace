@@ -2,9 +2,8 @@ import 'package:flutter/widgets.dart';
 
 /// Localization keys for BookMySpace.
 ///
-/// Two locales are supported:
-///  * English (`en`)
-///  * Telugu (`te`)
+/// Supported locales: English, Telugu, Hindi, Tamil, Kannada, Marathi,
+/// Bengali, Gujarati, Malayalam, Spanish. Missing keys fall back to English.
 class AppLocalizations {
   AppLocalizations(this.locale);
 
@@ -14,7 +13,37 @@ class AppLocalizations {
     Locale('en'),
     Locale('te'),
     Locale('hi'),
+    Locale('ta'),
+    Locale('kn'),
+    Locale('mr'),
+    Locale('bn'),
+    Locale('gu'),
+    Locale('ml'),
+    Locale('es'),
   ];
+
+  static String languageLabel(Locale locale) => switch (locale.languageCode) {
+    'en' => 'English',
+    'te' => 'తెలుగు',
+    'hi' => 'हिन्दी',
+    'ta' => 'தமிழ்',
+    'kn' => 'ಕನ್ನಡ',
+    'mr' => 'मराठी',
+    'bn' => 'বাংলা',
+    'gu' => 'ગુજરાતી',
+    'ml' => 'മലയാളം',
+    'es' => 'Español',
+    _ => locale.languageCode,
+  };
+
+  /// Resolves [locale] onto a supported language, falling back to English.
+  static Locale resolve(Locale? locale) {
+    if (locale == null) return supportedLocales.first;
+    for (final supported in supportedLocales) {
+      if (supported.languageCode == locale.languageCode) return supported;
+    }
+    return supportedLocales.first;
+  }
 
   static AppLocalizations of(BuildContext context) {
     return Localizations.of<AppLocalizations>(context, AppLocalizations)!;
@@ -59,6 +88,7 @@ class AppLocalizations {
 
   // Navigation / bottom bar
   String get navHome => _t('navHome');
+  String get navMap => _t('navMap');
   String get navSearch => _t('navSearch');
   String get navBookings => _t('navBookings');
   String get navSaved => _t('navSaved');
@@ -117,6 +147,15 @@ class AppLocalizations {
   String get events => _t('events');
   String get courses => _t('courses');
   String get searchHint => _t('searchHint');
+  String get recentSearches => _t('recentSearches');
+  String get clearRecentSearches => _t('clearRecentSearches');
+  String get noRecentSearches => _t('noRecentSearches');
+  String get servingCachedData => _t('servingCachedData');
+  String get holdExpired => _t('holdExpired');
+  String holdExpiresIn(String time) =>
+      _t('holdExpiresIn').replaceFirst('{time}', time);
+  String get venueOptimizer => _t('venueOptimizer');
+  String get contextualHelp => _t('contextualHelp');
 
   // Events
   String get upcomingEvents => _t('upcomingEvents');
@@ -196,6 +235,10 @@ class AppLocalizations {
   String get paymentMethod => _t('paymentMethod');
   String get payAtVenue => _t('payAtVenue');
   String get bookingConfirmed => _t('bookingConfirmed');
+  String get bookingSuccessTitle => _t('bookingSuccessTitle');
+  String get copy => _t('copy');
+  String get copiedToClipboard => _t('copiedToClipboard');
+  String get exploreMoreSpaces => _t('exploreMoreSpaces');
   String get noBookings => _t('noBookings');
   String get noBookingsMessage => _t('noBookingsMessage');
   String get cancelBooking => _t('cancelBooking');
@@ -220,6 +263,20 @@ class AppLocalizations {
   String get rent => _t('rent');
   String get deposit => _t('deposit');
   String get changeSharing => _t('changeSharing');
+  String get monthlyRentCalculator => _t('monthlyRentCalculator');
+  String get selectRoomSharing => _t('selectRoomSharing');
+  String get stayDuration => _t('stayDuration');
+  String get perMonth => _t('perMonth');
+  String get monthlyPayable => _t('monthlyPayable');
+  String get refundableSecurityDeposit => _t('refundableSecurityDeposit');
+  String get estimatedTotalMoveIn => _t('estimatedTotalMoveIn');
+  String monthsLabel(int count) => _t(
+    count == 1 ? 'monthCount' : 'monthsCount',
+  ).replaceFirst('{count}', '$count');
+  String totalRentForTenure(int count) =>
+      _t('totalRentForTenure').replaceFirst('{count}', '$count');
+  String maintenanceCharges(int count) =>
+      _t('maintenanceCharges').replaceFirst('{count}', '$count');
   String get slotHeld => _t('slotHeld');
   String get payMethod => _t('payMethod');
   String get onlinePayment => _t('onlinePayment');
@@ -241,8 +298,7 @@ class AppLocalizations {
   String get statusCancelled => _t('statusCancelled');
   String get statusRefunded => _t('statusRefunded');
   String get statusNoShow => _t('statusNoShow');
-  String get statusPendingOwnerApproval =>
-      _t('statusPendingOwnerApproval');
+  String get statusPendingOwnerApproval => _t('statusPendingOwnerApproval');
   String get statusRejected => _t('statusRejected');
   String get slotBooked => _t('slotBooked');
   String get slotUnavailable => _t('slotUnavailable');
@@ -299,6 +355,91 @@ class AppLocalizations {
   String get resendOtp => _t('resendOtp');
   String get otpSent => _t('otpSent');
   String get authFailed => _t('authFailed');
+  String get forgotPassword => _t('forgotPassword');
+  String get resetPassword => _t('resetPassword');
+  String get sendResetLink => _t('sendResetLink');
+  String get resetEmailPrompt => _t('resetEmailPrompt');
+  String get resetEmailSent => _t('resetEmailSent');
+  String get resetEmailSentMessage => _t('resetEmailSentMessage');
+  String get resetPasswordPrompt => _t('resetPasswordPrompt');
+  String get newPassword => _t('newPassword');
+  String get confirmPassword => _t('confirmPassword');
+  String get passwordsDoNotMatch => _t('passwordsDoNotMatch');
+  String get passwordUpdated => _t('passwordUpdated');
+  String get passwordUpdatedMessage => _t('passwordUpdatedMessage');
+  String get invalidResetLink => _t('invalidResetLink');
+  String get backToLogin => _t('backToLogin');
+  String get authUnavailable => _t('authUnavailable');
+  String get signInHint => _t('signInHint');
+  String get signInToContinue => _t('signInToContinue');
+  String get signInRequiredForBooking =>
+      _t('signInRequiredForBooking');
+  String get orDivider => _t('orDivider');
+  String get createProfile => _t('createProfile');
+  String get quickBookingMode => _t('quickBookingMode');
+  String get bookingDisabledForCategory => _t('bookingDisabledForCategory');
+  String get availabilityDisabledForCategory =>
+      _t('availabilityDisabledForCategory');
+  String get notAnOwner => _t('notAnOwner');
+  String get registerAsOwnerHint => _t('registerAsOwnerHint');
+  String get instituteOwnerPortal => _t('instituteOwnerPortal');
+  String get createInstitute => _t('createInstitute');
+  String get addClass => _t('addClass');
+  String get addFaculty => _t('addFaculty');
+  String get plans => _t('plans');
+  String get faculty => _t('faculty');
+  String get classes => _t('classes');
+  String get verifiedInstitute => _t('verifiedInstitute');
+  String get noGalleryYet => _t('noGalleryYet');
+  String get facultyPlaceholder => _t('facultyPlaceholder');
+  String get noPublishedClasses => _t('noPublishedClasses');
+  String get saveDraft => _t('saveDraft');
+  String get allFilters => _t('allFilters');
+  String get verifiedResults => _t('verifiedResults');
+  String get recommended => _t('recommended');
+  String get clearDate => _t('clearDate');
+  String get clearDates => _t('clearDates');
+  String get add => _t('add');
+  String get filtersHint => _t('filtersHint');
+  String otpSentResendIn(int seconds) =>
+      _t('otpSentResendIn').replaceFirst('{seconds}', '$seconds');
+  String otpResendIn(int seconds) =>
+      _t('otpResendIn').replaceFirst('{seconds}', '$seconds');
+  String get qrCheckIn => _t('qrCheckIn');
+  String get locationSubmissions => _t('locationSubmissions');
+  String get institutePortal => _t('institutePortal');
+  String get noInstituteProfile => _t('noInstituteProfile');
+  String get createInstituteHint => _t('createInstituteHint');
+  String get editInstitute => _t('editInstitute');
+  String get description => _t('description');
+  String get city => _t('city');
+  String get specialization => _t('specialization');
+  String get classTitle => _t('classTitle');
+  String get fee => _t('fee');
+  String get deliveryMode => _t('deliveryMode');
+  String get classesAndCourses => _t('classesAndCourses');
+  String get hotels => _t('hotels');
+  String get functionHalls => _t('functionHalls');
+  String inArea(String title, String area) =>
+      _t('inArea').replaceFirst('{title}', title).replaceFirst('{area}', area);
+  String verifiedResultsCount(int count) =>
+      _t('verifiedResultsCount').replaceFirst('{count}', '$count');
+  String get priceLow => _t('priceLow');
+  String get priceHigh => _t('priceHigh');
+  String fieldsRequired(String fields) =>
+      _t('fieldsRequired').replaceFirst('{fields}', fields);
+  String get verified => _t('verified');
+  String get unverified => _t('unverified');
+  String get justNow => _t('justNow');
+  String minutesAgo(int count) =>
+      _t('minutesAgo').replaceFirst('{count}', '$count');
+  String hoursAgo(int count) =>
+      _t('hoursAgo').replaceFirst('{count}', '$count');
+  String daysAgo(int count) => _t('daysAgo').replaceFirst('{count}', '$count');
+  String get noActiveAdvertisingPlan => _t('noActiveAdvertisingPlan');
+  String listingActiveUntil(String date) =>
+      _t('listingActiveUntil').replaceFirst('{date}', date);
+  String get plansPaymentHint => _t('plansPaymentHint');
 
   // Owner
   String get ownerDashboard => _t('ownerDashboard');
@@ -388,6 +529,7 @@ class AppLocalizations {
       'getStarted': 'Get started',
       'skip': 'Skip',
       'navHome': 'Home',
+      'navMap': 'Map',
       'navSearch': 'Search',
       'navBookings': 'Bookings',
       'navSaved': 'Saved',
@@ -442,6 +584,14 @@ class AppLocalizations {
       'events': 'Events',
       'courses': 'Courses',
       'searchHint': 'Search venues, areas, categories…',
+      'recentSearches': 'Recent searches',
+      'clearRecentSearches': 'Clear all',
+      'noRecentSearches': 'No recent searches',
+      'servingCachedData': 'Showing saved data while you are offline',
+      'holdExpired': 'This hold has expired. Pick the slot again.',
+      'holdExpiresIn': 'Hold expires in {time}',
+      'venueOptimizer': 'Venue Optimizer',
+      'contextualHelp': 'Help',
       'upcomingEvents': 'Upcoming events',
       'noUpcomingEvents': 'No upcoming events',
       'noUpcomingEventsMessage':
@@ -523,6 +673,10 @@ class AppLocalizations {
       'promoCodeApplied': 'Promo applied',
       'remove': 'Remove',
       'bookingConfirmed': 'Booking confirmed —',
+      'bookingSuccessTitle': 'Booking Confirmed!',
+      'copy': 'Copy',
+      'copiedToClipboard': 'Copied to clipboard',
+      'exploreMoreSpaces': 'Explore more spaces',
       'noBookings': 'No bookings yet',
       'noBookingsMessage': 'When you book a venue, it will show up here.',
       'cancelBooking': 'Cancel booking',
@@ -547,6 +701,17 @@ class AppLocalizations {
       'rent': 'Rent',
       'deposit': 'Deposit',
       'changeSharing': 'Change sharing',
+      'monthlyRentCalculator': 'Monthly rent calculator',
+      'selectRoomSharing': 'Select room sharing',
+      'stayDuration': 'Stay duration',
+      'perMonth': '/mo',
+      'monthlyPayable': 'Monthly payable',
+      'refundableSecurityDeposit': 'Refundable security deposit',
+      'estimatedTotalMoveIn': 'Estimated total move-in payable',
+      'monthCount': '{count} month',
+      'monthsCount': '{count} months',
+      'totalRentForTenure': 'Total rent ({count} mo)',
+      'maintenanceCharges': 'Maintenance ({count} mo)',
       'slotHeld': 'Slot held for 10 minutes. Complete the payment to confirm.',
       'payMethod': 'Payment method',
       'onlinePayment': 'Online (Razorpay)',
@@ -625,6 +790,89 @@ class AppLocalizations {
       'sendOtp': 'Send code',
       'resendOtp': 'Resend code',
       'otpSent': 'We sent you a verification code.',
+      'forgotPassword': 'Forgot password?',
+      'resetPassword': 'Reset password',
+      'sendResetLink': 'Send reset link',
+      'resetEmailPrompt':
+          'Enter the email on your account. We will send a reset link if it exists.',
+      'resetEmailSent': 'Check your email',
+      'resetEmailSentMessage':
+          'If an account exists for that address, a reset link is on its way. Open it on this device to choose a new password.',
+      'resetPasswordPrompt': 'Choose a new password for your account.',
+      'newPassword': 'New password',
+      'confirmPassword': 'Confirm password',
+      'passwordsDoNotMatch': 'Passwords do not match',
+      'passwordUpdated': 'Password updated',
+      'passwordUpdatedMessage': 'Sign in with your new password to continue.',
+      'invalidResetLink':
+          'This reset link is invalid or has expired. Request a new one from the login screen.',
+      'backToLogin': 'Back to login',
+      'authUnavailable': 'Authentication is currently unavailable.',
+      'signInHint':
+          'Sign in with email or phone. Extra details are asked only when you book.',
+      'signInToContinue': 'Sign in to continue',
+      'signInRequiredForBooking':
+          'Sign in required to confirm this booking. Your selections are saved.',
+      'orDivider': 'OR',
+      'createProfile': 'Create a profile',
+      'quickBookingMode': 'Quick booking mode',
+      'bookingDisabledForCategory': 'Booking is disabled for this category',
+      'availabilityDisabledForCategory':
+          'Availability is disabled for this category',
+      'notAnOwner': 'Not an owner',
+      'registerAsOwnerHint': 'Register as an owner to access the dashboard.',
+      'instituteOwnerPortal': 'Institute owner portal',
+      'createInstitute': 'Create institute',
+      'addClass': 'Add class',
+      'addFaculty': 'Add faculty',
+      'plans': 'Plans',
+      'faculty': 'Faculty',
+      'classes': 'Classes',
+      'verifiedInstitute': 'Verified institute',
+      'noGalleryYet': 'No gallery images yet.',
+      'facultyPlaceholder': 'Faculty profiles will appear here.',
+      'noPublishedClasses': 'No published classes yet.',
+      'saveDraft': 'Save draft',
+      'allFilters': 'All filters',
+      'verifiedResults': 'verified results',
+      'recommended': 'Recommended',
+      'clearDate': 'Clear date',
+      'clearDates': 'Clear dates',
+      'add': 'Add',
+      'filtersHint': 'Location, price, rating, capacity and amenities',
+      'otpSentResendIn': 'A verification code was sent. Resend in {seconds}s',
+      'otpResendIn': 'Resend in {seconds}s',
+      'qrCheckIn': 'QR check-in',
+      'locationSubmissions': 'Location submissions',
+      'institutePortal': 'Institute portal',
+      'noInstituteProfile': 'No institute profile',
+      'createInstituteHint':
+          'Create an institute to publish classes, faculty and a gallery.',
+      'editInstitute': 'Edit institute',
+      'description': 'Description',
+      'city': 'City',
+      'specialization': 'Specialization',
+      'classTitle': 'Title',
+      'fee': 'Fee',
+      'deliveryMode': 'Delivery mode',
+      'classesAndCourses': 'Classes & courses',
+      'hotels': 'Hotels',
+      'functionHalls': 'Function Halls',
+      'inArea': '{title} in {area}',
+      'verifiedResultsCount': '{count} verified results',
+      'priceLow': 'Price: low',
+      'priceHigh': 'Price: high',
+      'fieldsRequired': 'Need: {fields}',
+      'verified': 'Verified',
+      'unverified': 'Unverified',
+      'justNow': 'now',
+      'minutesAgo': '{count}m ago',
+      'hoursAgo': '{count}h ago',
+      'daysAgo': '{count}d ago',
+      'noActiveAdvertisingPlan': 'No active advertising plan',
+      'listingActiveUntil': 'Listing active until {date}',
+      'plansPaymentHint':
+          'Plans are purchased through the existing payment flow.',
       'authFailed': 'Authentication failed. Please try again.',
       'ownerDashboard': 'Owner dashboard',
       'myVenues': 'My Venues',
@@ -868,6 +1116,17 @@ class AppLocalizations {
       'rent': 'అద్దె',
       'deposit': 'డిపాజిట్',
       'changeSharing': 'షేరింగ్ మార్చండి',
+      'monthlyRentCalculator': 'నెలవారీ అద్దె కాలిక్యులేటర్',
+      'selectRoomSharing': 'రూమ్ షేరింగ్ ఎంచుకోండి',
+      'stayDuration': 'బస వ్యవధి',
+      'perMonth': '/నెల',
+      'monthlyPayable': 'నెలవారీ చెల్లింపు',
+      'refundableSecurityDeposit': 'వాపసు అయ్యే డిపాజిట్',
+      'estimatedTotalMoveIn': 'అంచనా మూవ్-ఇన్ మొత్తం',
+      'monthCount': '{count} నెల',
+      'monthsCount': '{count} నెలలు',
+      'totalRentForTenure': 'మొత్తం అద్దె ({count} నెల)',
+      'maintenanceCharges': 'నిర్వహణ ({count} నెల)',
       'slotHeld':
           'స్లాట్ 10 నిమిషాలు రిజర్వ్ చేయబడింది. నిర్ధారించడానికి చెల్లించండి.',
       'payMethod': 'చెల్లింపు విధానం',
@@ -990,6 +1249,65 @@ class AppLocalizations {
       'errorInvalidPhone': 'చెల్లుబాటు అయ్యే ఫోన్ నంబర్ నమోదు చేయండి',
       'errorRequired': 'ఈ ఫీల్డ్ అవసరం',
       'errorInvalidAmount': 'చెల్లుబాటు అయ్యే మొత్తం నమోదు చేయండి',
+      'authUnavailable': 'ప్రమాణీకరణ ప్రస్తుతం అందుబాటులో లేదు.',
+      'signInHint':
+          'ఇమెయిల్ లేదా ఫోన్‌తో సైన్ ఇన్ చేయండి. అదనపు వివరాలు మీరు బుక్ చేసినప్పుడు మాత్రమే అడుగుతాము.',
+      'orDivider': 'లేదా',
+      'createProfile': 'ప్రొఫైల్ సృష్టించండి',
+      'quickBookingMode': 'క్విక్ బుకింగ్ మోడ్',
+      'bookingDisabledForCategory': 'ఈ వర్గానికి బుకింగ్ నిలిపివేయబడింది',
+      'availabilityDisabledForCategory': 'ఈ వర్గానికి అందుబాటు నిలిపివేయబడింది',
+      'notAnOwner': 'యజమాని కాదు',
+      'registerAsOwnerHint':
+          'డాష్‌బోర్డ్‌ను యాక్సెస్ చేయడానికి యజమానిగా నమోదు చేసుకోండి.',
+      'instituteOwnerPortal': 'ఇన్‌స్టిట్యూట్ యజమాని పోర్టల్',
+      'createInstitute': 'ఇన్‌స్టిట్యూట్ సృష్టించండి',
+      'addClass': 'క్లాస్ జోడించండి',
+      'addFaculty': 'ఫ్యాకల్టీ జోడించండి',
+      'plans': 'ప్లాన్లు',
+      'faculty': 'ఫ్యాకల్టీ',
+      'classes': 'క్లాసులు',
+      'verifiedInstitute': 'ధృవీకరించబడిన ఇన్‌స్టిట్యూట్',
+      'noGalleryYet': 'ఇంకా గ్యాలరీ చిత్రాలు లేవు.',
+      'facultyPlaceholder': 'ఫ్యాకల్టీ ప్రొఫైల్స్ ఇక్కడ కనిపిస్తాయి.',
+      'noPublishedClasses': 'ఇంకా ప్రచురించిన క్లాసులు లేవు.',
+      'saveDraft': 'డ్రాఫ్ట్ సేవ్ చేయండి',
+      'allFilters': 'అన్ని ఫిల్టర్లు',
+      'verifiedResults': 'ధృవీకరించిన ఫలితాలు',
+      'recommended': 'సిఫార్సు',
+      'clearDate': 'తేదీ క్లియర్ చేయండి',
+      'clearDates': 'తేదీలు క్లియర్ చేయండి',
+      'add': 'జోడించండి',
+      'filtersHint': 'ప్రాంతం, ధర, రేటింగ్, సామర్థ్యం మరియు సౌకర్యాలు',
+      'otpSentResendIn': 'ధృవీకరణ కోడ్ పంపబడింది. {seconds}సెలో మళ్లీ పంపండి',
+      'otpResendIn': '{seconds}సెలో మళ్లీ పంపండి',
+      'qrCheckIn': 'QR చెక్-ఇన్',
+      'locationSubmissions': 'లొకేషన్ సమర్పణలు',
+      'institutePortal': 'ఇన్‌స్టిట్యూట్ పోర్టల్',
+      'noInstituteProfile': 'ఇన్‌స్టిట్యూట్ ప్రొఫైల్ లేదు',
+      'createInstituteHint':
+          'క్లాసులు, ఫ్యాకల్టీ మరియు గ్యాలరీ ప్రచురించడానికి ఇన్‌స్టిట్యూట్ సృష్టించండి.',
+      'editInstitute': 'ఇన్‌స్టిట్యూట్‌ను సవరించండి',
+      'description': 'వివరణ',
+      'city': 'నగరం',
+      'specialization': 'ప్రత్యేకత',
+      'classTitle': 'శీర్షిక',
+      'fee': 'ఫీజు',
+      'deliveryMode': 'డెలివరీ మోడ్',
+      'classesAndCourses': 'క్లాసులు & కోర్సులు',
+      'hotels': 'హోటళ్లు',
+      'functionHalls': 'ఫంక్షన్ హాళ్లు',
+      'inArea': '{area}లో {title}',
+      'verifiedResultsCount': '{count} ధృవీకరించిన ఫలితాలు',
+      'priceLow': 'ధర: తక్కువ',
+      'priceHigh': 'ధర: ఎక్కువ',
+      'fieldsRequired': 'అవసరం: {fields}',
+      'verified': 'ధృవీకరించబడింది',
+      'unverified': 'ధృవీకరించబడలేదు',
+      'justNow': 'ఇప్పుడు',
+      'minutesAgo': '{count}ని క్రితం',
+      'hoursAgo': '{count}గం క్రితం',
+      'daysAgo': '{count}రో క్రితం',
     },
     'hi': {
       'appName': 'बुकमाईस्पेस',
@@ -1054,6 +1372,380 @@ class AppLocalizations {
       'modeOnline': 'ऑनलाइन',
       'modeOffline': 'ऑफ़लाइन',
       'modeHybrid': 'हाइब्रिड',
+      'authUnavailable': 'प्रमाणीकरण अभी उपलब्ध नहीं है।',
+      'signInHint':
+          'ईमेल या फ़ोन से साइन इन करें। अतिरिक्त विवरण बुकिंग के समय ही मांगे जाते हैं।',
+      'orDivider': 'या',
+      'createProfile': 'प्रोफ़ाइल बनाएँ',
+      'quickBookingMode': 'त्वरित बुकिंग मोड',
+      'bookingDisabledForCategory': 'इस श्रेणी के लिए बुकिंग बंद है',
+      'availabilityDisabledForCategory': 'इस श्रेणी के लिए उपलब्धता बंद है',
+      'notAnOwner': 'मालिक नहीं हैं',
+      'registerAsOwnerHint':
+          'डैशबोर्ड इस्तेमाल करने के लिए मालिक के रूप में पंजीकरण करें।',
+      'instituteOwnerPortal': 'संस्थान मालिक पोर्टल',
+      'createInstitute': 'संस्थान बनाएँ',
+      'addClass': 'कक्षा जोड़ें',
+      'addFaculty': 'फैकल्टी जोड़ें',
+      'plans': 'प्लान',
+      'faculty': 'फैकल्टी',
+      'classes': 'कक्षाएँ',
+      'verifiedInstitute': 'सत्यापित संस्थान',
+      'noGalleryYet': 'अभी गैलरी चित्र नहीं हैं।',
+      'facultyPlaceholder': 'फैकल्टी प्रोफ़ाइल यहाँ दिखेंगी।',
+      'noPublishedClasses': 'अभी प्रकाशित कक्षाएँ नहीं हैं।',
+      'saveDraft': 'ड्राफ़्ट सहेजें',
+      'allFilters': 'सभी फ़िल्टर',
+      'verifiedResults': 'सत्यापित परिणाम',
+      'recommended': 'अनुशंसित',
+      'clearDate': 'तारीख हटाएँ',
+      'clearDates': 'तारीखें हटाएँ',
+      'add': 'जोड़ें',
+      'filtersHint': 'स्थान, कीमत, रेटिंग, क्षमता और सुविधाएँ',
+      'otpSentResendIn': 'सत्यापन कोड भेजा गया। {seconds}से में फिर भेजें',
+      'otpResendIn': '{seconds}से में फिर भेजें',
+      'qrCheckIn': 'QR चेक-इन',
+      'locationSubmissions': 'स्थान सबमिशन',
+      'institutePortal': 'संस्थान पोर्टल',
+      'noInstituteProfile': 'संस्थान प्रोफ़ाइल नहीं',
+      'createInstituteHint':
+          'कक्षाएँ, फैकल्टी और गैलरी प्रकाशित करने के लिए संस्थान बनाएँ।',
+      'editInstitute': 'संस्थान संपादित करें',
+      'description': 'विवरण',
+      'city': 'शहर',
+      'specialization': 'विशेषज्ञता',
+      'classTitle': 'शीर्षक',
+      'fee': 'शुल्क',
+      'deliveryMode': 'डिलीवरी मोड',
+      'classesAndCourses': 'कक्षाएँ और कोर्स',
+      'hotels': 'होटल',
+      'functionHalls': 'फ़ंक्शन हॉल',
+      'inArea': '{area} में {title}',
+      'verifiedResultsCount': '{count} सत्यापित परिणाम',
+      'priceLow': 'कीमत: कम',
+      'priceHigh': 'कीमत: अधिक',
+      'fieldsRequired': 'आवश्यक: {fields}',
+      'verified': 'सत्यापित',
+      'unverified': 'असत्यापित',
+      'justNow': 'अभी',
+      'minutesAgo': '{count}मि पहले',
+      'hoursAgo': '{count}घं पहले',
+      'daysAgo': '{count}दि पहले',
+    },
+    'ta': {
+      'appName': 'புக் மை ஸ்பேஸ்',
+      'searchHint': 'மண்டபம், பிஜி, ஹோட்டல் தேடுக...',
+      'search': 'தேடல்',
+      'bookNow': 'இப்போது முன்பதிவு செய்',
+      'cancel': 'ரத்துசெய்',
+      'confirm': 'உறுதிசெய்',
+      'save': 'சேமி',
+      'navHome': 'முகப்பு',
+      'navSearch': 'தேடல்',
+      'navBookings': 'என் பதிவுகள்',
+      'navSaved': 'சேமித்தவை',
+      'navProfile': 'சுயவிவரம்',
+      'reviews': 'விமர்சனங்கள்',
+      'amenities': 'வசதிகள்',
+      'capacity': 'கொள்திறன்',
+      'pricing': 'விலை',
+      'recentSearches': 'சமீபத்திய தேடல்கள்',
+      'clearRecentSearches': 'அழி',
+      'venueOptimizer': 'வென்யூ ஆப்டிமைசர்',
+      'offline': 'நீங்கள் ஆஃப்லைனில் உள்ளீர்கள்',
+      'language': 'மொழி',
+      'login': 'உள்நுழை',
+      'password': 'கடவுச்சொல்',
+      'payNow': 'பணம் செலுத்து',
+      'notifications': 'அறிவிப்புகள்',
+      'call': 'அழை',
+      'whatsapp': 'வாட்ஸ்அப்',
+      'ownerDashboard': 'உரிமையாளர் தளம்',
+      'createProfile': 'சுயவிவரம் உருவாக்கு',
+      'orDivider': 'அல்லது',
+      'notAnOwner': 'உரிமையாளர் அல்ல',
+      'instituteOwnerPortal': 'நிறுவன உரிமையாளர் தளம்',
+      'createInstitute': 'நிறுவனம் உருவாக்கு',
+      'addClass': 'வகுப்பு சேர்',
+      'allFilters': 'அனைத்து வடிகட்டிகள்',
+      'recommended': 'பரிந்துரைக்கப்பட்டவை',
+      'noResults': 'முடிவுகள் இல்லை',
+      'filters': 'வடிகட்டி',
+      'verified': 'சரிபார்க்கப்பட்டது',
+      'hotels': 'ஹோட்டல்கள்',
+      'functionHalls': 'மண்டபங்கள்',
+      'qrCheckIn': 'QR செக்-இன்',
+      'quickBookingMode': 'விரைவு புக்கிங்',
+    },
+    'kn': {
+      'appName': 'ಬುಕ್ ಮೈ ಸ್ಪೇಸ್',
+      'searchHint': 'ಫಂಕ್ಷನ್ ಹಾಲ್, ಪಿಜಿ, ಹೋಟೆಲ್ ಹುಡುಕಿ...',
+      'search': 'ಹುಡುಕಿ',
+      'bookNow': 'ಈಗಲೇ ಬುಕ್ ಮಾಡಿ',
+      'cancel': 'ರದ್ದುಮಾಡಿ',
+      'confirm': 'ಖಚಿತಪಡಿಸಿ',
+      'save': 'ಉಳಿಸಿ',
+      'navHome': 'ಹೋಮ್',
+      'navSearch': 'ಹುಡುಕಿ',
+      'navBookings': 'ನನ್ನ ಬುಕಿಂಗ್‌ಗಳು',
+      'navSaved': 'ಉಳಿಸಿದವು',
+      'navProfile': 'ಪ್ರೊಫೈಲ್',
+      'reviews': 'ವಿಮರ್ಶೆಗಳು',
+      'amenities': 'ಸೌಲಭ್ಯಗಳು',
+      'capacity': 'ಸಾಮರ್ಥ್ಯ',
+      'pricing': 'ಬೆಲೆ',
+      'recentSearches': 'ಇತ್ತೀಚಿನ ಹುಡುಕಾಟಗಳು',
+      'clearRecentSearches': 'ತೆರವುಗೊಳಿಸಿ',
+      'venueOptimizer': 'ವೆನ್ಯೂ ಆಪ್ಟಿಮೈಜರ್',
+      'offline': 'ನೀವು ಆಫ್‌ಲೈನ್‌ನಲ್ಲಿದ್ದೀರಿ',
+      'language': 'ಭಾಷೆ',
+      'login': 'ಲಾಗಿನ್',
+      'password': 'ಪಾಸ್‌ವರ್ಡ್',
+      'payNow': 'ಈಗ ಪಾವತಿಸಿ',
+      'notifications': 'ಅಧಿಸೂಚನೆಗಳು',
+      'call': 'ಕರೆ',
+      'whatsapp': 'ವಾಟ್ಸಾಪ್',
+      'ownerDashboard': 'ಮಾಲೀಕರ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್',
+      'createProfile': 'ಪ್ರೊಫೈಲ್ ರಚಿಸಿ',
+      'orDivider': 'ಅಥವಾ',
+      'notAnOwner': 'ಮಾಲೀಕರಲ್ಲ',
+      'instituteOwnerPortal': 'ಸಂಸ್ಥೆ ಮಾಲೀಕರ ಪೋರ್ಟಲ್',
+      'createInstitute': 'ಸಂಸ್ಥೆ ರಚಿಸಿ',
+      'addClass': 'ತರಗತಿ ಸೇರಿಸಿ',
+      'allFilters': 'ಎಲ್ಲಾ ಫಿಲ್ಟರ್‌ಗಳು',
+      'recommended': 'ಶಿಫಾರಸು',
+      'noResults': 'ಫಲಿತಾಂಶಗಳಿಲ್ಲ',
+      'filters': 'ಫಿಲ್ಟರ್',
+      'verified': 'ಪರಿಶೀಲಿಸಲಾಗಿದೆ',
+      'hotels': 'ಹೋಟೆಲ್‌ಗಳು',
+      'functionHalls': 'ಫಂಕ್ಷನ್ ಹಾಲ್‌ಗಳು',
+      'qrCheckIn': 'QR ಚೆಕ್-ಇನ್',
+      'quickBookingMode': 'ಕ್ವಿಕ್ ಬುಕಿಂಗ್',
+    },
+    'mr': {
+      'appName': 'बुक माय स्पेस',
+      'searchHint': 'हॉल, पीजी, हॉटेल शोधा...',
+      'search': 'शोधा',
+      'bookNow': 'आत्ताच बुक करा',
+      'cancel': 'रद्द करा',
+      'confirm': 'नक्की करा',
+      'save': 'सेव्ह करा',
+      'navHome': 'होम',
+      'navSearch': 'शोधा',
+      'navBookings': 'माझ्या बुकिंग्स',
+      'navSaved': 'सेव्ह केलेले',
+      'navProfile': 'प्रोफाइल',
+      'reviews': 'समीक्षा',
+      'amenities': 'सुविधा',
+      'capacity': 'क्षमता',
+      'pricing': 'किंमत',
+      'recentSearches': 'अलीकडील शोध',
+      'clearRecentSearches': 'साफ करा',
+      'venueOptimizer': 'Venue Optimizer',
+      'offline': 'तुम्ही ऑफलाइन आहात',
+      'language': 'भाषा',
+      'login': 'लॉग इन',
+      'password': 'पासवर्ड',
+      'payNow': 'आत्ताच पैसे द्या',
+      'notifications': 'सूचना',
+      'call': 'कॉल',
+      'whatsapp': 'व्हॉट्सॲप',
+      'ownerDashboard': 'मालक डॅशबोर्ड',
+      'createProfile': 'प्रोफाइल तयार करा',
+      'orDivider': 'किंवा',
+      'notAnOwner': 'मालक नाही',
+      'instituteOwnerPortal': 'संस्था मालक पोर्टल',
+      'createInstitute': 'संस्था तयार करा',
+      'addClass': 'क्लास जोडा',
+      'allFilters': 'सर्व फिल्टर',
+      'recommended': 'शिफारस',
+      'noResults': 'निकाल नाहीत',
+      'filters': 'फिल्टर',
+      'verified': 'सत्यापित',
+      'hotels': 'हॉटेल्स',
+      'functionHalls': 'फंक्शन हॉल',
+      'qrCheckIn': 'QR चेक-इन',
+      'quickBookingMode': 'क्विक बुकिंग',
+    },
+    'bn': {
+      'appName': 'বুক মাই স্পেস',
+      'searchHint': 'ভেন্যু, পিজি, হোটেল খুঁজুন...',
+      'search': 'খুঁজুন',
+      'bookNow': 'এখনই বুক করুন',
+      'cancel': 'বাতিল করুন',
+      'confirm': 'নিশ্চিত করুন',
+      'save': 'সংরক্ষণ করুন',
+      'navHome': 'হোম',
+      'navSearch': 'খুঁজুন',
+      'navBookings': 'আমার বুকিং',
+      'navSaved': 'সংরক্ষিত',
+      'navProfile': 'প্রোফাইল',
+      'reviews': 'রিভিউ',
+      'amenities': 'সুযোগ-সুবিধা',
+      'capacity': 'ক্ষমতা',
+      'pricing': 'মূল্য',
+      'recentSearches': 'সাম্প্রতিক অনুসন্ধান',
+      'clearRecentSearches': 'মুছুন',
+      'venueOptimizer': 'Venue Optimizer',
+      'offline': 'আপনি অফলাইন আছেন',
+      'language': 'ভাষা',
+      'login': 'লগ ইন',
+      'password': 'পাসওয়ার্ড',
+      'payNow': 'পেমেন্ট করুন',
+      'notifications': 'বিজ্ঞপ্তি',
+      'call': 'কল',
+      'whatsapp': 'হোয়াটসঅ্যাপ',
+      'ownerDashboard': 'মালিক ড্যাশবোর্ড',
+      'createProfile': 'প্রোফাইল তৈরি করুন',
+      'orDivider': 'অথবা',
+      'notAnOwner': 'মালিক নন',
+      'instituteOwnerPortal': 'ইনস্টিটিউট ওনার পোর্টাল',
+      'createInstitute': 'ইনস্টিটিউট তৈরি করুন',
+      'addClass': 'ক্লাস যোগ করুন',
+      'allFilters': 'সব ফিল্টার',
+      'recommended': 'সুপারিশকৃত',
+      'noResults': 'কোনো ফলাফল নেই',
+      'filters': 'ফিল্টার',
+      'verified': 'যাচাইকৃত',
+      'hotels': 'হোটেল',
+      'functionHalls': 'ফাংশন হল',
+      'qrCheckIn': 'QR চেক-ইন',
+      'quickBookingMode': 'কুইক বুকিং',
+    },
+    'gu': {
+      'appName': 'બુક માય સ્પેસ',
+      'searchHint': 'હોલ, પીજી, હોટેલ શોધો...',
+      'search': 'શોધો',
+      'bookNow': 'હમણાં બુક કરો',
+      'cancel': 'રદ કરો',
+      'confirm': 'કન્ફર્મ કરો',
+      'save': 'સેવ કરો',
+      'navHome': 'હોમ',
+      'navSearch': 'શોધો',
+      'navBookings': 'મારી બુકિંગ',
+      'navSaved': 'સેવ કરેલ',
+      'navProfile': 'પ્રોફાઈલ',
+      'reviews': 'રિવ્યુ',
+      'amenities': 'સુવિધાઓ',
+      'capacity': 'ક્ષમતા',
+      'pricing': 'કિંમત',
+      'recentSearches': 'તાજેતરની શોધ',
+      'clearRecentSearches': 'સાફ કરો',
+      'venueOptimizer': 'Venue Optimizer',
+      'offline': 'તમે ઑફલાઇન છો',
+      'language': 'ભાષા',
+      'login': 'લોગિન',
+      'password': 'પાસવર્ડ',
+      'payNow': 'હમણાં ચૂકવો',
+      'notifications': 'સૂચનાઓ',
+      'call': 'કોલ',
+      'whatsapp': 'વોટ્સએપ',
+      'ownerDashboard': 'માલિક ડેશબોર્ડ',
+      'createProfile': 'પ્રોફાઈલ બનાવો',
+      'orDivider': 'અથવા',
+      'notAnOwner': 'માલિક નથી',
+      'instituteOwnerPortal': 'સંસ્થા માલિક પોર્ટલ',
+      'createInstitute': 'સંસ્થા બનાવો',
+      'addClass': 'ક્લાસ ઉમેરો',
+      'allFilters': 'બધા ફિલ્ટર',
+      'recommended': 'ભલામણ',
+      'noResults': 'પરિણામ નથી',
+      'filters': 'ફિલ્ટર',
+      'verified': 'ચકાસાયેલ',
+      'hotels': 'હોટેલ્સ',
+      'functionHalls': 'ફંક્શન હોલ',
+      'qrCheckIn': 'QR ચેક-ઇન',
+      'quickBookingMode': 'ક્વિક બુકિંગ',
+    },
+    'ml': {
+      'appName': 'ബുക്ക് മൈ സ്‌പേസ്',
+      'searchHint': 'ഹാൾ, പിജി, ഹോട്ടൽ തിരയുക...',
+      'search': 'തിരയുക',
+      'bookNow': 'ഇപ്പോൾ ബുക്ക് ചെയ്യുക',
+      'cancel': 'റദ്ദാക്കുക',
+      'confirm': 'ഉറപ്പാക്കുക',
+      'save': 'സേവ് ചെയ്യുക',
+      'navHome': 'ഹോം',
+      'navSearch': 'തിരയുക',
+      'navBookings': 'എന്റെ ബുക്കിംഗുകൾ',
+      'navSaved': 'സേവ് ചെയ്‌തവ',
+      'navProfile': 'പ്രൊഫൈൽ',
+      'reviews': 'അഭിപ്രായങ്ങൾ',
+      'amenities': 'സൗകര്യങ്ങൾ',
+      'capacity': 'ശേഷി',
+      'pricing': 'വില',
+      'recentSearches': 'സമീപകാല തിരച്ചിലുകൾ',
+      'clearRecentSearches': 'മായ്ക്കുക',
+      'venueOptimizer': 'Venue Optimizer',
+      'offline': 'നിങ്ങൾ ഓഫ്‌ലൈനാണ്',
+      'language': 'ഭാഷ',
+      'login': 'ലോഗിൻ',
+      'password': 'പാസ്‌വേഡ്',
+      'payNow': 'ഇപ്പോൾ പണമടയ്ക്കുക',
+      'notifications': 'അറിയിപ്പുകൾ',
+      'call': 'വിളിക്കുക',
+      'whatsapp': 'വാട്ട്‌സ്ആപ്പ്',
+      'ownerDashboard': 'ഉടമ ഡാഷ്‌ബോർഡ്',
+      'createProfile': 'പ്രൊഫൈൽ സൃഷ്ടിക്കുക',
+      'orDivider': 'അല്ലെങ്കിൽ',
+      'notAnOwner': 'ഉടമയല്ല',
+      'instituteOwnerPortal': 'ഇൻസ്റ്റിറ്റ്യൂട്ട് ഉടമ പോർട്ടൽ',
+      'createInstitute': 'ഇൻസ്റ്റിറ്റ്യൂട്ട് സൃഷ്ടിക്കുക',
+      'addClass': 'ക്ലാസ് ചേർക്കുക',
+      'allFilters': 'എല്ലാ ഫിൽട്ടറുകളും',
+      'recommended': 'ശുപാർശ',
+      'noResults': 'ഫലങ്ങളില്ല',
+      'filters': 'ഫിൽട്ടർ',
+      'verified': 'സ്ഥിരീകരിച്ചത്',
+      'hotels': 'ഹോട്ടലുകൾ',
+      'functionHalls': 'ഫംഗ്ഷൻ ഹാളുകൾ',
+      'qrCheckIn': 'QR ചെക്ക്-ഇൻ',
+      'quickBookingMode': 'ക്വിക്ക് ബുക്കിംഗ്',
+    },
+    'es': {
+      'appName': 'BookMySpace',
+      'searchHint': 'Buscar local, PG, hotel...',
+      'search': 'Buscar',
+      'bookNow': 'Reservar ahora',
+      'cancel': 'Cancelar',
+      'confirm': 'Confirmar',
+      'save': 'Guardar',
+      'navHome': 'Inicio',
+      'navSearch': 'Buscar',
+      'navBookings': 'Mis reservas',
+      'navSaved': 'Guardados',
+      'navProfile': 'Perfil',
+      'reviews': 'Reseñas',
+      'amenities': 'Comodidades',
+      'capacity': 'Capacidad',
+      'pricing': 'Precio',
+      'recentSearches': 'Búsquedas recientes',
+      'clearRecentSearches': 'Borrar',
+      'venueOptimizer': 'Optimizador de locales',
+      'offline': 'Estás sin conexión',
+      'language': 'Idioma',
+      'login': 'Iniciar sesión',
+      'password': 'Contraseña',
+      'payNow': 'Pagar ahora',
+      'notifications': 'Notificaciones',
+      'call': 'Llamar',
+      'whatsapp': 'WhatsApp',
+      'ownerDashboard': 'Panel del propietario',
+      'createProfile': 'Crear un perfil',
+      'orDivider': 'O',
+      'notAnOwner': 'No es propietario',
+      'instituteOwnerPortal': 'Portal del instituto',
+      'createInstitute': 'Crear instituto',
+      'addClass': 'Añadir clase',
+      'allFilters': 'Todos los filtros',
+      'recommended': 'Recomendados',
+      'noResults': 'Sin resultados',
+      'filters': 'Filtros',
+      'verified': 'Verificado',
+      'hotels': 'Hoteles',
+      'functionHalls': 'Salones',
+      'qrCheckIn': 'Check-in QR',
+      'quickBookingMode': 'Reserva rápida',
     },
   };
 }

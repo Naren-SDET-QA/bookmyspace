@@ -1,3 +1,4 @@
+import 'package:bookmyspace/core/errors/app_exceptions.dart';
 import 'package:bookmyspace/features/booking/domain/booking.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -166,10 +167,15 @@ void main() {
       final hold = BookingHold.fromResponse({
         'hold_id': 'hold-1',
         'expires_in_minutes': 5,
-      });
+      }, now: DateTime(2026, 9, 1, 12));
       expect(hold.id, 'hold-1');
-      expect(hold.expiresAt.isAfter(DateTime.now()), isTrue);
+      expect(hold.expiresAt, DateTime(2026, 9, 1, 12, 5));
     });
+  });
+
+  test('hold-expired server errors map to HoldExpiredException', () {
+    expect(mapError(Exception('booking hold expired')), isA<HoldExpiredException>());
+    expect(mapError(Exception('hold_expired')), isA<HoldExpiredException>());
   });
 }
 

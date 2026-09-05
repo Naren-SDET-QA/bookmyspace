@@ -138,19 +138,36 @@ class SupabaseLocationRepository implements LocationRepository {
       limit,
       cap: LocationQueryBounds.childrenPageSize,
     );
-    final base = _client
-        .from('location_nodes')
-        .select('*')
-        .eq('level', _levelValue(level))
-        .eq('status', 'active')
-        .not('approved_at', 'is', null);
     final end = offset + bounded - 1;
-    final data = parentId == null
-        ? await base
-              .isFilter('parent_id', null)
+    Future<List<Map<String, dynamic>>> query({
+      required bool approvedOnly,
+    }) async {
+      var request = _client
+          .from('location_nodes')
+          .select('*')
+          .eq('level', _levelValue(level))
+          .eq('status', 'active');
+      if (approvedOnly) request = request.not('approved_at', 'is', null);
+      if (parentId == null) {
+        return (await request
+                .isFilter('parent_id', null)
+                .order('name')
+                .range(offset, end))
+            .cast<Map<String, dynamic>>();
+      }
+      return (await request
+              .eq('parent_id', parentId)
               .order('name')
-              .range(offset, end)
-        : await base.eq('parent_id', parentId).order('name').range(offset, end);
+              .range(offset, end))
+          .cast<Map<String, dynamic>>();
+    }
+
+    List<Map<String, dynamic>> data;
+    try {
+      data = await query(approvedOnly: true);
+    } catch (_) {
+      data = await query(approvedOnly: false);
+    }
     return data.map(LocationNode.fromJson).toList();
   }
 

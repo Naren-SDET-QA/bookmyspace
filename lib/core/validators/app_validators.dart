@@ -92,6 +92,16 @@ class AppValidators {
     return null;
   }
 
+  /// Ensures [confirmation] matches a valid [password].
+  static String? confirmPassword(String? password, String? confirmation) {
+    final error = AppValidators.password(password);
+    if (error != null) return error;
+    if (confirmation == null || confirmation != password) {
+      return 'Passwords do not match';
+    }
+    return null;
+  }
+
   /// Validates a description with optional min/max length.
   static String? description(String? value, {int minLength = 10, int maxLength = 1000}) {
     if (value == null || value.trim().isEmpty) {

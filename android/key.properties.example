@@ -1,0 +1,6 @@
+# Copy to android/key.properties (gitignored) for a local signed release.
+# Never commit real passwords, aliases, or keystore files.
+storePassword=STORE_PASSWORD_PLACEHOLDER
+keyPassword=KEY_PASSWORD_PLACEHOLDER
+keyAlias=upload
+storeFile=upload-keystore.jks
